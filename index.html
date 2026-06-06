@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yuvraaj — Health Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0d0d0f;--surface:#141418;--surface2:#1c1c22;--surface3:#242430;
+    --border:#2a2a38;--accent:#6c63ff;--accent2:#ff6584;
+    --green:#4ade80;--yellow:#facc15;--red:#f87171;--orange:#fb923c;
+    --text:#f0f0f6;--muted:#888899;--r:12px;--rs:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+  .app{max-width:1280px;margin:0 auto;padding:20px 16px;}
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .hdr h1{font-size:21px;font-weight:700;letter-spacing:-.5px;}
+  .hdr .sub{color:var(--muted);font-size:12px;margin-top:2px;}
+  .badge{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);border-radius:var(--rs);padding:4px 10px;font-size:11px;color:var(--yellow);display:inline-block;margin-bottom:3px;}
+  .date-chip{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--muted);text-align:right;}
+  .date-chip strong{color:var(--text);display:block;font-size:14px;}
+  .grid{display:grid;gap:14px;}
+  .g4{grid-template-columns:repeat(4,1fr);}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:900px){.g4,.g3{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:580px){.g4,.g3,.g2{grid-template-columns:1fr;}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+  .ct{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:13px;display:flex;align-items:center;gap:5px;}
+  .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .stat{text-align:center;}
+  .stat .val{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1;}
+  .stat .unit{font-size:12px;color:var(--muted);margin-top:2px;}
+  .stat .delta{font-size:11px;margin-top:5px;}
+  .pos{color:var(--green);}.neg{color:var(--red);}.neu{color:var(--muted);}
+  .pbar{background:var(--surface3);border-radius:99px;height:8px;overflow:hidden;margin-top:6px;}
+  .pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s;}
+  input[type=number],input[type=text],textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);padding:9px 11px;font-size:14px;width:100%;outline:none;transition:border-color .2s;font-family:inherit;}
+  input:focus,textarea:focus{border-color:var(--accent);}
+  input[type=number]{-moz-appearance:textfield;}
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+  textarea{resize:vertical;min-height:72px;}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;}
+  .sec{margin-bottom:14px;}
+  .tabs{display:flex;gap:3px;background:var(--surface2);border-radius:var(--rs);padding:3px;margin-bottom:16px;}
+  .tab{flex:1;padding:7px;border-radius:6px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit;}
+  .tab.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  .tg{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;}
+  .tb{flex:1;min-width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);padding:9px 6px;cursor:pointer;text-align:center;font-size:12px;font-weight:500;transition:all .15s;font-family:inherit;}
+  .tb.ay{background:#166534;border-color:var(--green);color:var(--green);}
+  .tb.an{background:#7f1d1d;border-color:var(--red);color:var(--red);}
+  .supp-list{display:flex;flex-direction:column;gap:7px;}
+  .si{display:flex;align-items:center;gap:9px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;cursor:pointer;transition:all .15s;user-select:none;}
+  .si.ck{background:rgba(74,222,128,.08);border-color:var(--green);}
+  .si.sun{border-style:dashed;}
+  .sc{width:17px;height:17px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .si.ck .sc{background:var(--green);border-color:var(--green);color:#000;}
+  .sn{font-size:13px;flex:1;}
+  .sd{font-size:11px;color:var(--muted);}
+  .stag{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface3);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .stag.sun{background:rgba(250,204,21,.1);color:var(--yellow);}
+  .sun-notice{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:var(--rs);padding:7px 11px;font-size:12px;color:var(--orange);margin-bottom:8px;display:none;}
+  .cig-wrap{display:flex;align-items:center;gap:14px;justify-content:center;padding:8px 0;}
+  .cbtn{width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;}
+  .cbtn:hover{border-color:var(--accent);}
+  .cnum{font-size:42px;font-weight:700;letter-spacing:-2px;min-width:70px;text-align:center;}
+  .cnum.z{color:var(--green);}.cnum.l{color:var(--yellow);}.cnum.h{color:var(--red);}
+  .mgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
+  .mb{aspect-ratio:1;border-radius:var(--rs);background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;}
+  .mb.sel{border-color:var(--accent);background:rgba(108,99,255,.2);transform:scale(1.1);}
+  .cal-total{background:var(--surface2);border-radius:var(--rs);padding:10px 12px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;}
+  .cnum-s{font-size:20px;font-weight:700;}
+  .over{color:var(--red);}.close{color:var(--yellow);}.under{color:var(--green);}
+  .save-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:8px;transition:all .15s;font-family:inherit;}
+  .save-btn:hover{background:#7c74ff;box-shadow:0 0 20px rgba(108,99,255,.3);}
+  .save-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#000;padding:10px 18px;border-radius:var(--rs);font-weight:600;font-size:13px;transform:translateY(60px);opacity:0;transition:all .3s;z-index:999;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .chart-wrap{position:relative;height:200px;}
+  .pill{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:500;}
+  .py{background:rgba(74,222,128,.15);color:var(--green);}
+  .pn{background:rgba(248,113,113,.15);color:var(--red);}
+  table.ht{width:100%;border-collapse:collapse;font-size:12px;}
+  table.ht th{text-align:left;padding:6px 9px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);}
+  table.ht td{padding:9px 9px;border-bottom:1px solid var(--surface2);vertical-align:middle;}
+  table.ht tr:hover td{background:var(--surface2);}
+  .hfm-drop{border:2px dashed var(--border);border-radius:var(--rs);padding:12px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:10px;min-height:56px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;}
+  .hfm-drop:hover{border-color:var(--accent);}
+  .concern-banner{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:var(--r);padding:13px 16px;margin-bottom:16px;}
+  .cb-title{font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;}
+  .cb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .ci{font-size:12px;color:var(--text);display:flex;gap:5px;margin-bottom:3px;}
+  .ci::before{content:'⚠';color:var(--red);flex-shrink:0;}
+  .oi{font-size:12px;color:var(--muted);display:flex;gap:5px;margin-bottom:3px;}
+  .oi::before{content:'✓';color:var(--green);flex-shrink:0;}
+  .bio-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+  table.bt{width:100%;border-collapse:collapse;font-size:12px;}
+  table.bt th{text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);}
+  table.bt td{padding:7px 8px;border-bottom:1px solid rgba(42,42,56,.4);vertical-align:middle;}
+  table.bt tr:hover td{background:var(--surface2);}
+  .bv-ok{font-weight:700;color:var(--green);}
+  .bv-hi{font-weight:700;color:var(--red);}
+  .bv-lo{font-weight:700;color:var(--yellow);}
+  .bk-ok{background:rgba(74,222,128,.12);color:var(--green);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;}
+  .bk-hi{background:rgba(248,113,113,.12);color:var(--red);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;}
+  .bk-lo{background:rgba(250,204,21,.12);color:var(--yellow);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;}
+  .loading{text-align:center;color:var(--muted);padding:32px;font-size:13px;}
+  .streak-row{display:flex;gap:24px;flex-wrap:wrap;}
+  .streak-box{text-align:center;}
+  .streak-box .sv{font-size:32px;font-weight:700;}
+  .streak-box .sl{font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="hdr">
+    <div>
+      <div class="badge" id="weekBadge">Week 9 · Block 3 · Cut Phase</div>
+      <h1>Yuvraaj's Health Dashboard</h1>
+      <div class="sub">26M · 179cm · B+ · Target: 75kg by ~Jul 12</div>
+    </div>
+    <div class="date-chip">
+      <strong id="dateStr">—</strong>
+      <span id="timeStr">—</span>
+    </div>
+  </div>
+
+  <!-- CONCERN BANNER -->
+  <div class="concern-banner sec">
+    <div class="cb-title">⚠ 4 Concerns — Healthians, 06 Jun 2026</div>
+    <div class="cb-grid">
+      <div>
+        <div class="ci"><strong>Vitamin D:</strong> 15.34 ng/ml — DEFICIENT (need ≥30). D3 weekly likely under-dosed.</div>
+        <div class="ci"><strong>Iron:</strong> 64 ug/dl — borderline low. Watch fatigue.</div>
+        <div class="ci"><strong>Creatinine:</strong> 1.23 mg/dl — slightly high. High protein + creatine adds kidney load. Retest monthly.</div>
+        <div class="ci"><strong>T4 Total:</strong> 12.70 ug/dl — slightly high. TSH normal. Monitor.</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">✓ All Clear</div>
+        <div class="oi">Testosterone 411 ng/dl · HbA1c 4.6% · LDL 72</div>
+        <div class="oi">HDL 54 · Trigs 58 — clean lipids</div>
+        <div class="oi">TSH 1.99 · ALT 16 · AST 21 — liver excellent</div>
+        <div class="oi">hsCRP 0.62 — low inflammation</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT CARDS -->
+  <div class="grid g4 sec">
+    <div class="card"><div class="ct"><span class="dot" style="background:var(--accent)"></span>Weight</div>
+      <div class="stat"><div class="val" id="statWeight">—</div><div class="unit">kg</div><div class="delta" id="statWeightDelta"></div></div>
+    </div>
+    <div class="card"><div class="ct"><span class="dot" style="background:var(--green)"></span>7-Day Avg</div>
+      <div class="stat"><div class="val" id="stat7Avg">—</div><div class="unit">kg rolling</div><div class="delta neu" id="stat7Delta"></div></div>
+    </div>
+    <div class="card"><div class="ct"><span class="dot" style="background:var(--orange)"></span>Calories</div>
+      <div class="stat"><div class="val" id="statCals">0</div><div class="unit">of 2,100 kcal</div><div class="delta" id="statCalDelta"></div></div>
+    </div>
+    <div class="card"><div class="ct"><span class="dot" style="background:var(--red)"></span>Cigarettes</div>
+      <div class="stat"><div class="val" id="statCigs">0</div><div class="unit">today</div><div class="delta" id="statCigDelta"></div></div>
+    </div>
+  </div>
+
+  <!-- CUT PROGRESS -->
+  <div class="card sec">
+    <div class="ct"><span class="dot" style="background:var(--accent2)"></span>Cut Progress — 82kg → 75kg</div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px;">
+      <span>82kg start</span><span id="cutPct">—</span><span>75kg target</span>
+    </div>
+    <div class="pbar"><div class="pfill" id="cutBar" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--muted)">
+      <span id="kgLost">—</span><span id="kgLeft">—</span><span id="daysLeft">—</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab on" onclick="showTab('today')">Today</button>
+    <button class="tab" onclick="showTab('progress')">Progress</button>
+    <button class="tab" onclick="showTab('history')">History</button>
+    <button class="tab" onclick="showTab('bloodwork')">Bloodwork</button>
+  </div>
+
+  <!-- TODAY -->
+  <div id="tab-today">
+    <div class="grid g2 sec">
+      <div class="card">
+        <div class="ct"><span class="dot"></span>Morning Weight</div>
+        <label>Weight (kg)</label>
+        <input type="number" id="inputWeight" step="0.1" min="60" max="120" placeholder="78.0">
+        <div style="margin-top:7px;font-size:11px;color:var(--muted)">Last saved: <span id="lastWeightDate">—</span></div>
+      </div>
+      <div class="card">
+        <div class="ct"><span class="dot" style="background:var(--green)"></span>Activity</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div><label>Lifted today?</label>
+            <div class="tg">
+              <button class="tb" id="lift-yes" onclick="setToggle('lift','yes')">✓ Yes</button>
+              <button class="tb" id="lift-no" onclick="setToggle('lift','no')">✗ Rest</button>
+            </div>
+          </div>
+          <div><label>Core work?</label>
+            <div class="tg">
+              <button class="tb" id="core-yes" onclick="setToggle('core','yes')">✓ Yes</button>
+              <button class="tb" id="core-no" onclick="setToggle('core','no')">✗ No</button>
+            </div>
+          </div>
+          <div><label>Cardio?</label>
+            <div class="tg">
+              <button class="tb" id="cardio-yes" onclick="setToggle('cardio','yes')">✓ Stairmaster</button>
+              <button class="tb" id="cardio-no" onclick="setToggle('cardio','no')">✗ No</button>
+              <button class="tb" id="cardio-bad" onclick="setToggle('cardio','bad')">🏸 Badminton</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card sec">
+      <div class="ct"><span class="dot" style="background:var(--yellow)"></span>Supplements</div>
+      <div class="sun-notice" id="suppNotice">📅 Vitamin D3 is Sunday only — not today.</div>
+      <div class="supp-list" id="suppList"></div>
+    </div>
+
+    <div class="grid g2 sec">
+      <div class="card">
+        <div class="ct"><span class="dot" style="background:var(--orange)"></span>HealthifyMe — Daily Macros</div>
+        <div class="hfm-drop" id="hfmDrop" onclick="document.getElementById('hfmFile').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="handleDrop(event)">
+          <div id="hfmPreviewWrap" style="display:none;width:100%">
+            <img id="hfmPreview" style="max-width:100%;max-height:200px;border-radius:6px;display:block;margin:0 auto"/>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px">Click to replace</div>
+          </div>
+          <div id="hfmPrompt"><div style="font-size:20px;margin-bottom:2px">📲</div>
+            <div style="font-size:12px;color:var(--muted)">Drop or click — today's HealthifyMe screenshot</div>
+          </div>
+        </div>
+        <input type="file" id="hfmFile" accept="image/*" style="display:none" onchange="handleFile(this)">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+          <div><label>Calories (kcal)</label><input type="number" id="inputCals" placeholder="e.g. 1980" min="0" max="6000" oninput="recalcCals()"></div>
+          <div><label>Protein (g) — floor 165g</label><input type="number" id="inputProtein" placeholder="e.g. 170" min="0" max="400"></div>
+          <div><label>Carbs (g)</label><input type="number" id="inputCarbs" placeholder="e.g. 210" min="0" max="800"></div>
+          <div><label>Fat (g)</label><input type="number" id="inputFat" placeholder="e.g. 55" min="0" max="400"></div>
+        </div>
+        <div class="cal-total">
+          <div><div style="font-size:11px;color:var(--muted)">Total</div><div class="cnum-s" id="calTotal">0</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Target: 2,100 kcal</div><div style="font-size:12px;color:var(--muted)" id="calRemaining">2,100 remaining</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <div class="ct"><span class="dot" style="background:var(--red)"></span>Cigarettes</div>
+          <div class="cig-wrap">
+            <button class="cbtn" onclick="changeCig(-1)">−</button>
+            <div><div class="cnum z" id="cigCount">0</div><div style="font-size:11px;color:var(--muted);text-align:center">today</div></div>
+            <button class="cbtn" onclick="changeCig(1)">+</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct"><span class="dot" style="background:var(--accent2)"></span>Mental Check-In</div>
+          <label>How are you feeling?</label>
+          <div class="mgrid">
+            <button class="mb" data-mood="1" onclick="setMood(1)" title="Rough">😤</button>
+            <button class="mb" data-mood="2" onclick="setMood(2)" title="Bad">😞</button>
+            <button class="mb" data-mood="3" onclick="setMood(3)" title="Okay">😐</button>
+            <button class="mb" data-mood="4" onclick="setMood(4)" title="Good">🙂</button>
+            <button class="mb" data-mood="5" onclick="setMood(5)" title="Fired up">🔥</button>
+          </div>
+          <label>Notes (sleep, energy, body feel...)</label>
+          <textarea id="moodNotes" placeholder="e.g. 7hrs sleep, knee fine, strong session..."></textarea>
+        </div>
+      </div>
+    </div>
+    <button class="save-btn" id="saveBtn" onclick="saveToday()">💾 Save Today's Log</button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="tab-progress" style="display:none">
+    <div class="grid g2 sec">
+      <div class="card"><div class="ct"><span class="dot"></span>Weight Trend (cut: 82→75kg)</div><div class="chart-wrap"><canvas id="weightChart"></canvas></div></div>
+      <div class="card"><div class="ct"><span class="dot" style="background:var(--orange)"></span>Daily Calories</div><div class="chart-wrap"><canvas id="calChart"></canvas></div></div>
+    </div>
+    <div class="grid g2 sec">
+      <div class="card"><div class="ct"><span class="dot" style="background:var(--red)"></span>Cigarettes / Day</div><div class="chart-wrap"><canvas id="cigChart"></canvas></div></div>
+      <div class="card"><div class="ct"><span class="dot" style="background:var(--accent2)"></span>Mood Trend</div><div class="chart-wrap"><canvas id="moodChart"></canvas></div></div>
+    </div>
+    <div class="card sec"><div class="ct"><span class="dot" style="background:var(--green)"></span>Activity Streaks</div><div id="streakWrap" class="streak-row"></div></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="tab-history" style="display:none">
+    <div class="card"><div class="ct"><span class="dot"></span>Daily Log History</div><div id="historyTable"><div class="loading">Loading…</div></div></div>
+  </div>
+
+  <!-- BLOODWORK -->
+  <div id="tab-bloodwork" style="display:none">
+    <div class="card sec">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <div class="ct" style="margin-bottom:3px"><span class="dot" style="background:var(--accent2)"></span>Bloodwork — Healthians, Gurgaon</div>
+          <div style="font-size:12px;color:var(--muted)">Collected: <strong style="color:var(--text)">06 Jun 2026, 07:11 AM</strong> · Fasting · CAP + NABL</div>
+        </div>
+        <div style="background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3);border-radius:10px;padding:10px 16px;text-align:center">
+          <div style="font-size:26px;font-weight:700;color:var(--accent)">86</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Health Score</div>
+        </div>
+      </div>
+      <div class="bio-sec">Hormones & Metabolism</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>Testosterone</td><td class="bv-ok">411.50</td><td>ng/dl</td><td>197–670</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>TSH</td><td class="bv-ok">1.99</td><td>µIU/ml</td><td>0.55–4.78</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>T4 Total</td><td class="bv-hi">12.70</td><td>ug/dl</td><td>3.2–12.6</td><td><span class="bk-hi">⚠ High</span></td></tr>
+        <tr><td>HbA1c</td><td class="bv-ok">4.60</td><td>%</td><td>4.2–5.7</td><td><span class="bk-ok">✓ Excellent</span></td></tr>
+        <tr><td>Fasting Glucose</td><td class="bv-ok">75.7</td><td>mg/dl</td><td>70–100</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>NT-proBNP</td><td class="bv-ok">17.80</td><td>pg/mL</td><td>&lt;106</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+      </tbody></table>
+      <div class="bio-sec">Vitamins, Minerals & Iron</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>Vitamin D (25-OH)</td><td class="bv-hi">15.34</td><td>ng/ml</td><td>30–100</td><td><span class="bk-hi">⚠ Deficient</span></td></tr>
+        <tr><td>Vitamin B12</td><td class="bv-ok">394</td><td>pg/ml</td><td>211–912</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Serum Iron</td><td class="bv-lo">64.0</td><td>ug/dl</td><td>65–175</td><td><span class="bk-lo">⚠ Low</span></td></tr>
+        <tr><td>Calcium</td><td class="bv-ok">9.9</td><td>mg/dl</td><td>8.7–10.4</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Transferrin Sat.</td><td class="bv-ok">23.29</td><td>%</td><td>10–50</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+      </tbody></table>
+      <div class="bio-sec">Lipid Profile</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>Total Cholesterol</td><td class="bv-ok">138.0</td><td>mg/dl</td><td>&lt;200</td><td><span class="bk-ok">✓ Excellent</span></td></tr>
+        <tr><td>HDL</td><td class="bv-ok">54.0</td><td>mg/dL</td><td>40–60</td><td><span class="bk-ok">✓ Good</span></td></tr>
+        <tr><td>LDL</td><td class="bv-ok">72.40</td><td>mg/dL</td><td>&lt;100</td><td><span class="bk-ok">✓ Optimal</span></td></tr>
+        <tr><td>Triglycerides</td><td class="bv-ok">58.0</td><td>mg/dL</td><td>&lt;150</td><td><span class="bk-ok">✓ Excellent</span></td></tr>
+      </tbody></table>
+      <div class="bio-sec">Kidney Function</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>Serum Creatinine</td><td class="bv-hi">1.23</td><td>mg/dl</td><td>0.2–1.2</td><td><span class="bk-hi">⚠ High — monitor</span></td></tr>
+        <tr><td>eGFR</td><td class="bv-ok">83.04</td><td>mL/min/1.73m²</td><td>78–146</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Blood Urea</td><td class="bv-ok">45</td><td>mg/dl</td><td>19.3–49.4</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Uric Acid</td><td class="bv-ok">6.4</td><td>mg/dl</td><td>3.5–7.2</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+      </tbody></table>
+      <div class="bio-sec">Liver Function</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>ALT / SGPT</td><td class="bv-ok">16</td><td>U/L</td><td>10–49</td><td><span class="bk-ok">✓ Excellent</span></td></tr>
+        <tr><td>AST / SGOT</td><td class="bv-ok">21</td><td>U/L</td><td>5–34</td><td><span class="bk-ok">✓ Excellent</span></td></tr>
+        <tr><td>GGT</td><td class="bv-ok">12.0</td><td>U/L</td><td>0–55</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Albumin</td><td class="bv-ok">4.55</td><td>g/dl</td><td>3.4–4.8</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+      </tbody></table>
+      <div class="bio-sec">CBC & Inflammation</div>
+      <table class="bt"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Range</th><th>Status</th></tr></thead><tbody>
+        <tr><td>Haemoglobin</td><td class="bv-ok">16.0</td><td>g/dL</td><td>13–17</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>WBC / TLC</td><td class="bv-ok">5.0</td><td>10³/µL</td><td>4–10</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>Platelets</td><td class="bv-ok">244</td><td>10³/µl</td><td>150–410</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+        <tr><td>hsCRP</td><td class="bv-ok">0.62</td><td>mg/L</td><td>&lt;3</td><td><span class="bk-ok">✓ Low risk</span></td></tr>
+        <tr><td>CRP</td><td class="bv-ok">7.30</td><td>mg/L</td><td>&lt;10</td><td><span class="bk-ok">✓ Normal</span></td></tr>
+      </tbody></table>
+      <div style="margin-top:14px;padding:11px;background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.2);border-radius:var(--rs);font-size:12px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--yellow)">Action items:</strong> 1) Vitamin D — ask doctor about 60,000 IU weekly bolus for 8 weeks. 2) Iron — red meat + vitamin C with meals; retest 2 months. 3) Creatinine — hydrate well, retest monthly. 4) T4 — marginal, TSH fine; monitor next test.
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://zfyeqfnretrrmtevczrc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1vuya6LuGu-aWTr-xDW29Q_vfhbwfIM';
+const HFM_IMG_KEY = 'yuvraaj_hfm_img_v1';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDate(k) {
+  const [y,m,day] = k.split('-');
+  return `${parseInt(day)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]}`;
+}
+
+// SUPPLEMENTS
+const SUPPS = [
+  {id:'zinc',         name:'Zinc',              dose:'Daily',                  tag:'daily', sun:false},
+  {id:'vitd3',        name:'Vitamin D3',         dose:'Sunday only',            tag:'sunday',sun:true },
+  {id:'magnesium',    name:'Magnesium',          dose:'400mg · Daily',          tag:'daily', sun:false},
+  {id:'ashwag_am',    name:'Ashwagandha (AM)',   dose:'1 of 2 daily doses',     tag:'2×/day',sun:false},
+  {id:'ashwag_pm',    name:'Ashwagandha (PM)',   dose:'2 of 2 daily doses',     tag:'2×/day',sun:false},
+  {id:'creatine_am',  name:'Creatine (AM)',      dose:'3.5g — monitor creatinine',tag:'7g/day',sun:false},
+  {id:'creatine_pm',  name:'Creatine (PM)',      dose:'3.5g · 2nd dose',        tag:'7g/day',sun:false},
+];
+let suppState = {};
+
+function isSun() { return new Date().getDay() === 0; }
+
+function renderSupps() {
+  document.getElementById('suppNotice').style.display = !isSun() ? 'block' : 'none';
+  document.getElementById('suppList').innerHTML = SUPPS.map(s => {
+    const ck = !!suppState[s.id];
+    const dis = s.sun && !isSun();
+    return `<div class="si ${ck?'ck':''} ${s.sun?'sun':''}" onclick="${dis?'':'toggleSupp(\''+s.id+'\')'}" style="${dis?'opacity:.4;cursor:not-allowed':''}">
+      <div class="sc">${ck?'✓':''}</div>
+      <div style="flex:1"><div class="sn">${s.name}</div><div class="sd">${s.dose}</div></div>
+      <span class="stag ${s.sun?'sun':''}">${s.tag}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleSupp(id) { suppState[id] = !suppState[id]; renderSupps(); }
+
+// TOGGLES
+function setToggle(group, val) {
+  const map = {lift:['yes','no'], core:['yes','no'], cardio:['yes','no','bad']};
+  map[group].forEach(v => { const el = document.getElementById(`${group}-${v}`); if(el) el.classList.remove('ay','an'); });
+  const el = document.getElementById(`${group}-${val}`);
+  if(el) el.classList.add(val==='no'?'an':'ay');
+}
+function getToggleVal(g) {
+  const map = {lift:['yes','no'], core:['yes','no'], cardio:['yes','no','bad']};
+  for(const v of map[g]) { const el=document.getElementById(`${g}-${v}`); if(el&&(el.classList.contains('ay')||el.classList.contains('an'))) return v; }
+  return null;
+}
+
+// MOOD
+let mood = null;
+function setMood(v) { mood=v; document.querySelectorAll('.mb').forEach(b=>b.classList.remove('sel')); document.querySelector(`.mb[data-mood="${v}"]`).classList.add('sel'); }
+
+// IMAGE
+function handleFile(inp) { const f=inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>setImg(e.target.result); r.readAsDataURL(f); }
+function handleDrop(e) { e.preventDefault(); document.getElementById('hfmDrop').style.borderColor='var(--border)'; const f=e.dataTransfer.files[0]; if(!f||!f.type.startsWith('image/')) return; const r=new FileReader(); r.onload=ev=>setImg(ev.target.result); r.readAsDataURL(f); }
+function setImg(url) {
+  document.getElementById('hfmPreview').src=url;
+  document.getElementById('hfmPreviewWrap').style.display='block';
+  document.getElementById('hfmPrompt').style.display='none';
+  const s=JSON.parse(localStorage.getItem(HFM_IMG_KEY)||'{}'); s[todayKey()]=url; localStorage.setItem(HFM_IMG_KEY,JSON.stringify(s));
+}
+function loadImg() { const s=JSON.parse(localStorage.getItem(HFM_IMG_KEY)||'{}'); const img=s[todayKey()]; if(img) setImg(img); }
+
+// CALORIES
+function recalcCals() {
+  const total=parseInt(document.getElementById('inputCals').value)||0;
+  const rem=2100-total;
+  const el=document.getElementById('calTotal'); el.textContent=total;
+  el.className='cnum-s '+(total>2200?'over':total>=1900?'close':'under');
+  const relEl=document.getElementById('calRemaining');
+  relEl.textContent=rem>=0?`${rem} remaining`:`${Math.abs(rem)} over target`;
+  relEl.style.color=rem<0?'var(--red)':rem<200?'var(--yellow)':'var(--green)';
+  document.getElementById('statCals').textContent=total;
+  const d=document.getElementById('statCalDelta');
+  if(rem>=0){d.textContent=`${rem} under`;d.className='delta pos';}
+  else{d.textContent=`${Math.abs(rem)} over`;d.className='delta neg';}
+}
+
+// CIGARETTES
+function changeCig(delta) {
+  const n=Math.max(0,(parseInt(document.getElementById('cigCount').textContent)||0)+delta);
+  const el=document.getElementById('cigCount'); el.textContent=n;
+  el.className='cnum '+(n===0?'z':n<=3?'l':'h');
+  document.getElementById('statCigs').textContent=n;
+  const d=document.getElementById('statCigDelta');
+  if(n===0){d.textContent='smoke-free 🎉';d.className='delta pos';}
+  else if(n<=3){d.textContent=`${n} today`;d.className='delta neu';}
+  else{d.textContent=`${n} — cut back`;d.className='delta neg';}
+}
+
+// SAVE
+async function saveToday() {
+  const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  const record = {
+    log_date: todayKey(),
+    weight: parseFloat(document.getElementById('inputWeight').value)||null,
+    protein: parseInt(document.getElementById('inputProtein').value)||null,
+    carbs: parseInt(document.getElementById('inputCarbs').value)||null,
+    fat: parseInt(document.getElementById('inputFat').value)||null,
+    total_cals: parseInt(document.getElementById('inputCals').value)||null,
+    lift: getToggleVal('lift'), core: getToggleVal('core'), cardio: getToggleVal('cardio'),
+    cigs: parseInt(document.getElementById('cigCount').textContent)||0,
+    mood, mood_notes: document.getElementById('moodNotes').value,
+    supplements: suppState, saved_at: new Date().toISOString()
+  };
+  const {error} = await sb.from('daily_logs').upsert(record, {onConflict:'log_date'});
+  btn.disabled=false; btn.textContent='💾 Save Today\'s Log';
+  if(error) { showToast('Error: '+error.message, true); return; }
+  showToast('Saved ✓');
+  await refreshStats();
+}
+
+// LOAD TODAY
+async function loadToday() {
+  const {data} = await sb.from('daily_logs').select('*').eq('log_date',todayKey()).maybeSingle();
+  if(!data) return;
+  if(data.weight) document.getElementById('inputWeight').value=data.weight;
+  if(data.protein) document.getElementById('inputProtein').value=data.protein;
+  if(data.carbs) document.getElementById('inputCarbs').value=data.carbs;
+  if(data.fat) document.getElementById('inputFat').value=data.fat;
+  if(data.total_cals) { document.getElementById('inputCals').value=data.total_cals; recalcCals(); }
+  if(data.lift) setToggle('lift',data.lift);
+  if(data.core) setToggle('core',data.core);
+  if(data.cardio) setToggle('cardio',data.cardio);
+  if(data.cigs) { document.getElementById('cigCount').textContent=data.cigs; document.getElementById('cigCount').className='cnum '+(data.cigs===0?'z':data.cigs<=3?'l':'h'); }
+  if(data.mood) setMood(data.mood);
+  if(data.mood_notes) document.getElementById('moodNotes').value=data.mood_notes;
+  if(data.supplements) suppState={...data.supplements};
+  renderSupps();
+}
+
+// HEADER STATS
+async function refreshStats() {
+  const {data} = await sb.from('daily_logs').select('log_date,weight').order('log_date',{ascending:false}).limit(30);
+  if(!data||!data.length) return;
+
+  const withW = data.filter(r=>r.weight);
+  if(withW.length) {
+    const latest=withW[0];
+    document.getElementById('statWeight').textContent=latest.weight.toFixed(1);
+    document.getElementById('lastWeightDate').textContent=fmtDate(latest.log_date);
+    const delta=(latest.weight-82).toFixed(1);
+    const dEl=document.getElementById('statWeightDelta');
+    dEl.textContent=`${delta>0?'+':''}${delta}kg from start`; dEl.className='delta '+(delta<0?'pos':'neg');
+
+    const lost=82-latest.weight, pct=Math.min(100,Math.max(0,(lost/7)*100));
+    document.getElementById('cutBar').style.width=pct+'%';
+    document.getElementById('cutPct').textContent=`${pct.toFixed(0)}% complete`;
+    document.getElementById('kgLost').textContent=`Lost: ${Math.max(0,lost).toFixed(1)}kg`;
+    document.getElementById('kgLeft').textContent=`Left: ${Math.max(0,latest.weight-75).toFixed(1)}kg`;
+  }
+
+  const days=Math.ceil((new Date('2026-07-14')-new Date())/86400000);
+  document.getElementById('daysLeft').textContent=days>0?`~${days} days left`:'Deadline passed';
+
+  const last7=withW.slice(0,7).map(r=>r.weight);
+  if(last7.length) {
+    const avg=(last7.reduce((a,b)=>a+b,0)/last7.length).toFixed(1);
+    document.getElementById('stat7Avg').textContent=avg;
+    document.getElementById('stat7Delta').textContent=`${last7.length} day sample`;
+  }
+}
+
+// HISTORY
+async function renderHistory() {
+  const {data,error}=await sb.from('daily_logs').select('*').order('log_date',{ascending:false}).limit(40);
+  if(error||!data?.length){document.getElementById('historyTable').innerHTML='<div class="loading">No entries yet.</div>';return;}
+  const mE=['','😤','😞','😐','🙂','🔥'];
+  document.getElementById('historyTable').innerHTML=`<div style="overflow-x:auto"><table class="ht">
+    <thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>P/C/F</th><th>Lift</th><th>Core</th><th>Cardio</th><th>Cigs</th><th>Mood</th></tr></thead>
+    <tbody>${data.map(d=>{
+      const cl=d.cardio==='bad'?'🏸':d.cardio==='yes'?'✓':d.cardio==='no'?'✗':'—';
+      const mac=(d.protein||d.carbs||d.fat)?`${d.protein||'?'}/${d.carbs||'?'}/${d.fat||'?'}g`:'—';
+      return `<tr>
+        <td style="color:var(--muted);white-space:nowrap">${fmtDate(d.log_date)}</td>
+        <td><strong>${d.weight?d.weight+'kg':'—'}</strong></td>
+        <td style="color:${!d.total_cals?'var(--muted)':d.total_cals>2200?'var(--red)':d.total_cals>=1900?'var(--yellow)':'var(--green)'}">${d.total_cals?d.total_cals+' kcal':'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${mac}</td>
+        <td><span class="pill ${d.lift==='yes'?'py':d.lift==='no'?'pn':''}">${d.lift==='yes'?'✓':d.lift==='no'?'Rest':'—'}</span></td>
+        <td><span class="pill ${d.core==='yes'?'py':d.core==='no'?'pn':''}">${d.core==='yes'?'✓':d.core==='no'?'✗':'—'}</span></td>
+        <td>${cl}</td>
+        <td style="color:${(d.cigs||0)===0?'var(--green)':(d.cigs||0)<=3?'var(--yellow)':'var(--red)'}">${d.cigs||0}</td>
+        <td>${d.mood?mE[d.mood]:'—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+// CHARTS
+let charts={};
+async function renderCharts() {
+  const {data}=await sb.from('daily_logs').select('log_date,weight,total_cals,cigs,mood').order('log_date',{ascending:true}).limit(30);
+  if(!data) return;
+  const labels=data.map(d=>fmtDate(d.log_date));
+  const gc='rgba(255,255,255,0.05)';
+  const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gc},ticks:{color:'#888899',font:{size:10}}},y:{grid:{color:gc},ticks:{color:'#888899',font:{size:10}}}}};
+
+  if(charts.w) charts.w.destroy();
+  charts.w=new Chart(document.getElementById('weightChart').getContext('2d'),{type:'line',data:{labels,datasets:[
+    {data:data.map(d=>d.weight),borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.1)',borderWidth:2,pointRadius:3,fill:true,tension:.3,spanGaps:true},
+    {data:data.map(()=>75),borderColor:'rgba(248,113,113,.4)',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false}
+  ]},options:{...base,scales:{...base.scales,y:{...base.scales.y,min:73,max:83}}}});
+
+  const cals=data.map(d=>d.total_cals);
+  if(charts.c) charts.c.destroy();
+  charts.c=new Chart(document.getElementById('calChart').getContext('2d'),{type:'bar',data:{labels,datasets:[
+    {data:cals,backgroundColor:cals.map(c=>c>2200?'rgba(248,113,113,.7)':c>=1900?'rgba(250,204,21,.7)':'rgba(74,222,128,.7)'),borderRadius:4},
+    {type:'line',data:data.map(()=>2100),borderColor:'rgba(108,99,255,.5)',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false}
+  ]},options:base});
+
+  const cigs=data.map(d=>d.cigs||0);
+  if(charts.cig) charts.cig.destroy();
+  charts.cig=new Chart(document.getElementById('cigChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{data:cigs,backgroundColor:cigs.map(c=>c===0?'rgba(74,222,128,.7)':c<=3?'rgba(250,204,21,.7)':'rgba(248,113,113,.7)'),borderRadius:4}]},options:{...base,scales:{...base.scales,y:{...base.scales.y,min:0,ticks:{stepSize:1,color:'#888899',font:{size:10}}}}}});
+
+  const moods=data.map(d=>d.mood);
+  if(charts.m) charts.m.destroy();
+  charts.m=new Chart(document.getElementById('moodChart').getContext('2d'),{type:'line',data:{labels,datasets:[{data:moods,borderColor:'#ff6584',backgroundColor:'rgba(255,101,132,.1)',borderWidth:2,pointRadius:4,fill:true,tension:.3,spanGaps:true}]},options:{...base,scales:{...base.scales,y:{...base.scales.y,min:1,max:5,ticks:{stepSize:1,callback:v=>['','😤','😞','😐','🙂','🔥'][v]||v,color:'#888899',font:{size:12}}}}}});
+
+  // Streaks
+  const sorted=[...data].sort((a,b)=>b.log_date.localeCompare(a.log_date));
+  let ls=0,cs=0,crs=0;
+  for(const r of sorted){if(r.lift==='yes')ls++;else break;}
+  for(const r of sorted){const c=r.cardio;if(c==='yes'||c==='bad')cs++;else break;}
+  for(const r of sorted){if(r.core==='yes')crs++;else break;}
+  document.getElementById('streakWrap').innerHTML=`
+    <div class="streak-box"><div class="sv" style="color:var(--accent)">${ls}</div><div class="sl">lift streak</div></div>
+    <div class="streak-box"><div class="sv" style="color:var(--green)">${cs}</div><div class="sl">cardio streak</div></div>
+    <div class="streak-box"><div class="sv" style="color:var(--yellow)">${crs}</div><div class="sl">core streak</div></div>`;
+}
+
+// TABS
+function showTab(tab) {
+  ['today','progress','history','bloodwork'].forEach(t=>{document.getElementById(`tab-${t}`).style.display=t===tab?'block':'none';});
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['today','progress','history','bloodwork'][i]===tab));
+  if(tab==='progress') renderCharts();
+  if(tab==='history') renderHistory();
+}
+
+// TOAST
+function showToast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.style.background=err?'var(--red)':'var(--green)';t.style.color=err?'#fff':'#000';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// CLOCK
+function updateClock(){
+  const n=new Date();
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dateStr').textContent=`${days[n.getDay()]}, ${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}`;
+  document.getElementById('timeStr').textContent=n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+// WEEK BADGE
+function updateBadge(){
+  const start=new Date('2026-04-05');
+  const wk=Math.min(12,Math.ceil((new Date()-start)/(7*86400000)));
+  const blk=wk<=4?1:wk<=8?2:wk<=11?3:'Deload';
+  document.getElementById('weekBadge').textContent=`Week ${wk} · Block ${blk} · Cut Phase`;
+}
+
+// SEED HISTORY (only if table is empty)
+async function seedIfEmpty(){
+  const {count}=await sb.from('daily_logs').select('*',{count:'exact',head:true});
+  if(count>0) return;
+  const seeds=[
+    {log_date:'2026-04-05',weight:82.0,mood_notes:'Programme start'},
+    {log_date:'2026-04-12',weight:81.2},{log_date:'2026-04-19',weight:80.6},
+    {log_date:'2026-04-26',weight:80.0},{log_date:'2026-05-03',weight:79.5},
+    {log_date:'2026-05-10',weight:79.1},{log_date:'2026-05-17',weight:78.8},
+    {log_date:'2026-05-24',weight:78.5},{log_date:'2026-06-01',weight:78.3},
+    {log_date:'2026-06-06',weight:78.3,mood_notes:'Bloodwork day'},
+    {log_date:'2026-06-07',weight:78.0,mood_notes:'Dashboard launch day'},
+  ];
+  await sb.from('daily_logs').insert(seeds);
+}
+
+// INIT
+async function init(){
+  updateClock(); setInterval(updateClock,30000);
+  updateBadge();
+  renderSupps();
+  loadImg();
+  await seedIfEmpty();
+  await loadToday();
+  await refreshStats();
+}
+
+init();
+</script>
+</body>
+</html>
