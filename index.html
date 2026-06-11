@@ -254,6 +254,37 @@ table.bt tr:hover td{background:var(--s2)}
 .ring-bg{fill:none;stroke:var(--s3);stroke-width:6}
 .ring-fg{fill:none;stroke-width:6;stroke-linecap:round;stroke-dasharray:188;stroke-dashoffset:calc(188 - 188 * var(--pct) / 100);transition:stroke-dashoffset 1s ease;stroke:var(--blue)}
 .ring-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}
+
+/* ══ QUIRK LAYER ══ */
+/* custom cursor (desktop only) */
+@media(hover:hover) and (pointer:fine){
+  body,button,a,input,textarea,.si,.tab,.mb,.tb,.hfm-drop,.bn-tab{cursor:none!important}
+  #cursorDot{position:fixed;left:-100px;top:-100px;width:8px;height:8px;border-radius:50%;background:var(--blue);pointer-events:none;z-index:10001;transform:translate(-50%,-50%);transition:background .2s,width .15s,height .15s,opacity .2s;box-shadow:0 0 10px rgba(74,143,232,.7)}
+  #cursorRing{position:fixed;left:-100px;top:-100px;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(74,143,232,.5);pointer-events:none;z-index:10000;transform:translate(-50%,-50%);transition:width .2s,height .2s,border-color .2s,opacity .2s}
+  body.cursor-hot #cursorDot{width:13px;height:13px;background:var(--green);box-shadow:0 0 14px rgba(61,196,122,.8)}
+  body.cursor-hot #cursorRing{width:46px;height:46px;border-color:rgba(61,196,122,.6)}
+  body.cursor-down #cursorRing{width:20px;height:20px;border-color:rgba(232,184,74,.8)}
+}
+@media(hover:none),(pointer:coarse){#cursorDot,#cursorRing{display:none!important}}
+
+#fxCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999}
+
+#sndToggle{position:fixed;bottom:16px;right:16px;z-index:1002;width:42px;height:42px;border-radius:50%;background:var(--s2);border:1px solid var(--b1);font-size:17px;display:flex;align-items:center;justify-content:center;transition:all var(--transition);font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#sndToggle:hover{transform:scale(1.12) rotate(-8deg);border-color:var(--blue)}
+#sndToggle:active{transform:scale(.92)}
+@media(max-width:600px){#sndToggle{bottom:calc(env(safe-area-inset-bottom,8px) + 72px)}}
+
+/* squish feedback on press */
+.tab:active,.tb:active,.si:active,.mb:active,.bn-tab:active{transform:scale(.93)!important}
+.card{transition:border-color var(--transition),transform .15s ease-out;will-change:transform}
+
+/* header heartbeat easter egg */
+@keyframes heartbeat{0%{transform:scale(1)}25%{transform:scale(1.08)}40%{transform:scale(.97)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+.hdr h1{display:inline-block;user-select:none}
+
+/* lock logo wiggle on hover */
+.lock-logo{transition:transform .25s cubic-bezier(.34,1.56,.64,1);cursor:none}
+.lock-logo:hover{transform:rotate(-12deg) scale(1.15)}
 </style>
 </head>
 <body>
@@ -885,6 +916,169 @@ async function init(){
   await loadToday();
   await refreshStats();
 }
+
+/* ══════════ QUIRK LAYER ══════════ */
+(function(){
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fine=window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+let lastX=innerWidth/2,lastY=innerHeight/2,lastGesture=0;
+
+/* ── CUSTOM CURSOR ── */
+if(fine){
+  const dot=document.createElement('div');dot.id='cursorDot';
+  const ring=document.createElement('div');ring.id='cursorRing';
+  document.body.append(ring,dot);
+  let mx=lastX,my=lastY,rx=mx,ry=my;
+  addEventListener('mousemove',e=>{
+    mx=e.clientX;my=e.clientY;
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+    const hot=e.target.closest('button,a,input,textarea,.si,.tab,.mb,.tb,.hfm-drop,.bn-tab,.hdr h1,.lock-logo');
+    document.body.classList.toggle('cursor-hot',!!hot);
+  },{passive:true});
+  (function loop(){rx+=(mx-rx)*.16;ry+=(my-ry)*.16;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop)})();
+  addEventListener('mousedown',()=>document.body.classList.add('cursor-down'));
+  addEventListener('mouseup',()=>document.body.classList.remove('cursor-down'));
+  document.documentElement.addEventListener('mouseleave',()=>{dot.style.opacity='0';ring.style.opacity='0'});
+  document.documentElement.addEventListener('mouseenter',()=>{dot.style.opacity='1';ring.style.opacity='1'});
+}
+
+/* ── PARTICLE ENGINE ── */
+const cv=document.createElement('canvas');cv.id='fxCanvas';document.body.appendChild(cv);
+const cx=cv.getContext('2d');let P=[];
+function fit(){const d=Math.min(2,devicePixelRatio||1);cv.width=innerWidth*d;cv.height=innerHeight*d;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';cx.setTransform(d,0,0,d,0,0)}
+fit();addEventListener('resize',fit);
+(function tick(){
+  cx.clearRect(0,0,innerWidth,innerHeight);
+  P=P.filter(p=>p.life>0);
+  for(const p of P){
+    p.x+=p.vx;p.y+=p.vy;p.vy+=p.g||0;p.vx*=.985;p.vy*=.985;p.life-=p.decay;p.rot+=p.vr||0;
+    cx.globalAlpha=Math.max(0,Math.min(1,p.life));
+    if(p.emoji){
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);
+      cx.font=(p.size*2)+'px serif';cx.textAlign='center';cx.textBaseline='middle';
+      cx.fillText(p.emoji,0,0);cx.restore();
+    }else if(p.ring){
+      cx.strokeStyle=p.color;cx.lineWidth=Math.max(.5,2.5*p.life);
+      cx.beginPath();cx.arc(p.x,p.y,p.size*(1.7-p.life),0,7);cx.stroke();
+    }else{
+      cx.fillStyle=p.color;cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);
+      cx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.62);cx.restore();
+    }
+  }
+  cx.globalAlpha=1;
+  requestAnimationFrame(tick);
+})();
+const HUES=['#4a8fe8','#3dc47a','#e8b84a','#d94f5c','#6b6ef5','#e07a42'];
+function sparks(x,y,n=10,colors=HUES){if(reduced)return;for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;P.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,g:.07,size:3+Math.random()*4,life:1,decay:.022+Math.random()*.02,rot:Math.random()*6,vr:(Math.random()-.5)*.3,color:colors[Math.floor(Math.random()*colors.length)]})}}
+function ripple(x,y,color='rgba(74,143,232,.8)'){if(reduced)return;P.push({x,y,vx:0,vy:0,size:26,life:1,decay:.045,rot:0,ring:true,color})}
+function emojiBurst(x,y,emoji,n=7){if(reduced)return;for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*2.5;P.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2.2,g:.12,size:8+Math.random()*7,life:1,decay:.014,rot:0,vr:(Math.random()-.5)*.2,emoji})}}
+function confetti(x=innerWidth/2,y=innerHeight*.35,n=80){if(reduced)return;for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*1.7,s=4+Math.random()*7;P.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,g:.18,size:5+Math.random()*6,life:1,decay:.008+Math.random()*.006,rot:Math.random()*6,vr:(Math.random()-.5)*.4,color:HUES[Math.floor(Math.random()*HUES.length)]})}}
+
+/* ── SOUND FX (Web Audio, no files) ── */
+let AC=null,muted=localStorage.getItem('yrh_muted')==='1';
+function ac(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}
+function tone(f1,f2,dur,type='sine',vol=.07){if(muted)return;try{const a=ac(),o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f1,a.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),a.currentTime+dur);g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+dur);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+dur+.02)}catch(e){}}
+const sfx={
+  pop:()=>tone(440,180,.09,'sine',.06),
+  ding:()=>{tone(660,660,.16,'sine',.06);setTimeout(()=>tone(990,990,.22,'sine',.05),90)},
+  err:()=>tone(170,85,.28,'sawtooth',.05),
+  puff:()=>tone(150,70,.2,'sine',.05),
+};
+
+/* ── MUTE TOGGLE ── */
+const mbtn=document.createElement('button');mbtn.id='sndToggle';mbtn.title='Toggle sound effects';
+const syncM=()=>mbtn.textContent=muted?'🔇':'🔊';syncM();
+mbtn.addEventListener('click',e=>{e.stopPropagation();muted=!muted;localStorage.setItem('yrh_muted',muted?'1':'0');syncM();if(!muted)sfx.ding();sparks(lastX,lastY,8)});
+document.body.appendChild(mbtn);
+
+/* ── GLOBAL CLICK FEEDBACK ── */
+addEventListener('pointerdown',e=>{
+  lastX=e.clientX;lastY=e.clientY;lastGesture=Date.now();
+  if(e.target.closest('#sndToggle'))return;
+  ripple(lastX,lastY);
+  if(e.target.closest('button,a,.si,.tab,.mb,.tb,.hfm-drop,.bn-tab')){sparks(lastX,lastY,8);sfx.pop()}
+},{passive:true});
+const fresh=()=>Date.now()-lastGesture<450;
+
+/* ── CARD TILT (desktop) ── */
+if(fine&&!reduced){
+  document.querySelectorAll('.card').forEach(c=>{
+    c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();const px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;c.style.transform=`perspective(700px) rotateX(${(-py*2.5).toFixed(2)}deg) rotateY(${(px*2.5).toFixed(2)}deg)`},{passive:true});
+    c.addEventListener('mouseleave',()=>{c.style.transform=''});
+  });
+}
+
+/* ── HOOKS INTO EXISTING ACTIONS ── */
+// Save → confetti + rotating victory copy
+const SAVE_MSGS=['Saved ✓ future you says thanks','Logged ✓ consistency king 👑','Saved ✓ another brick in the wall 🧱','In the books ✓ 📒','Saved ✓ the data gods are pleased'];
+const _toast=showToast;
+showToast=(m,err=false)=>{
+  if(!err&&m==='Saved ✓'){m=SAVE_MSGS[Math.floor(Math.random()*SAVE_MSGS.length)];confetti();sfx.ding()}
+  if(err)sfx.err();
+  _toast(m,err);
+};
+
+// Cigarettes → smoke puffs up, celebration back at zero
+const _cig=changeCig;
+changeCig=d=>{
+  _cig(d);
+  const el=document.getElementById('cigCount'),r=el.getBoundingClientRect();
+  const x=r.left+r.width/2,y=r.top+r.height/2,n=parseInt(el.textContent)||0;
+  if(d>0){emojiBurst(x,y,'💨',5);sfx.puff()}
+  else if(n===0){emojiBurst(x,y,'🚭',6);sfx.ding()}
+  else{sparks(x,y,6,['#3dc47a','#e8b84a'])}
+};
+
+// Supplements → sparkle per check, confetti when full stack done
+const _supp=toggleSupp;
+toggleSupp=id=>{
+  _supp(id);
+  if(suppState[id]&&fresh()){
+    sparks(lastX,lastY,12,['#3dc47a','#e8b84a']);
+    const due=SUPPS.filter(s=>!s.sun||isSun());
+    if(due.every(s=>suppState[s.id])){confetti(lastX,lastY,60);sfx.ding();_toast('Full stack complete 💊✨')}
+  }
+};
+
+// Mood → burst of the chosen emoji
+const _mood=setMood;
+setMood=v=>{
+  _mood(v);
+  if(!fresh())return;
+  const b=document.querySelector(`.mb[data-mood="${v}"]`);
+  if(b){const r=b.getBoundingClientRect();emojiBurst(r.left+r.width/2,r.top+r.height/2,b.textContent.trim(),7)}
+};
+
+// Unlock → confetti welcome
+const _unlock=unlock;
+unlock=async()=>{
+  await _unlock();
+  if(document.getElementById('app').style.display==='block'&&fresh()){confetti(innerWidth/2,innerHeight*.3,90);sfx.ding()}
+};
+
+// Tab switch → re-trigger entrance animation
+const _tab=showTab;
+showTab=t=>{
+  _tab(t);
+  const el=document.getElementById('tab-'+t);
+  if(el&&!reduced){el.style.animation='none';void el.offsetWidth;el.style.animation='fadeUp .3s ease'}
+};
+
+// Header title → heartbeat easter egg
+const PUNS=['Keep your heart in it 🫀','Hydrate or diedrate 💧','You miss 100% of the lifts you skip 🏋️','Abs are made in the kitchen 🍳','Rest is part of the program 😴','Creatinine called — drink water 💧'];
+const h1=document.querySelector('.hdr h1');
+if(h1){h1.addEventListener('click',()=>{
+  if(!reduced){h1.style.animation='none';void h1.offsetWidth;h1.style.animation='heartbeat .6s ease'}
+  const r=h1.getBoundingClientRect();
+  emojiBurst(r.left+r.width/2,r.top+4,'❤️',6);
+  _toast(PUNS[Math.floor(Math.random()*PUNS.length)]);
+  sfx.ding();
+})}
+
+// Lock logo → bounce burst
+const logo=document.querySelector('.lock-logo');
+if(logo){logo.addEventListener('click',()=>{const r=logo.getBoundingClientRect();emojiBurst(r.left+r.width/2,r.top+r.height/2,'🩺',5);sfx.pop()})}
+})();
 </script>
 </body>
 </html>
