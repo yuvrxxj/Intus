@@ -1,0 +1,17 @@
+[
+  {"code":"bp","label":"Blood pressure","min_age":18,"max_age":null,"sex":null,"interval_years":1,"requires_flag":null,"rationale":"Check at least yearly, and more often if readings run high or you have risk factors.","sort_order":10},
+  {"code":"lipids","label":"Lipid panel","min_age":20,"max_age":null,"sex":null,"interval_years":5,"requires_flag":null,"rationale":"Repeat roughly every 5 years when results are normal; sooner with a family history of high cholesterol.","sort_order":20},
+  {"code":"glucose_hba1c","label":"Blood sugar (glucose / HbA1c)","min_age":18,"max_age":null,"sex":null,"interval_years":3,"requires_flag":null,"rationale":"Recheck every few years; sooner with excess weight or a family history of diabetes.","sort_order":30},
+  {"code":"hiv","label":"HIV test","min_age":18,"max_age":null,"sex":null,"interval_years":null,"requires_flag":null,"rationale":"One-time baseline test in adulthood, then repeat only if your risk changes.","sort_order":40},
+  {"code":"hcv","label":"Hepatitis C test","min_age":18,"max_age":null,"sex":null,"interval_years":null,"requires_flag":null,"rationale":"One-time test in adulthood, since infection is often silent.","sort_order":50},
+  {"code":"hbsag_hepb","label":"Hepatitis B status and vaccination","min_age":18,"max_age":null,"sex":null,"interval_years":null,"requires_flag":null,"rationale":"Check immunity or infection status once, and vaccinate if you are not protected.","sort_order":60},
+  {"code":"tdap","label":"Tetanus and diphtheria booster","min_age":18,"max_age":null,"sex":null,"interval_years":10,"requires_flag":null,"rationale":"Booster about every 10 years.","sort_order":70},
+  {"code":"dental","label":"Dental check-up","min_age":0,"max_age":null,"sex":null,"interval_years":1,"requires_flag":null,"rationale":"Dental exam every 6 to 12 months.","sort_order":80},
+  {"code":"checkup","label":"General check-up","min_age":18,"max_age":null,"sex":null,"interval_years":1,"requires_flag":null,"rationale":"Yearly visit with a primary-care doctor.","sort_order":90},
+  {"code":"testicular","label":"Testicular self-check","min_age":15,"max_age":40,"sex":"male","interval_years":1,"requires_flag":null,"rationale":"Check regularly; testicular cancer is most common in younger men.","sort_order":100},
+  {"code":"skin","label":"Skin self-check","min_age":0,"max_age":null,"sex":null,"interval_years":1,"requires_flag":null,"rationale":"Look over your skin regularly and note any change in moles.","sort_order":110},
+  {"code":"mental","label":"Mood and anxiety questionnaire","min_age":16,"max_age":null,"sex":null,"interval_years":1,"requires_flag":null,"rationale":"Fill in a short PHQ-9 / GAD-7 questionnaire from time to time.","sort_order":120},
+  {"code":"audiometry","label":"Hearing test","min_age":null,"max_age":null,"sex":null,"interval_years":2,"requires_flag":"noise_or_blast_exposure","rationale":"Every 2 years if you have had loud-noise or blast exposure.","sort_order":130},
+  {"code":"colonoscopy","label":"Colonoscopy","min_age":45,"max_age":null,"sex":null,"interval_years":10,"requires_flag":"family_colorectal_cancer","rationale":"Screening starts at 45, or earlier with a family history of colorectal cancer.","sort_order":140},
+  {"code":"psa","label":"PSA (prostate) discussion","min_age":50,"max_age":null,"sex":"male","interval_years":2,"requires_flag":"family_prostate_cancer","rationale":"Talk to a doctor about PSA testing from 50, or earlier with a family history of prostate cancer.","sort_order":150}
+]
