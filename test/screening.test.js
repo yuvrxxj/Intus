@@ -92,9 +92,15 @@ test('detail text carries the date and the rule rationale', () => {
   assert.match(items.find((i) => i.code === 'bp').detail, /^No record yet\./);
 });
 
-test('sex matching ignores case, and unknown sex drops sex-specific rules', () => {
-  assert.deepEqual(build({ sex: 'Male', age: 30 }), build({ sex: 'male', age: 30 }));
-  assert.equal(codes(build({ sex: null, age: 60 })).includes('psa'), false);
+test('sex accepts M/F and any case, and unknown sex drops sex-specific rules', () => {
+  for (const alias of ['Male', 'M', 'm', ' male ']) {
+    assert.deepEqual(build({ sex: alias, age: 30 }), build({ sex: 'male', age: 30 }));
+  }
+  assert.deepEqual(build({ sex: 'F', age: 30 }), build({ sex: 'female', age: 30 }));
+  assert.equal(codes(build({ sex: 'M', age: 60 })).includes('psa'), true);
+  for (const unknown of [null, undefined, 'x', '']) {
+    assert.equal(codes(build({ sex: unknown, age: 60 })).includes('psa'), false);
+  }
 });
 
 test('output follows the order of the rules passed in', () => {
