@@ -31,7 +31,10 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
 .lock-sub{color:var(--muted);font-size:13px;margin-bottom:28px}
 .lock-input-wrap{position:relative;margin-bottom:12px}
 .lock-input{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);color:var(--txt);padding:13px 44px 13px 16px;font-size:15px;font-family:inherit;outline:none;transition:border-color var(--transition),box-shadow var(--transition);letter-spacing:2px}
+.lock-input.plain{letter-spacing:0;padding-right:16px}
 .lock-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue3)}
+.signout{margin-top:8px;background:none;border:1px solid var(--b1);border-radius:var(--rs);color:var(--muted);font-size:11px;padding:4px 10px;cursor:pointer;font-family:inherit;transition:color var(--transition),border-color var(--transition)}
+.signout:hover{color:var(--txt);border-color:var(--b2)}
 .lock-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
 .lock-btn{width:100%;background:linear-gradient(135deg,var(--blue),#6b6ef5);border:none;border-radius:var(--rs);color:#fff;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all var(--transition);position:relative;overflow:hidden}
 .lock-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(74,143,232,.35)}
@@ -294,13 +297,16 @@ table.bt tr:hover td{background:var(--s2)}
   <div class="lock-card">
     <div class="lock-logo">🩺</div>
     <div class="lock-title">Yuvraaj's Health OS</div>
-    <div class="lock-sub">Enter your passphrase to continue</div>
+    <div class="lock-sub">Sign in to continue</div>
     <div class="lock-input-wrap">
-      <input class="lock-input" id="pwInput" type="password" placeholder="••••••••" autocomplete="off" onkeydown="if(event.key==='Enter')unlock()">
+      <input class="lock-input plain" id="emailInput" type="email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('pwInput').focus()">
+    </div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" id="pwInput" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
       <button class="lock-toggle" onclick="togglePw()" id="pwToggle">👁</button>
     </div>
-    <button class="lock-btn" onclick="unlock()">Unlock</button>
-    <div class="lock-err hidden" id="lockErr">Incorrect passphrase</div>
+    <button class="lock-btn" id="signInBtn" onclick="unlock()">Sign in</button>
+    <div class="lock-err hidden" id="lockErr">Sign-in failed. Check your email and password.</div>
     <div class="lock-dots">
       <div class="lock-dot active"></div>
       <div class="lock-dot"></div>
@@ -323,6 +329,7 @@ table.bt tr:hover td{background:var(--s2)}
       <div class="date-chip">
         <div class="d" id="dateStr">—</div>
         <div class="t" id="timeStr">—</div>
+        <button class="signout" onclick="signOut()">Sign out</button>
       </div>
     </div>
 
@@ -595,36 +602,43 @@ table.bt tr:hover td{background:var(--s2)}
 <div class="toast" id="toast"></div>
 
 <script>
-// ── PASSWORD ──
-const HASH = 'a5f05c418bb8d1cafdac9e3e03668ea0f2a0d83ae7a7fd49d9a701a0f1c994a6';
-async function sha256(str){const b=new TextEncoder().encode(str);const h=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+// ── SIGN-IN ──
+// The session lives in Supabase Auth; the page only shows the app while a session exists.
+// Real protection is the row-level security on the database, not this screen.
+let appStarted=false;
+function startApp(){
+  if(appStarted)return;
+  appStarted=true;
+  const lock=document.getElementById('lock');
+  lock.style.transition='all .3s ease';
+  lock.style.opacity='0';
+  lock.style.transform='scale(1.02)';
+  setTimeout(()=>{lock.style.display='none'},300);
+  document.getElementById('app').style.display='block';
+  init();
+}
 async function unlock(){
-  const v=document.getElementById('pwInput').value;
-  if(!v){shake();return}
-  const h=await sha256(v);
-  if(h===HASH){
-    sessionStorage.setItem('auth','1');
-    document.getElementById('lock').style.opacity='0';
-    document.getElementById('lock').style.transform='scale(1.02)';
-    document.getElementById('lock').style.transition='all .3s ease';
-    setTimeout(()=>{document.getElementById('lock').style.display='none';},300);
-    document.getElementById('app').style.display='block';
-    init();
-  }else{
+  const email=document.getElementById('emailInput').value.trim();
+  const pw=document.getElementById('pwInput').value;
+  if(!email||!pw){shake();return}
+  const btn=document.getElementById('signInBtn');
+  btn.disabled=true;
+  const{error}=await sb.auth.signInWithPassword({email,password:pw});
+  btn.disabled=false;
+  if(error){
     shake();
     const el=document.getElementById('lockErr');el.classList.remove('hidden');
     setTimeout(()=>el.classList.add('hidden'),2500);
+    return;
   }
+  document.getElementById('pwInput').value='';
+}
+async function signOut(){
+  await sb.auth.signOut();
+  location.reload();
 }
 function shake(){const i=document.querySelector('.lock-input-wrap');i.style.animation='none';void i.offsetWidth;i.style.animation='shake .3s ease'}
 function togglePw(){const i=document.getElementById('pwInput');i.type=i.type==='password'?'text':'password'}
-document.addEventListener('DOMContentLoaded',()=>{
-  if(sessionStorage.getItem('auth')==='1'){
-    document.getElementById('lock').style.display='none';
-    document.getElementById('app').style.display='block';
-    init();
-  }
-});
 // shake animation (injected)
 const shakeCSS=document.createElement('style');
 shakeCSS.textContent='@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}';
@@ -635,6 +649,11 @@ const SB_URL='https://zfyeqfnretrrmtevczrc.supabase.co';
 const SB_KEY='sb_publishable_1vuya6LuGu-aWTr-xDW29Q_vfhbwfIM';
 const HFM_KEY='yuvraaj_hfm_v2';
 const sb=supabase.createClient(SB_URL,SB_KEY);
+// Fires with the stored session on page load, and again on sign-in and sign-out.
+// startApp is deferred because Supabase calls made inside this callback can deadlock.
+sb.auth.onAuthStateChange((_event,session)=>{
+  if(session)setTimeout(startApp,0);
+});
 
 function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function fmtDate(k){const[y,m,d]=k.split('-');return `${parseInt(d)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]}`}
