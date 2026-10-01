@@ -1,0 +1,16 @@
+/* Differences from the single-file page this replaces. */
+
+/* the React app mounts the dashboard only when signed in, so it no longer starts hidden */
+#app{display:block}
+
+.shake{animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+.panel{animation:fadeUp .3s ease}
+
+/* visible keyboard focus on the controls that were mouse-only before */
+.si:focus-visible,.hfm-drop:focus-visible,.tab:focus-visible,.bn-tab:focus-visible,.tb:focus-visible,.mb:focus-visible,.cbtn:focus-visible,.save-btn:focus-visible,.signout:focus-visible,.lock-btn:focus-visible,.lock-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

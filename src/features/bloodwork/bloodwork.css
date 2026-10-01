@@ -1,0 +1,73 @@
+/* Bloodwork screen. Colour classes reuse the dashboard tokens; nothing here relies on colour alone. */
+.bw-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.bw-sub{font-size:12px;color:var(--txt2)}
+.bw-legend{font-size:11px;color:var(--muted);margin:8px 0 12px;line-height:1.5}
+.bw-none{margin-top:14px;font-size:12px;color:var(--muted)}
+
+.cbanner-past{background:var(--yellow2);border-color:rgba(232,184,74,.3)}
+.cbanner-past .cbanner-hdr{color:var(--yellow)}
+.cbanner-past .cbanner-hdr::before{background:var(--yellow);animation:none}
+.cbanner-sum{cursor:pointer;margin-bottom:0}
+.cbanner-past[open] .cbanner-sum{margin-bottom:10px}
+.cbanner-none{background:var(--green3);border-color:rgba(61,196,122,.25)}
+.ci::before{content:'\26A0'}
+.ci-src{color:var(--muted);margin-left:4px}
+.cb-note{font-size:11px;color:var(--muted);margin-top:8px}
+.cb-caveat{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;padding:0 4px}
+.cb-unwatched{margin-top:6px}
+.cb-unwatched summary{cursor:pointer;color:var(--txt2)}
+.cb-unwatched div{margin-top:4px}
+.retry-btn{margin-top:10px;background:var(--s3);border:1px solid var(--b2);color:var(--txt);border-radius:var(--rs);padding:8px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+
+.bt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.bt-main{min-width:640px;table-layout:fixed}
+.bt-unit{color:var(--muted);font-size:11px;font-weight:400}
+.bv-none{font-weight:700;color:var(--txt2)}
+.bk-none{background:var(--s3);color:var(--muted)}
+.bk-crit{background:var(--red);color:#fff}
+.status-stack{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.bt-name{background:none;border:none;color:var(--txt);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;text-align:left;display:inline-flex;align-items:center;gap:6px}
+.bt-name:hover{color:var(--blue)}
+.bt-name:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+.bt-caret{color:var(--muted);width:10px;display:inline-block}
+tr.bt-open td{background:var(--s2)}
+tr.bt-detail td{background:var(--s2);padding:12px 8px 16px}
+.bt-detail-grid{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:18px;align-items:start}
+@media(max-width:800px){.bt-detail-grid{grid-template-columns:1fr}}
+.bt-limits{font-size:11px;color:var(--txt2);margin-top:8px;line-height:1.55}
+.bt-nolimit{color:var(--yellow)}
+.bt-desc{margin-top:6px;color:var(--muted)}
+table.bt-hist{min-width:0}
+.bt-notes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--txt2)}
+.bt-notes .tag{margin-left:0}
+
+.chg{font-weight:700;color:var(--txt);white-space:nowrap}
+.chg-arrow{display:inline-block;width:1em;text-align:center}
+.chg-flat{color:var(--txt2)}
+.chg-none{color:var(--muted);font-size:11px}
+.chg-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap}
+.chg-trend{font-size:10px;color:var(--txt2);margin-top:2px}
+
+.tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.tag-demo{background:var(--red3);color:var(--red);border:1px solid rgba(217,79,92,.3)}
+.tag-warn{background:var(--yellow2);color:var(--yellow);border:1px solid rgba(232,184,74,.3)}
+
+.spark{display:block;max-width:100%;height:auto}
+.spark-band{fill:var(--green3)}
+.spark-limit{stroke:var(--b2);stroke-dasharray:3 3}
+.spark-line{stroke:var(--blue);stroke-width:1.5}
+.spark-dot{fill:var(--blue)}
+
+/* phones: one stacked block per marker instead of a table that scrolls sideways */
+@media(max-width:640px){
+  table.bt-main{min-width:0;table-layout:auto}
+  .bt-main colgroup,.bt-main thead{display:none}
+  .bt-main tbody,.bt-main tr{display:block}
+  .bt-main tr.bt-row{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;padding:12px 4px;border-bottom:1px solid rgba(34,34,56,.5)}
+  .bt-main tr.bt-row td{display:block;border:none;padding:0;background:none}
+  .bt-main tr.bt-row td:first-child{grid-column:1 / -1}
+  .bt-main tr.bt-row td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .bt-main tr.bt-detail td{display:block;padding:8px 4px 14px}
+  .bt-detail-grid{gap:12px}
+  table.bt-hist{table-layout:auto}
+}
