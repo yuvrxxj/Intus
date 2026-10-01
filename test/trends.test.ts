@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mannKendall, theilSenSlope, trendOfReadings, twoSidedNormalP, TREND } from '../lib/trends.js';
+import { mannKendall, theilSenSlope, trendOfReadings, twoSidedNormalP, TREND } from '../src/lib/trends.ts';
 
-const near = (actual, expected, rel = 1e-9) =>
-  assert.ok(Math.abs(actual - expected) <= rel * Math.abs(expected), `${actual} vs ${expected}`);
+const near = (actual: number | null, expected: number, rel = 1e-9) =>
+  assert.ok(actual !== null && Math.abs(actual - expected) <= rel * Math.abs(expected), `${actual} vs ${expected}`);
 
 // reference values from scipy.stats.norm and pymannkendall.original_test (MIT)
 test('two-sided normal p matches scipy across the tail', () => {
@@ -67,14 +67,15 @@ test('a constant series has no trend and p of 1', () => {
 
 test('non-finite values are rejected', () => {
   assert.throws(() => mannKendall([1, 2, NaN, 4, 5]), TypeError);
+  // @ts-expect-error a string in a numeric series is the point of the test
   assert.throws(() => mannKendall([1, 2, '3', 4, 5]), TypeError);
 });
 
-function permutationVariance(values) {
-  const counts = new Map();
+function permutationVariance(values: number[]): number {
+  const counts = new Map<number, number>();
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
   const keys = [...counts.keys()];
-  const perm = [];
+  const perm: number[] = [];
   let total = 0;
   let sum = 0;
   let sumSq = 0;
@@ -91,11 +92,11 @@ function permutationVariance(values) {
     }
     for (const k of keys) {
       if (counts.get(k) === 0) continue;
-      counts.set(k, counts.get(k) - 1);
+      counts.set(k, (counts.get(k) ?? 0) - 1);
       perm.push(k);
       walk();
       perm.pop();
-      counts.set(k, counts.get(k) + 1);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
     }
   })();
   return sumSq / total - (sum / total) ** 2;
@@ -105,7 +106,7 @@ test('variance equals the exact permutation variance, including ties', () => {
   const multisets = [[1, 2, 3, 4, 5, 6], [1, 1, 2, 3, 3], [2, 2, 2, 5, 7, 7, 9], [4, 4, 4, 4, 4, 4]];
   for (const values of multisets) {
     const { variance } = mannKendall(values, { minPoints: 0 });
-    assert.ok(Math.abs(variance - permutationVariance(values)) < 1e-9, values.join(','));
+    assert.ok(variance !== null && Math.abs(variance - permutationVariance(values)) < 1e-9, values.join(','));
   }
 });
 
@@ -116,14 +117,14 @@ test('Theil-Sen slope is the median of pairwise slopes', () => {
   assert.equal(theilSenSlope([3, 3, 3], [1, 2, 3]), null);
 });
 
-const readings = [
+const readings = ([
   ['2025-01-01', 100],
   ['2025-01-11', 101],
   ['2025-02-15', 108],
   ['2025-03-02', 107],
   ['2025-07-20', 130],
   ['2026-01-01', 150],
-].map(([measured_at, value]) => ({ measured_at, value }));
+] as const).map(([measured_at, value]) => ({ measured_at: measured_at as string, value: value as number | string | null }));
 
 test('trendOfReadings orders by date and reports a per-day slope', () => {
   const sorted = trendOfReadings(readings);

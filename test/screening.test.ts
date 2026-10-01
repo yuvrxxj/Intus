@@ -1,14 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildScreeningCalendar, latestDoneByCode, SCREENING_STATUS as S } from '../lib/screening.js';
-import { dayNumber, isoDay } from '../lib/dates.js';
+import {
+  buildScreeningCalendar, latestDoneByCode, SCREENING_STATUS as S,
+  type ScreeningCalendarInput, type ScreeningItem, type ScreeningRule,
+} from '../src/lib/screening.ts';
+import { dayNumber, isoDay } from '../src/lib/dates.ts';
 
-const rules = JSON.parse(readFileSync(new URL('./fixtures/screening-rules.json', import.meta.url), 'utf8'));
+const rules: ScreeningRule[] = JSON.parse(readFileSync(new URL('./fixtures/screening-rules.json', import.meta.url), 'utf8'));
 const today = '2026-09-30';
-const build = (args) => buildScreeningCalendar({ rules, today, ...args });
-const codes = (items) => items.map((i) => i.code);
-const statusOf = (items, code) => items.find((i) => i.code === code)?.status;
+const build = (args: Omit<ScreeningCalendarInput, 'rules' | 'today'> & { today?: string }) => buildScreeningCalendar({ rules, today, ...args });
+const codes = (items: ScreeningItem[]) => items.map((i) => i.code);
+const statusOf = (items: ScreeningItem[], code: string) => items.find((i) => i.code === code)?.status;
 
 test('adult male with no history: everything applicable is due, risk-gated rules say not yet', () => {
   const items = build({ sex: 'male', age: 30 });
@@ -49,7 +52,7 @@ test('PSA is male only and starts at 50, or earlier with family history', () => 
 });
 
 test('testicular self-check covers males 15 to 40 only', () => {
-  const has = (sex, age) => codes(build({ sex, age })).includes('testicular');
+  const has = (sex: string, age: number) => codes(build({ sex, age })).includes('testicular');
   assert.deepEqual([has('male', 14), has('male', 15), has('male', 40), has('male', 41), has('female', 20)], [false, true, true, false, false]);
 });
 
@@ -61,7 +64,7 @@ test('hearing test appears only when the exposure flag is set, at any age', () =
 });
 
 test('interval rules flip to overdue once a full interval has passed', () => {
-  const at = (done) => statusOf(build({ sex: 'male', age: 30, lastDone: { bp: done } }), 'bp');
+  const at = (done: string) => statusOf(build({ sex: 'male', age: 30, lastDone: { bp: done } }), 'bp');
   assert.equal(at('2025-09-30'), S.UP_TO_DATE);
   assert.equal(at('2025-09-29'), S.OVERDUE);
 });
@@ -86,10 +89,11 @@ test('latestDoneByCode keeps the most recent date whatever the row order', () =>
 test('detail text carries the date and the rule rationale', () => {
   const items = build({ sex: 'male', age: 30, lastDone: { lipids: '2024-09-30' } });
   const lipids = items.find((i) => i.code === 'lipids');
+  assert.ok(lipids);
   assert.equal(lipids.lastDone, '2024-09-30');
   assert.match(lipids.detail, /2024-09-30.*2\.0 years ago \(every 5 years\)/);
-  assert.ok(lipids.detail.endsWith(rules.find((r) => r.code === 'lipids').rationale));
-  assert.match(items.find((i) => i.code === 'bp').detail, /^No record yet\./);
+  assert.ok(lipids.detail.endsWith(rules.find((r) => r.code === 'lipids')?.rationale ?? ''));
+  assert.match(items.find((i) => i.code === 'bp')?.detail ?? '', /^No record yet\./);
 });
 
 test('sex accepts M/F and any case, and unknown sex drops sex-specific rules', () => {
@@ -110,7 +114,7 @@ test('output follows the order of the rules passed in', () => {
 
 test('a missing profile fails loudly instead of returning an empty calendar', () => {
   for (const age of [undefined, null, NaN, -1, '30']) {
-    assert.throws(() => build({ sex: 'male', age }), TypeError);
+    assert.throws(() => build({ sex: 'male', age: age as number }), TypeError);
   }
   assert.throws(() => build({ sex: 'male', age: 30, today: 'not-a-date' }), TypeError);
 });

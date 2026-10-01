@@ -1,4 +1,4 @@
-import { dayNumber, isoDay } from './dates.js';
+import { dayNumber, isoDay } from './dates.ts';
 
 export const SCREENING_STATUS = Object.freeze({
   DUE: 'due',
@@ -7,14 +7,55 @@ export const SCREENING_STATUS = Object.freeze({
   NOT_YET: 'not_yet',
 });
 
-const SEX_ALIASES = { m: 'male', male: 'male', f: 'female', female: 'female' };
+export type ScreeningStatus = (typeof SCREENING_STATUS)[keyof typeof SCREENING_STATUS];
+
+/** A screening_rules row. */
+export interface ScreeningRule {
+  code: string;
+  label: string;
+  min_age: number | null;
+  max_age: number | null;
+  sex: string | null;
+  interval_years: number | null;
+  requires_flag: string | null;
+  rationale: string | null;
+  sort_order?: number;
+}
+
+export interface ScreeningHistoryRow {
+  screening_code: string;
+  done_date: string;
+}
+
+/** Profile booleans (family_* / noise_*) keyed by column name. */
+export type ScreeningFlags = Record<string, boolean | null | undefined>;
+
+export interface ScreeningItem {
+  code: string;
+  label: string;
+  status: ScreeningStatus;
+  detail: string;
+  lastDone: string | null;
+}
+
+export interface ScreeningCalendarInput {
+  rules: readonly ScreeningRule[];
+  sex: string | null | undefined;
+  age: number;
+  flags?: ScreeningFlags;
+  lastDone?: Record<string, string>;
+  today?: Date | string;
+}
+
+const SEX_ALIASES: Record<string, 'male' | 'female'> = { m: 'male', male: 'male', f: 'female', female: 'female' };
 const APPLIES = 'applies';
 const TOO_EARLY = 'too_early';
 const SKIP = 'skip';
+type Gate = typeof APPLIES | typeof TOO_EARLY | typeof SKIP;
 
 /** historyRows: screening_history rows; returns { code: latest done_date } */
-export function latestDoneByCode(historyRows) {
-  const latest = {};
+export function latestDoneByCode(historyRows: readonly ScreeningHistoryRow[]): Record<string, string> {
+  const latest: Record<string, string> = {};
   for (const { screening_code: code, done_date: date } of historyRows) {
     if (!Object.hasOwn(latest, code) || dayNumber(date) > dayNumber(latest[code])) {
       latest[code] = date;
@@ -23,7 +64,7 @@ export function latestDoneByCode(historyRows) {
   return latest;
 }
 
-function gate(rule, sex, age, flags) {
+function gate(rule: ScreeningRule, sex: string | null, age: number, flags: ScreeningFlags): Gate {
   if (rule.sex && rule.sex !== sex) return SKIP;
   const flagOn = rule.requires_flag ? Boolean(flags[rule.requires_flag]) : false;
   // with min_age the flag bypasses the age gate; without min_age the flag is required
@@ -34,11 +75,15 @@ function gate(rule, sex, age, flags) {
   return rule.requires_flag ? TOO_EARLY : SKIP;
 }
 
-function describe(text, rationale) {
+function describe(text: string, rationale: string | null): string {
   return rationale ? `${text} ${rationale}` : text;
 }
 
-function evaluateStatus(rule, doneDate, todayDay) {
+function evaluateStatus(
+  rule: ScreeningRule,
+  doneDate: string | null,
+  todayDay: number,
+): Pick<ScreeningItem, 'status' | 'detail' | 'lastDone'> {
   if (doneDate == null) {
     return { status: SCREENING_STATUS.DUE, detail: describe('No record yet.', rule.rationale), lastDone: null };
   }
@@ -64,11 +109,18 @@ function evaluateStatus(rule, doneDate, todayDay) {
  * rules: screening_rules rows in display order; flags: profile row (family_* / noise_* booleans);
  * lastDone: { code: 'YYYY-MM-DD' } from latestDoneByCode
  */
-export function buildScreeningCalendar({ rules, sex, age, flags = {}, lastDone = {}, today }) {
+export function buildScreeningCalendar({
+  rules,
+  sex,
+  age,
+  flags = {},
+  lastDone = {},
+  today,
+}: ScreeningCalendarInput): ScreeningItem[] {
   if (!Number.isFinite(age) || age < 0) throw new TypeError('age must be a non-negative number');
   const normalizedSex = SEX_ALIASES[String(sex ?? '').trim().toLowerCase()] ?? null;
   const todayDay = dayNumber(today ?? new Date());
-  const items = [];
+  const items: ScreeningItem[] = [];
   for (const rule of rules) {
     const verdict = gate(rule, normalizedSex, age, flags);
     if (verdict === SKIP) continue;

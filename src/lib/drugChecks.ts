@@ -1,5 +1,5 @@
-import { dayNumber } from './dates.js';
-import { toNumber, toNumberOrNull } from './numbers.js';
+import { dayNumber } from './dates.ts';
+import { toNumber, toNumberOrNull, type NumericInput } from './numbers.ts';
 
 export const PARACETAMOL = Object.freeze({
   NONE: 'none',
@@ -9,12 +9,45 @@ export const PARACETAMOL = Object.freeze({
   EXCEEDED: 'exceeded',
 });
 
+export type ParacetamolStatus = (typeof PARACETAMOL)[keyof typeof PARACETAMOL];
+
 // Adult label maximum, and a lower line that asks the user to look at the total before reaching it.
 export const PARACETAMOL_LIMITS = Object.freeze({ cautionMg: 3000, maxMg: 4000 });
 
+/** The slice of a medications row that the drug checks read. */
+export interface MedicationLike {
+  name: string;
+  dosage?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  paracetamol_mg_per_dose?: NumericInput;
+  doses_per_day?: NumericInput;
+}
+
+export interface ParacetamolItem {
+  name: string;
+  mgPerDose: number;
+  dosesPerDay: number;
+  dailyMg: number;
+}
+
+export interface ParacetamolOptions {
+  today: string;
+  cautionMg?: number;
+  maxMg?: number;
+}
+
+export interface ParacetamolTotal {
+  status: ParacetamolStatus;
+  totalMg: number;
+  items: ParacetamolItem[];
+  incomplete: string[];
+  limits: { cautionMg: number; maxMg: number };
+}
+
 // Dates decide what is current. The generated `active` column is end_date IS NULL, so a course that
 // ends next week would read as inactive and drop out of the daily total.
-function takenOn(med, day) {
+function takenOn(med: MedicationLike, day: number): boolean {
   if (med.start_date != null && dayNumber(med.start_date) > day) return false;
   if (med.end_date != null && dayNumber(med.end_date) < day) return false;
   return true;
@@ -25,11 +58,14 @@ function takenOn(med, day) {
  * Adds up paracetamol_mg_per_dose x doses_per_day over everything taken today.
  * A paracetamol row missing either number cannot be added up, so it is reported as incomplete rather than ignored.
  */
-export function paracetamolDailyTotal(medications, { today, cautionMg, maxMg } = {}) {
+export function paracetamolDailyTotal(
+  medications: readonly MedicationLike[],
+  { today, cautionMg, maxMg }: ParacetamolOptions,
+): ParacetamolTotal {
   const limits = { ...PARACETAMOL_LIMITS, ...(cautionMg != null && { cautionMg }), ...(maxMg != null && { maxMg }) };
   const todayDay = dayNumber(today);
-  const items = [];
-  const incomplete = [];
+  const items: ParacetamolItem[] = [];
+  const incomplete: string[] = [];
   let totalMg = 0;
   for (const med of medications) {
     if (med.paracetamol_mg_per_dose == null && med.doses_per_day == null) continue;
@@ -45,7 +81,7 @@ export function paracetamolDailyTotal(medications, { today, cautionMg, maxMg } =
     items.push({ name: med.name, mgPerDose, dosesPerDay, dailyMg });
     totalMg += dailyMg;
   }
-  let status = PARACETAMOL.OK;
+  let status: ParacetamolStatus = PARACETAMOL.OK;
   if (totalMg > limits.maxMg) status = PARACETAMOL.EXCEEDED;
   else if (totalMg >= limits.cautionMg) status = PARACETAMOL.CAUTION;
   else if (incomplete.length > 0) status = PARACETAMOL.INCOMPLETE;
@@ -55,7 +91,7 @@ export function paracetamolDailyTotal(medications, { today, cautionMg, maxMg } =
 
 // Biomarker codes (as in the biomarkers table) measured by assays that commonly use biotin-streptavidin
 // chemistry. Whether a given lab's platform is affected depends on the lab, so this errs towards warning.
-export const BIOTIN_SENSITIVE_CODES = Object.freeze([
+export const BIOTIN_SENSITIVE_CODES: readonly string[] = Object.freeze([
   'tsh', 't3_free', 't4_free', 't4_total', 'vitamin_d', 'vitamin_b12', 'ferritin', 'cortisol', 'testosterone',
 ]);
 
@@ -64,6 +100,22 @@ export const BIOTIN_WASHOUT_DAYS = 3;
 
 const BIOTIN_NAME = /\bbiotin\b|\bvitamin\s*b-?7\b/i;
 
+export interface BiotinInput {
+  medications: readonly MedicationLike[];
+  readings: readonly { id?: string; biomarker_id: string; measured_at: string }[];
+  biomarkers: readonly { id: string; code: string; name: string }[];
+  washoutDays?: number;
+}
+
+export interface BiotinWarning {
+  reading_id: string | null;
+  code: string;
+  name: string;
+  measured_at: string;
+  medication: string;
+  dosage: string | null;
+}
+
 /**
  * medications: medications rows (any status, so past readings are judged against what was taken then).
  * readings: biomarker_readings rows. biomarkers: biomarkers rows, for the code of each reading.
@@ -71,14 +123,19 @@ const BIOTIN_NAME = /\bbiotin\b|\bvitamin\s*b-?7\b/i;
  * The dose is not judged: a small multivitamin amount probably does not matter and a high-dose hair
  * supplement does, and dosage is free text, so the warning carries the dose text and leaves the call to the reader.
  */
-export function biotinWarnings({ medications, readings, biomarkers, washoutDays = BIOTIN_WASHOUT_DAYS }) {
+export function biotinWarnings({
+  medications,
+  readings,
+  biomarkers,
+  washoutDays = BIOTIN_WASHOUT_DAYS,
+}: BiotinInput): BiotinWarning[] {
   const biotinMeds = medications.filter((m) => BIOTIN_NAME.test(m.name ?? ''));
   if (biotinMeds.length === 0) return [];
   const sensitiveIds = new Map(
     biomarkers.filter((b) => BIOTIN_SENSITIVE_CODES.includes(b.code)).map((b) => [b.id, b]),
   );
   const washout = toNumberOrNull(washoutDays, 'washoutDays') ?? 0;
-  const warnings = [];
+  const warnings: BiotinWarning[] = [];
   for (const reading of readings) {
     const biomarker = sensitiveIds.get(reading.biomarker_id);
     if (!biomarker) continue;

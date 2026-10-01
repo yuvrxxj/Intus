@@ -2,13 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   paracetamolDailyTotal, biotinWarnings, PARACETAMOL as P, BIOTIN_SENSITIVE_CODES, BIOTIN_WASHOUT_DAYS,
-} from '../lib/drugChecks.js';
+  type MedicationLike, type ParacetamolOptions,
+} from '../src/lib/drugChecks.ts';
 
 const today = '2026-10-01';
-const med = (name, mg, doses, extra = {}) => ({
+type Figure = number | string | null;
+const med = (name: string, mg: Figure, doses: Figure, extra: Record<string, unknown> = {}): MedicationLike => ({
   name, paracetamol_mg_per_dose: mg, doses_per_day: doses, start_date: null, end_date: null, ...extra,
 });
-const total = (meds, options) => paracetamolDailyTotal(meds, { today, ...options });
+const total = (meds: MedicationLike[], options?: Partial<ParacetamolOptions>) =>
+  paracetamolDailyTotal(meds, { today, ...options });
 
 test('no paracetamol anywhere is none, not ok', () => {
   assert.equal(total([]).status, P.NONE);
@@ -35,7 +38,7 @@ test('products add up across rows, such as a cold remedy on top of a regular dos
 });
 
 test('course dates decide what counts today, inclusive at both ends', () => {
-  const at = (extra) => total([med('a', 1000, 4, extra)]).totalMg;
+  const at = (extra: Record<string, unknown>) => total([med('a', 1000, 4, extra)]).totalMg;
   assert.equal(at({ start_date: '2026-10-01' }), 4000);
   assert.equal(at({ start_date: '2026-10-02' }), 0);
   assert.equal(at({ end_date: '2026-10-01' }), 4000);
@@ -65,6 +68,7 @@ test('limits can be overridden', () => {
 test('bad figures and a missing date throw', () => {
   assert.throws(() => total([med('a', 'lots', 2)]), TypeError);
   assert.throws(() => total([med('a', -500, 2)]), RangeError);
+  // @ts-expect-error the date is required on purpose
   assert.throws(() => paracetamolDailyTotal([med('a', 500, 2)], {}), TypeError);
   assert.throws(() => paracetamolDailyTotal([med('a', 500, 2)], { today: 'tomorrow' }), TypeError);
 });
@@ -74,9 +78,9 @@ const biomarkers = [
   { id: 'vd', code: 'vitamin_d', name: 'Vitamin D' },
   { id: 'k', code: 'potassium', name: 'Potassium' },
 ];
-const reading = (id, biomarker_id, measured_at) => ({ id, biomarker_id, value: '1', measured_at });
-const biotin = (extra = {}) => ({ name: 'Biotin', dosage: '10 mg', start_date: '2026-01-01', end_date: null, ...extra });
-const warn = (meds, readings) => biotinWarnings({ medications: meds, readings, biomarkers });
+const reading = (id: string, biomarker_id: string, measured_at: string) => ({ id, biomarker_id, value: '1', measured_at });
+const biotin = (extra: Record<string, unknown> = {}): MedicationLike => ({ name: 'Biotin', dosage: '10 mg', start_date: '2026-01-01', end_date: null, ...extra });
+const warn = (meds: MedicationLike[], readings: ReturnType<typeof reading>[]) => biotinWarnings({ medications: meds, readings, biomarkers });
 
 test('only assays that biotin can distort are warned about', () => {
   const w = warn([biotin()], [reading('r1', 'tsh', '2026-06-06'), reading('r2', 'k', '2026-06-06'), reading('r3', 'vd', '2026-06-06')]);
@@ -101,7 +105,7 @@ test('biotin is recognised by name, in any case, including vitamin B7', () => {
 });
 
 test('timing: warns while taking it and through the washout, not before or well after', () => {
-  const r = (date) => [reading('r1', 'tsh', date)];
+  const r = (date: string) => [reading('r1', 'tsh', date)];
   const ended = biotin({ start_date: '2026-01-01', end_date: '2026-06-01' });
   assert.equal(warn([ended], r('2026-06-01')).length, 1);
   assert.equal(warn([ended], r(`2026-06-0${1 + BIOTIN_WASHOUT_DAYS}`)).length, 1);
