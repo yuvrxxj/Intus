@@ -47,16 +47,26 @@ export interface ParacetamolTotal {
 
 // Dates decide what is current. The generated `active` column is end_date IS NULL, so a course that
 // ends next week would read as inactive and drop out of the daily total.
-function takenOn(med: MedicationLike, day: number): boolean {
+export function takenOn(med: MedicationLike, day: number): boolean {
   if (med.start_date != null && dayNumber(med.start_date) > day) return false;
   if (med.end_date != null && dayNumber(med.end_date) < day) return false;
   return true;
+}
+
+// Names that mean a product is, or contains, paracetamol. It cannot be exhaustive (cold and flu remedies and
+// combination painkillers often contain it), so the screens also remind the reader to check labels.
+const PARACETAMOL_NAME = /paracetamol|acetaminophen|\b(?:panadol|dolo|crocin|calpol|tylenol|paracip)\b/i;
+
+export function looksLikeParacetamol(name: string): boolean {
+  return PARACETAMOL_NAME.test(name ?? '');
 }
 
 /**
  * medications: medications rows. today: 'YYYY-MM-DD' (required, so results never depend on the clock).
  * Adds up paracetamol_mg_per_dose x doses_per_day over everything taken today.
  * A paracetamol row missing either number cannot be added up, so it is reported as incomplete rather than ignored.
+ * That includes a product whose name says paracetamol but which has no figures at all: leaving it out of the
+ * total would read as reassurance that nothing was missed.
  */
 export function paracetamolDailyTotal(
   medications: readonly MedicationLike[],
@@ -68,7 +78,8 @@ export function paracetamolDailyTotal(
   const incomplete: string[] = [];
   let totalMg = 0;
   for (const med of medications) {
-    if (med.paracetamol_mg_per_dose == null && med.doses_per_day == null) continue;
+    const hasFigure = med.paracetamol_mg_per_dose != null || med.doses_per_day != null;
+    if (!hasFigure && !looksLikeParacetamol(med.name)) continue;
     if (!takenOn(med, todayDay)) continue;
     if (med.paracetamol_mg_per_dose == null || med.doses_per_day == null) {
       incomplete.push(med.name);
@@ -100,6 +111,10 @@ export const BIOTIN_WASHOUT_DAYS = 3;
 
 const BIOTIN_NAME = /\bbiotin\b|\bvitamin\s*b-?7\b/i;
 
+export function looksLikeBiotin(name: string): boolean {
+  return BIOTIN_NAME.test(name ?? '');
+}
+
 export interface BiotinInput {
   medications: readonly MedicationLike[];
   readings: readonly { id?: string; biomarker_id: string; measured_at: string }[];
@@ -129,7 +144,7 @@ export function biotinWarnings({
   biomarkers,
   washoutDays = BIOTIN_WASHOUT_DAYS,
 }: BiotinInput): BiotinWarning[] {
-  const biotinMeds = medications.filter((m) => BIOTIN_NAME.test(m.name ?? ''));
+  const biotinMeds = medications.filter((m) => looksLikeBiotin(m.name));
   if (biotinMeds.length === 0) return [];
   const sensitiveIds = new Map(
     biomarkers.filter((b) => BIOTIN_SENSITIVE_CODES.includes(b.code)).map((b) => [b.id, b]),

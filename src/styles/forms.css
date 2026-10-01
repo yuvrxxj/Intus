@@ -1,0 +1,28 @@
+/* Shared form and button styles for the screens that write data (Medications, Screening). */
+input[type=date],input[type=email],select{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);color:var(--txt);padding:10px 12px;font-size:14px;width:100%;outline:none;transition:border-color var(--transition),box-shadow var(--transition);font-family:inherit;color-scheme:dark}
+select{appearance:auto}
+input[type=date]:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue3)}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);margin:0}
+
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 14px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+.fld.wide{grid-column:1 / -1}
+.fld-err{color:var(--red);font-size:11px;margin-top:4px}
+.fld-hint{color:var(--muted);font-size:11px;margin-top:4px}
+.check-row{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--txt2);margin:6px 0;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500}
+.check-row label{margin:0}
+
+.btn{background:var(--s3);border:1px solid var(--b2);color:var(--txt);border-radius:var(--rs);padding:8px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:border-color var(--transition),background var(--transition)}
+.btn:hover:not(:disabled){border-color:var(--blue)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),#6b6ef5);border-color:transparent;color:#fff}
+.btn-danger{color:var(--red)}
+.btn-danger:hover:not(:disabled){border-color:var(--red)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+.notice{border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.5;margin-top:10px;border:1px solid var(--b1);color:var(--txt2);background:var(--s2)}
+.notice-warn{background:var(--yellow2);border-color:rgba(232,184,74,.3);color:var(--yellow)}
+.notice-bad{background:var(--red3);border-color:rgba(217,79,92,.3);color:var(--red)}
+.notice-ok{background:var(--green3);border-color:rgba(61,196,122,.25);color:var(--green)}
+.empty{color:var(--muted);font-size:13px;padding:14px 4px}
