@@ -1,0 +1,47 @@
+name: Apply database migrations
+
+# Merging a new file into supabase/migrations applies it to the production database.
+# Needs the repository secret SUPABASE_DB_URL: the session-pooler connection string from the Supabase
+# dashboard (Connect), with the database password filled in. See supabase/README.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be applied and change nothing
+        type: boolean
+        default: true
+
+# Two runs at once would race on the same files. Queue them instead.
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The migrations run against a throwaway database first. If they fail there, production is not touched.
+      - name: Check the migrations on a throwaway database
+        run: npm run test:db
+
+      - name: Apply to production
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash supabase/apply-migrations.sh ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}

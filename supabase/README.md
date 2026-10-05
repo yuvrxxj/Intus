@@ -3,57 +3,82 @@
 Every person sees only their own rows. The database enforces this with row level security, so it holds even
 if someone calls the API directly with the public key in the app.
 
-| File | What it does | Applied to the live project? |
+## Changing the database
+
+Add a file to `supabase/migrations/` (name it `YYYYMMDDHHMMSS_what_it_does.sql`), open a pull request, merge it.
+The workflow `.github/workflows/migrate.yml` then:
+
+1. runs the migrations on a throwaway Postgres (`npm run test:db`); if that fails, production is not touched;
+2. applies the files production has not seen yet, oldest first, each in its own transaction, using
+   `supabase/apply-migrations.sh`.
+
+A file lands completely or not at all. A failed file is rolled back and tried again on the next run. Applied
+files are recorded in `supabase_migrations.repo_migrations`, a table the API cannot reach.
+
+Do not apply schema changes through the Supabase connector in a Claude Code session. Anything that drops or
+deletes makes it ask for a confirmation that never reaches a person in a cloud session, and the call hangs until it
+times out. Reads (`select`) are fine there.
+
+**One-time setup:** add the repository secret `SUPABASE_DB_URL` (GitHub, Settings, Secrets and variables, Actions).
+Its value is the **session pooler** connection string from the Supabase dashboard (Connect, Session pooler), with
+the database password filled in. The direct connection is IPv6 only and GitHub's runners cannot reach it. To check
+the connection without changing anything, run the workflow by hand (Actions, Apply database migrations, Run
+workflow). It defaults to a dry run that lists what is pending.
+
+The same script works from a laptop: `DATABASE_URL=... bash supabase/apply-migrations.sh --dry-run`.
+
+`supabase/baseline.txt` lists the files that were applied by hand before the script existed. They are never run
+again. Do not add new files to it.
+
+## The model
+
+| Kind of table | Tables | Rule |
 | --- | --- | --- |
-| `20261001000100_app_owner.sql` | Adds the `app_owner` table and an owner check | Yes |
-| `20261001000150_private_is_owner.sql` | Moves the owner check into a private schema | Yes |
-| `20261001000200_owner_lockdown.sql` | Replaces the open policies with owner-only ones | Yes |
-| `20261005000100_per_user_data.sql` | Adds `user_id` to every personal table, assigns existing rows to the owner, and replaces owner-only with per-person policies | Yes (run in the SQL editor on 5 Oct 2026) |
-| `20261005000200_drop_single_user_unique.sql` | Drops the one-person `unique(log_date)` on `daily_logs` | **No, apply last** |
-| `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day | Yes |
-| `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` | Yes |
-| `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` (activity level, diet, workouts a week, cardio notes, typical and desired day) | Yes |
+| Personal | `biomarker_readings`, `daily_logs`, `habits`, `medications`, `profile`, `screening_history`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
+| Reference | `biomarkers`, `screening_rules` | Everyone signed in can read them. Nobody can change them through the API; they are edited by migration |
+| Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
 
-`one-off/20261005_seed_owner_habits.sql` is not a migration. It carries the original owner's old hardcoded habits
-(cigarettes, lift, core, cardio, steps) into the new table and copies their old `daily_logs` columns into the new
-`habits` column. It is safe to run more than once, and only adds what is missing. It was run once on 5 Oct 2026.
-Run it again right after the new app is deployed, to pick up any days the old app logged in the meantime.
+One log per person per day (`unique (user_id, log_date)`), and one profile per person.
 
-## Applying the per-user change
+## Migrations
 
-Order matters, because the app and the database have to agree on how a day is saved.
+| File | What it does |
+| --- | --- |
+| `20261001000100_app_owner.sql` | Adds the `app_owner` table and an owner check |
+| `20261001000150_private_is_owner.sql` | Moves the owner check into a private schema |
+| `20261001000200_owner_lockdown.sql` | Replaces the open policies with owner-only ones |
+| `20261005000100_per_user_data.sql` | Adds `user_id` to every personal table, assigns existing rows to the owner, and replaces owner-only with per-person policies |
+| `20261005000200_drop_single_user_unique.sql` | Drops the one-person `unique(log_date)` on `daily_logs` |
+| `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day |
+| `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` |
+| `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` |
 
-1. **Apply `20261005000100_per_user_data.sql`** (done). It is safe while the current app is live. Every existing row
-   is assigned to the one registered owner, so you still see everything, and the old save keeps working. It
-   refuses to run unless `app_owner` holds exactly one row.
-2. **Regenerate `src/db/types.ts`** so the new `user_id` column is in the types, and commit it (done).
-3. **Deploy the new app** (merge the pull request). Saving a day now uses the per-person key
-   `(user_id, log_date)`.
-4. **Apply `20261005000200_drop_single_user_unique.sql`.** Then run the habits seed again (see above). Until then a second person could not save a log for a
-   date you already have. It refuses to run if step 1 has not been applied.
+All eight are applied to the live project. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
+the original owner's old hardcoded habits (cigarettes, lift, core, cardio, steps) into the new table and copies
+their old `daily_logs` columns into the new `habits` column. It is safe to run more than once, and only adds what
+is missing.
 
-Applying a file that contains a `DROP` from an AI coding session can stall, because the Supabase tool asks for a
-confirmation that never reaches the person running it. If that happens, paste the file into the Supabase
-dashboard's SQL editor and run it there.
+To undo the per-user change, put the owner-only policies back by re-running `20261001000200_owner_lockdown.sql`.
+The `user_id` columns can stay, since the owner-only rule ignores them.
 
-To undo step 1, put the owner-only policies back by re-running `20261001000200_owner_lockdown.sql`. The
-`user_id` columns can stay, since the owner-only rule ignores them.
+## Sign-ups
 
-## Before opening sign-ups
+Sign-ups are open for testing: email and password only. In the Supabase dashboard (Authentication, Sign In /
+Providers) **Allow new users to sign up** must be on and **Confirm email** must be off, so a new account gets a
+session straight away and no email is sent. With Confirm email on, new people would see "Check your email", and
+Supabase's built-in sender only delivers to members of your own Supabase organisation. Neither setting can be read
+from the repository, so check them in the dashboard if sign-up misbehaves.
 
-Sign-ups are off in Supabase today, which is the safe state. When the onboarding work is ready:
-
-- Supabase dashboard, Authentication, Sign In / Providers: turn **Allow new users to sign up** on, keep
-  **Confirm email** on, and set the minimum password length to 8 or more.
-- Authentication, URL Configuration: set the Site URL to the production address and add it (and any preview
-  address you want to test on) to the redirect URLs, so the confirmation link brings people back to the app.
-- Leaked-password protection is a paid feature and stays off for now.
+Left for later, on purpose: CAPTCHA, email confirmation, leaked-password protection, a custom SMTP sender, and
+password reset by email (it needs the SMTP sender). Until then, a tester who forgets their password has to be
+reset from the Supabase dashboard (Authentication, Users). Social login comes after the mobile apps, and payments
+after the app is on the App Store.
 
 ## How the rules work
 
-- **Personal tables** (readings, daily logs, profile, medications, screening history, and the others) have a
-  `user_id` filled in automatically from the signed-in person. The policy `own_rows` lets a person read and
-  write only rows whose `user_id` is theirs, and refuses to write a row for anyone else or hand one over.
+- **Personal tables** have a `user_id` filled in automatically from the signed-in person. The policy `own_rows`
+  lets a person read and write only rows whose `user_id` is theirs, and refuses to write a row for anyone else or
+  hand one over.
 - **Shared reference tables** (`biomarkers`, `screening_rules`) can be read by any signed-in person and cannot
   be changed through the API at all.
 - **Signed out** gets nothing, in every table.

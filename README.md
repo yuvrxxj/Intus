@@ -28,13 +28,13 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/auth/` | Email and password sign-in through Supabase Auth |
 | `src/db/` | Supabase client, generated table types and the queries |
 | `src/fx/` | The playful layer: particles, cursor, sounds. Decoration only, and it honours reduced motion |
-| `supabase/` | Migrations and the notes on the owner-only lock-down |
+| `supabase/` | Migrations, the script and workflow that apply them, and the notes on who can see what |
 | `test/` | Unit tests for `src/lib` and for the view logic |
 
 ## Bloodwork and safety
 
 - A reading counts as critical when it reaches a stored critical limit (inclusive). A marker with no limit is reported as unwatched, never as fine.
-- The critical limits in the database have not been verified by a clinician. The screen says so, and a quiet banner is not an all clear. A qualified person should check them before anyone else uses this app.
+- The critical limits in the database have not been verified by a clinician. The screen says so, and a quiet banner is not an all clear. Testing has been opened to other people with that caveat; the screen keeps telling them.
 - Arrows compare the latest result with the one before. A statistical trend (Mann-Kendall) needs five results, so most markers will not show one yet.
 - The app does not assess medicines or doses. Supplements are recorded as a list and nothing more.
 - Data the checks cannot trust (a reading with no biomarker, a threshold that is not a number) stops the screen with an error instead of being skipped.
