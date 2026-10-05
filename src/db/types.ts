@@ -18,6 +18,7 @@ export type Database = {
           priority: string | null;
           sort_order: number | null;
           text: string;
+          user_id: string;
         };
         Insert: {
           category?: string | null;
@@ -26,6 +27,7 @@ export type Database = {
           priority?: string | null;
           sort_order?: number | null;
           text: string;
+          user_id?: string;
         };
         Update: {
           category?: string | null;
@@ -34,6 +36,7 @@ export type Database = {
           priority?: string | null;
           sort_order?: number | null;
           text?: string;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -52,6 +55,7 @@ export type Database = {
           notes: string | null;
           source: string | null;
           status: string | null;
+          user_id: string;
           value: number;
         };
         Insert: {
@@ -62,6 +66,7 @@ export type Database = {
           notes?: string | null;
           source?: string | null;
           status?: string | null;
+          user_id?: string;
           value: number;
         };
         Update: {
@@ -72,6 +77,7 @@ export type Database = {
           notes?: string | null;
           source?: string | null;
           status?: string | null;
+          user_id?: string;
           value?: number;
         };
         Relationships: [
@@ -151,6 +157,7 @@ export type Database = {
           lean_mass_kg: number | null;
           measured_at: string;
           muscle_mass_kg: number | null;
+          user_id: string;
           visceral_fat: number | null;
           water_pct: number | null;
           weight_kg: number | null;
@@ -164,6 +171,7 @@ export type Database = {
           lean_mass_kg?: number | null;
           measured_at: string;
           muscle_mass_kg?: number | null;
+          user_id?: string;
           visceral_fat?: number | null;
           water_pct?: number | null;
           weight_kg?: number | null;
@@ -177,6 +185,7 @@ export type Database = {
           lean_mass_kg?: number | null;
           measured_at?: string;
           muscle_mass_kg?: number | null;
+          user_id?: string;
           visceral_fat?: number | null;
           water_pct?: number | null;
           weight_kg?: number | null;
@@ -192,6 +201,7 @@ export type Database = {
           measured_at: string;
           recovery_hr: number | null;
           resting_hr: number | null;
+          user_id: string;
           vo2_max: number | null;
         };
         Insert: {
@@ -202,6 +212,7 @@ export type Database = {
           measured_at: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          user_id?: string;
           vo2_max?: number | null;
         };
         Update: {
@@ -212,6 +223,7 @@ export type Database = {
           measured_at?: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          user_id?: string;
           vo2_max?: number | null;
         };
         Relationships: [];
@@ -224,6 +236,7 @@ export type Database = {
           cigs: number | null;
           core: string | null;
           fat: number | null;
+          habits: Json;
           id: string;
           lift: string | null;
           log_date: string;
@@ -235,6 +248,7 @@ export type Database = {
           steps: number | null;
           supplements: Json | null;
           total_cals: number | null;
+          user_id: string;
           water_ml: number | null;
           weight: number | null;
         };
@@ -245,6 +259,7 @@ export type Database = {
           cigs?: number | null;
           core?: string | null;
           fat?: number | null;
+          habits?: Json;
           id?: string;
           lift?: string | null;
           log_date: string;
@@ -256,6 +271,7 @@ export type Database = {
           steps?: number | null;
           supplements?: Json | null;
           total_cals?: number | null;
+          user_id?: string;
           water_ml?: number | null;
           weight?: number | null;
         };
@@ -266,6 +282,7 @@ export type Database = {
           cigs?: number | null;
           core?: string | null;
           fat?: number | null;
+          habits?: Json;
           id?: string;
           lift?: string | null;
           log_date?: string;
@@ -277,15 +294,16 @@ export type Database = {
           steps?: number | null;
           supplements?: Json | null;
           total_cals?: number | null;
+          user_id?: string;
           water_ml?: number | null;
           weight?: number | null;
         };
         Relationships: [];
       };
       devices: {
-        Row: { id: string; kind: string | null; last_sync: string | null; name: string; status: string | null };
-        Insert: { id: string; kind?: string | null; last_sync?: string | null; name: string; status?: string | null };
-        Update: { id?: string; kind?: string | null; last_sync?: string | null; name?: string; status?: string | null };
+        Row: { id: string; kind: string | null; last_sync: string | null; name: string; status: string | null; user_id: string };
+        Insert: { id: string; kind?: string | null; last_sync?: string | null; name: string; status?: string | null; user_id?: string };
+        Update: { id?: string; kind?: string | null; last_sync?: string | null; name?: string; status?: string | null; user_id?: string };
         Relationships: [];
       };
       diagnoses: {
@@ -296,6 +314,7 @@ export type Database = {
           id: string;
           notes: string | null;
           status: string;
+          user_id: string;
         };
         Insert: {
           condition: string;
@@ -304,6 +323,7 @@ export type Database = {
           id?: string;
           notes?: string | null;
           status?: string;
+          user_id?: string;
         };
         Update: {
           condition?: string;
@@ -312,6 +332,46 @@ export type Database = {
           id?: string;
           notes?: string | null;
           status?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      habits: {
+        Row: {
+          archived_at: string | null;
+          better: string;
+          created_at: string;
+          goal: number | null;
+          id: string;
+          kind: string;
+          name: string;
+          sort_order: number;
+          unit: string | null;
+          user_id: string;
+        };
+        Insert: {
+          archived_at?: string | null;
+          better?: string;
+          created_at?: string;
+          goal?: number | null;
+          id?: string;
+          kind: string;
+          name: string;
+          sort_order?: number;
+          unit?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          archived_at?: string | null;
+          better?: string;
+          created_at?: string;
+          goal?: number | null;
+          id?: string;
+          kind?: string;
+          name?: string;
+          sort_order?: number;
+          unit?: string | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -327,6 +387,7 @@ export type Database = {
           meal: string;
           name: string;
           protein: number | null;
+          user_id: string;
         };
         Insert: {
           carbs?: number | null;
@@ -339,6 +400,7 @@ export type Database = {
           meal: string;
           name: string;
           protein?: number | null;
+          user_id?: string;
         };
         Update: {
           carbs?: number | null;
@@ -351,6 +413,7 @@ export type Database = {
           meal?: string;
           name?: string;
           protein?: number | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -368,6 +431,7 @@ export type Database = {
           notes: string | null;
           paracetamol_mg_per_dose: number | null;
           start_date: string | null;
+          user_id: string;
         };
         Insert: {
           active?: boolean | null;
@@ -382,6 +446,7 @@ export type Database = {
           notes?: string | null;
           paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
+          user_id?: string;
         };
         Update: {
           active?: boolean | null;
@@ -396,13 +461,14 @@ export type Database = {
           notes?: string | null;
           paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
+          user_id?: string;
         };
         Relationships: [];
       };
       photo_log: {
-        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; weight: number | null };
-        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; weight?: number | null };
-        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; weight?: number | null };
+        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; user_id: string; weight: number | null };
+        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; user_id?: string; weight?: number | null };
+        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; user_id?: string; weight?: number | null };
         Relationships: [];
       };
       profile: {
@@ -431,6 +497,7 @@ export type Database = {
           start_weight: number | null;
           step_target: number | null;
           updated_at: string | null;
+          user_id: string;
           water_target: number | null;
         };
         Insert: {
@@ -458,6 +525,7 @@ export type Database = {
           start_weight?: number | null;
           step_target?: number | null;
           updated_at?: string | null;
+          user_id?: string;
           water_target?: number | null;
         };
         Update: {
@@ -485,14 +553,15 @@ export type Database = {
           start_weight?: number | null;
           step_target?: number | null;
           updated_at?: string | null;
+          user_id?: string;
           water_target?: number | null;
         };
         Relationships: [];
       };
       screening_history: {
-        Row: { created_at: string; done_date: string; id: string; notes: string | null; screening_code: string };
-        Insert: { created_at?: string; done_date: string; id?: string; notes?: string | null; screening_code: string };
-        Update: { created_at?: string; done_date?: string; id?: string; notes?: string | null; screening_code?: string };
+        Row: { created_at: string; done_date: string; id: string; notes: string | null; screening_code: string; user_id: string };
+        Insert: { created_at?: string; done_date: string; id?: string; notes?: string | null; screening_code: string; user_id?: string };
+        Update: { created_at?: string; done_date?: string; id?: string; notes?: string | null; screening_code?: string; user_id?: string };
         Relationships: [
           {
             foreignKeyName: 'screening_history_screening_code_fkey';
@@ -548,6 +617,7 @@ export type Database = {
           sort_order: number | null;
           sunday_only: boolean | null;
           tag: string | null;
+          user_id: string;
           when_taken: string | null;
         };
         Insert: {
@@ -558,6 +628,7 @@ export type Database = {
           sort_order?: number | null;
           sunday_only?: boolean | null;
           tag?: string | null;
+          user_id?: string;
           when_taken?: string | null;
         };
         Update: {
@@ -568,6 +639,7 @@ export type Database = {
           sort_order?: number | null;
           sunday_only?: boolean | null;
           tag?: string | null;
+          user_id?: string;
           when_taken?: string | null;
         };
         Relationships: [];

@@ -59,13 +59,3 @@ export function programmeWeek(programme: Programme, today: string): number {
   const days = dayNumber(today) - dayNumber(programme.startDate);
   return Math.min(programme.weeks, Math.max(1, Math.floor(days / 7) + 1));
 }
-
-/** Consecutive newest entries that satisfy a test. It counts entries, not calendar days, as the page always has. */
-export function streak(logsNewestFirst: readonly DailyLog[], counts: (log: DailyLog) => boolean): number {
-  let n = 0;
-  for (const log of logsNewestFirst) {
-    if (!counts(log)) break;
-    n++;
-  }
-  return n;
-}

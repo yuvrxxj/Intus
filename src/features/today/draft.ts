@@ -1,6 +1,6 @@
 import type { DailyLog, DailyLogInsert } from '../../db/dailyLogs.ts';
-
-export type Toggle = 'yes' | 'no' | 'bad';
+import type { Habit } from '../../db/habits.ts';
+import { parseEntries, serializeEntries, withUntouchedCounts, type Entries } from '../habits/model.ts';
 
 export interface TodayDraft {
   weight: string;
@@ -8,23 +8,16 @@ export interface TodayDraft {
   protein: string;
   carbs: string;
   fat: string;
-  lift: Toggle | null;
-  core: Toggle | null;
-  cardio: Toggle | null;
-  cigs: number;
+  /** what the person logged for each habit today, by habit id */
+  habits: Entries;
   mood: number | null;
   notes: string;
   supplements: Record<string, boolean>;
 }
 
 export const EMPTY_DRAFT: TodayDraft = {
-  weight: '', calories: '', protein: '', carbs: '', fat: '', lift: null, core: null, cardio: null,
-  cigs: 0, mood: null, notes: '', supplements: {},
+  weight: '', calories: '', protein: '', carbs: '', fat: '', habits: {}, mood: null, notes: '', supplements: {},
 };
-
-function toggleOf(value: string | null): Toggle | null {
-  return value === 'yes' || value === 'no' || value === 'bad' ? value : null;
-}
 
 function supplementsOf(value: DailyLog['supplements']): Record<string, boolean> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -40,10 +33,7 @@ export function draftFromLog(log: DailyLog): TodayDraft {
     protein: text(log.protein),
     carbs: text(log.carbs),
     fat: text(log.fat),
-    lift: toggleOf(log.lift),
-    core: toggleOf(log.core),
-    cardio: toggleOf(log.cardio),
-    cigs: log.cigs ?? 0,
+    habits: parseEntries(log.habits),
     mood: log.mood,
     notes: log.mood_notes ?? '',
     supplements: supplementsOf(log.supplements),
@@ -54,7 +44,11 @@ export function draftFromLog(log: DailyLog): TodayDraft {
 const asFloat = (s: string) => parseFloat(s) || null;
 const asInt = (s: string) => parseInt(s, 10) || null;
 
-export function recordFromDraft(draft: TodayDraft, date: string, savedAt: string): DailyLogInsert {
+/**
+ * habits: the person's habit list, so a count they never touched today is saved as zero. The old lift, core, cardio
+ * and cigarette columns are no longer written; the habits column carries all of it now.
+ */
+export function recordFromDraft(draft: TodayDraft, date: string, savedAt: string, habits: readonly Habit[] = []): DailyLogInsert {
   return {
     log_date: date,
     weight: asFloat(draft.weight),
@@ -62,10 +56,7 @@ export function recordFromDraft(draft: TodayDraft, date: string, savedAt: string
     carbs: asInt(draft.carbs),
     fat: asInt(draft.fat),
     total_cals: asInt(draft.calories),
-    lift: draft.lift,
-    core: draft.core,
-    cardio: draft.cardio,
-    cigs: draft.cigs,
+    habits: serializeEntries(withUntouchedCounts(habits, draft.habits)),
     mood: draft.mood,
     mood_notes: draft.notes,
     supplements: draft.supplements,

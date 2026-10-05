@@ -4,6 +4,7 @@ import { SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Bloodwork } from './features/bloodwork/Bloodwork.tsx';
 import { Goals } from './features/goals/Goals.tsx';
+import { HabitsProvider, useHabits } from './features/habits/HabitsContext.tsx';
 import { History } from './features/history/History.tsx';
 import { ProfileProvider, useProfile } from './features/profile/ProfileContext.tsx';
 import { profileLine, titleFor } from './features/profile/profileLine.ts';
@@ -89,7 +90,8 @@ function Dashboard() {
   const today = todayKey(now);
   const { toast, notify } = useToast();
   const recent = useRecentLogs(40);
-  const form = useToday(recent.reload);
+  const habits = useHabits();
+  const form = useToday(recent.reload, habits.habits);
   const { profile, programme, reload: reloadProfile } = useProfile();
   const stats = weightStats(recent.logs, programme);
   const week = programme ? programmeWeek(programme, today) : null;
@@ -179,7 +181,9 @@ export function App() {
     <>
       {session.status === 'signed_in' && (
         <ProfileProvider>
-          <Dashboard />
+          <HabitsProvider>
+            <Dashboard />
+          </HabitsProvider>
         </ProfileProvider>
       )}
       {session.status === 'signed_out' && <SignIn />}

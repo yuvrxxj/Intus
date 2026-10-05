@@ -10,18 +10,16 @@ export interface GoalsForm {
   goal_date: string;
   calorie_target: string;
   protein_target: string;
-  step_target: string;
 }
 
 export const EMPTY_GOALS_FORM: GoalsForm = {
-  start_weight: '', goal_weight: '', start_date: '', goal_date: '', calorie_target: '', protein_target: '', step_target: '',
+  start_weight: '', goal_weight: '', start_date: '', goal_date: '', calorie_target: '', protein_target: '',
 };
 
 export const LIMITS = {
   weightKg: { min: 20, max: 400 },
   calories: { min: 800, max: 6000 },
   proteinG: { min: 0, max: 500 },
-  steps: { min: 0, max: 100000 },
 } as const;
 
 const text = (v: unknown): string => (v == null ? '' : String(v));
@@ -35,7 +33,6 @@ export function formFromProfile(fields: GoalFields | null | undefined): GoalsFor
     goal_date: text(fields.goal_date),
     calorie_target: text(fields.calorie_target),
     protein_target: text(fields.protein_target),
-    step_target: text(fields.step_target),
   };
 }
 
@@ -94,7 +91,6 @@ export function validateGoalsForm(form: GoalsForm, today: string): GoalsResult {
   const goalDate = dateError(form.goal_date, 'goal date');
   const calories = optionalWhole(form.calorie_target, LIMITS.calories.min, LIMITS.calories.max, 'Calories');
   const protein = optionalWhole(form.protein_target, LIMITS.proteinG.min, LIMITS.proteinG.max, 'Protein');
-  const steps = optionalWhole(form.step_target, LIMITS.steps.min, LIMITS.steps.max, 'Steps');
 
   if (startWeight.error) errors.start_weight = startWeight.error;
   if (goalWeight.error) errors.goal_weight = goalWeight.error;
@@ -102,7 +98,6 @@ export function validateGoalsForm(form: GoalsForm, today: string): GoalsResult {
   if (goalDate.error) errors.goal_date = goalDate.error;
   if (calories.error) errors.calorie_target = calories.error;
   if (protein.error) errors.protein_target = protein.error;
-  if (steps.error) errors.step_target = steps.error;
 
   if (startDate.value && goalDate.value && !errors.goal_date && dayNumber(goalDate.value) <= dayNumber(startDate.value)) {
     errors.goal_date = 'The goal date must be after the start date';
@@ -118,7 +113,6 @@ export function validateGoalsForm(form: GoalsForm, today: string): GoalsResult {
     goal_date: goalDate.value as string,
     calorie_target: calories.value,
     protein_target: protein.value,
-    step_target: steps.value,
   };
   if (dayNumber(value.goal_date) < dayNumber(today)) notes.push('This goal date has already passed. You can still save it, or start a new goal.');
   if (directionOf(value.start_weight, value.goal_weight) === 'maintain') notes.push('The two weights are the same, so this goal is about keeping your weight steady.');

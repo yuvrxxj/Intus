@@ -13,7 +13,6 @@ export interface GoalFields {
   goal_date?: string | null;
   calorie_target?: NumericInput;
   protein_target?: NumericInput;
-  step_target?: NumericInput;
 }
 
 /** A person's current goal, with everything the screens need already worked out. */
@@ -31,7 +30,6 @@ export interface Programme {
   /** from here up to the over line a day reads as close; null without a calorie target */
   calorieNear: number | null;
   proteinTarget: number | null;
-  stepTarget: number | null;
 }
 
 /** Weights closer together than this are treated as "keep my weight". */
@@ -91,6 +89,5 @@ export function programmeFromProfile(fields: GoalFields | null | undefined): Pro
     calorieOver: calorieTarget === null ? null : calorieTarget + 100,
     calorieNear: calorieTarget === null ? null : Math.max(0, calorieTarget - 200),
     proteinTarget: positive(fields.protein_target),
-    stepTarget: positive(fields.step_target),
   };
 }

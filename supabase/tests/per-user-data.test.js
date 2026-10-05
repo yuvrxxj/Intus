@@ -15,6 +15,10 @@ const EXPAND = migration('20261005000100_per_user_data');
 const CONTRACT = migration('20261005000200_drop_single_user_unique');
 // Independent of the two above: when each supplement is taken.
 const SCHEDULE = migration('20261005000300_supplement_schedule');
+// Also independent of the per-user pair: the habits table and the daily log's habits column.
+const HABITS = migration('20261005000400_habits');
+// A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
+const SEED_HABITS = read(`${process.env.ONE_OFF_DIR ?? '../one-off'}/20261005_seed_owner_habits.sql`);
 
 const OWNER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -62,9 +66,9 @@ async function runScript(db, sql) {
 /**
  * stage: live (as the database is today, owner's data in every table), expanded (plus the first
  * per-user migration), contracted (plus the second). owners: accounts registered in app_owner.
- * schedule: when the supplement schedule migration goes in, 'before' or 'after' the per-user one (or not at all).
+ * schedule, habits: when each of those independent migrations goes in, 'before' or 'after' the per-user one (or not at all).
  */
-async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none' } = {}) {
+async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none', habits = 'none' } = {}) {
   const db = new PGlite();
   await db.exec(read('./fixtures/supabase-stub.sql'));
   await db.exec(read('./fixtures/pre-lockdown.sql'));
@@ -77,9 +81,11 @@ async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none' }
   for (const id of owners) await db.query('insert into public.app_owner (user_id) values ($1)', [id]);
   await runScript(db, LOCKDOWN);
   if (schedule === 'before') await runScript(db, SCHEDULE);
+  if (habits === 'before') await runScript(db, HABITS);
   if (stage === 'live') return db;
   await runScript(db, EXPAND);
   if (schedule === 'after') await runScript(db, SCHEDULE);
+  if (habits === 'after') await runScript(db, HABITS);
   if (stage === 'expanded') return db;
   await runScript(db, CONTRACT);
   return db;
@@ -445,4 +451,202 @@ test('a second person cannot see or change the owner\'s supplement schedule', as
     assert.equal((await scheduleOf(db, 'mine')).days, '{2,4}');
   });
   await asUser(db, OWNER, async () => assert.equal(await count(db, `select count(*) as n from public.medications where name = 'mine'`), 0, 'owner cannot see theirs'));
+});
+
+// ── habits ───────────────────────────────────────────────────────────────────────────────────────────
+
+const habit = (cols, vals) => `insert into public.habits (${cols}) values (${vals})`;
+
+test('a person can create their own habit, it is filled in with their id, and they cannot create one for someone else', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  await asUser(db, OWNER, async () => {
+    await db.exec(habit('name, kind', `'Lift', 'yesno'`));
+    assert.equal(await count(db, `select count(*) as n from public.habits where user_id = '${OWNER}'`), 1);
+    await assert.rejects(() => db.exec(habit('user_id, name, kind', `'${OTHER}', 'Lift', 'yesno'`)), /row-level security/);
+  });
+});
+
+test('habits are private: another person sees none of them, and cannot change or delete them', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  await asUser(db, OWNER, () => db.exec(habit('name, kind', `'Lift', 'yesno'`)));
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'habits'), 0, 'cannot read');
+    await db.exec(`update public.habits set name = 'taken'`);
+    await db.exec(`delete from public.habits`);
+  });
+  assert.equal(await count(db, `select count(*) as n from public.habits where name = 'Lift'`), 1, 'untouched');
+});
+
+test('the signed-out role cannot read or write habits', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  await asAnon(db, async () => {
+    await assert.rejects(() => db.exec('select * from public.habits'), /permission denied/);
+    await assert.rejects(() => db.exec(habit('name, kind', `'x', 'count'`)), /permission denied/);
+  });
+});
+
+test('a habit needs a sensible name, kind, goal and unit, and a yes or no carries neither goal nor unit', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  // as the signed-in owner, so user_id is filled in and it is the check under test that speaks, not the not-null rule
+  const ok = (cols, vals) => asUser(db, OWNER, () => db.exec(habit(cols, vals)));
+  for (const [what, cols, vals, rule] of [
+    ['empty name', 'name, kind', `'', 'count'`, /habits_name_check/],
+    ['blank name', 'name, kind', `'   ', 'count'`, /habits_name_check/],
+    ['long name', 'name, kind', `'${'x'.repeat(61)}', 'count'`, /habits_name_check/],
+    ['unknown kind', 'name, kind', `'a', 'tally'`, /habits_kind_check/],
+    ['unknown direction', 'name, kind, better', `'a', 'count', 'sideways'`, /habits_better_check/],
+    ['negative goal', 'name, kind, goal', `'a', 'count', -1`, /habits_goal_check/],
+    ['huge goal', 'name, kind, goal', `'a', 'amount', 100001`, /habits_goal_check/],
+    ['long unit', 'name, kind, unit', `'a', 'amount', '${'u'.repeat(21)}'`, /habits_unit_check/],
+    ['blank unit', 'name, kind, unit', `'a', 'amount', ' '`, /habits_unit_check/],
+    ['yes or no with a goal', 'name, kind, goal', `'a', 'yesno', 5`, /habits_yesno_has_no_goal/],
+    ['yes or no with a unit', 'name, kind, unit', `'a', 'yesno', 'x'`, /habits_yesno_has_no_goal/],
+  ]) {
+    await assert.rejects(() => ok(cols, vals), rule, what);
+  }
+  await ok('name, kind', `'Lift', 'yesno'`);
+  await ok('name, kind, better, goal', `'Cigarettes', 'count', 'lower', 0`);
+  await ok('name, kind, unit, goal', `'Steps', 'amount', 'steps', 9000`);
+  await ok('name, kind, goal', `'Max', 'amount', 100000`);
+});
+
+test('the daily log gets a habits column that starts as an empty object and must stay an object', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  assert.equal((await db.query(`select habits::text as h from public.daily_logs`)).rows[0].h, '{}', 'existing row');
+  await db.exec(`insert into public.daily_logs (log_date, cigs) values ('2026-02-01', 3)`);
+  assert.equal((await db.query(`select habits::text as h from public.daily_logs where log_date = '2026-02-01'`)).rows[0].h, '{}', 'insert from the old app');
+  for (const bad of ['[]', '"x"', '3', 'null']) {
+    await assert.rejects(() => db.exec(`update public.daily_logs set habits = '${bad}'::jsonb`), /daily_logs_habits_is_object/, bad);
+  }
+  await assert.rejects(() => db.exec(`update public.daily_logs set habits = null`), /null value/);
+  await db.exec(`update public.daily_logs set habits = '{"a": {"value": 2, "note": "n"}}'`);
+});
+
+test('the habits migration can be applied twice, and in either order with the per-user one', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  await asUser(db, OWNER, () => db.exec(habit('name, kind', `'Lift', 'yesno'`)));
+  await runScript(db, HABITS);
+  assert.equal(await count(db, 'select count(*) as n from public.habits'), 1, 'a second run keeps the data');
+  assert.equal(await count(db, `select count(*) as n from pg_policies where schemaname = 'public' and tablename = 'habits'`), 1, 'still one policy');
+  for (const order of ['before', 'after']) {
+    const w = await world({ stage: 'expanded', habits: order });
+    await asUser(w, OWNER, () => w.exec(habit('name, kind', `'Lift', 'yesno'`)));
+    await asUser(w, OTHER, async () => assert.equal(await rowsOf(w, 'habits'), 0, `${order}: private`));
+    await asUser(w, OWNER, async () => assert.equal(await rowsOf(w, 'habits'), 1, `${order}: own`));
+    // saving a day still works with the new column present
+    await asUser(w, OWNER, () => w.exec(`insert into public.daily_logs (log_date, habits) values ('2026-03-01', '{"x": {"value": true}}')`));
+  }
+});
+
+test('deleting an account removes that person\'s habits and leaves everyone else\'s', async () => {
+  const db = await world({ stage: 'live', habits: 'before' });
+  await asUser(db, OWNER, () => db.exec(habit('name, kind', `'Lift', 'yesno'`)));
+  await asUser(db, OTHER, () => db.exec(habit('name, kind', `'Core', 'yesno'`)));
+  await db.exec(`delete from auth.users where id = '${OTHER}'`);
+  assert.deepEqual((await db.query('select name from public.habits')).rows.map((r) => r.name), ['Lift']);
+});
+
+// the one-off that carries the original owner's hardcoded habits across
+const habitsOf = async (db) => (await db.query(`select name, kind, unit, goal::text as goal, better, sort_order from public.habits order by sort_order`)).rows;
+const logHabits = async (db, date) => {
+  const { rows } = await db.query(`select habits from public.daily_logs where log_date = $1`, [date]);
+  const byName = Object.fromEntries((await db.query('select id::text, name from public.habits')).rows.map((h) => [h.id, h.name]));
+  return Object.fromEntries(Object.entries(rows[0].habits).map(([id, entry]) => [byName[id], entry]));
+};
+async function seededWorld(options = {}) {
+  const db = await world({ stage: 'live', habits: 'before', ...options });
+  await db.exec(`
+    delete from public.daily_logs;
+    insert into public.daily_logs (log_date, cigs, lift, core, cardio, steps) values
+      ('2026-04-01', 3, 'yes', 'no', 'yes', 8200),
+      ('2026-04-02', 0, 'no', 'yes', 'bad', null),
+      ('2026-04-03', null, null, null, 'no', 12000),
+      ('2026-04-04', null, null, null, null, null);`);
+  return db;
+}
+
+test('the seed creates the five habits the app used to hardcode, in the old order', async () => {
+  const db = await seededWorld();
+  await runScript(db, SEED_HABITS);
+  assert.deepEqual(await habitsOf(db), [
+    { name: 'Cigarettes', kind: 'count', unit: null, goal: '0', better: 'lower', sort_order: 0 },
+    { name: 'Lift', kind: 'yesno', unit: null, goal: null, better: 'higher', sort_order: 1 },
+    { name: 'Core', kind: 'yesno', unit: null, goal: null, better: 'higher', sort_order: 2 },
+    { name: 'Cardio', kind: 'yesno', unit: null, goal: null, better: 'higher', sort_order: 3 },
+    { name: 'Steps', kind: 'amount', unit: 'steps', goal: '9000', better: 'higher', sort_order: 4 },
+  ]);
+  assert.equal(await count(db, `select count(*) as n from public.habits where user_id = '${OWNER}'`), 5, 'all belong to the registered owner');
+});
+
+test('the steps goal comes from the person\'s own saved step target when they have one', async () => {
+  const db = await seededWorld();
+  await db.exec('update public.profile set step_target = 11000');
+  await runScript(db, SEED_HABITS);
+  assert.equal((await habitsOf(db)).find((h) => h.name === 'Steps').goal, '11000');
+});
+
+test('the seed copies each day\'s old columns into habits, with cardio words kept as notes', async () => {
+  const db = await seededWorld();
+  await runScript(db, SEED_HABITS);
+  assert.deepEqual(await logHabits(db, '2026-04-01'), {
+    Cigarettes: { value: 3 }, Lift: { value: true }, Core: { value: false }, Cardio: { value: true, note: 'Stairmaster' }, Steps: { value: 8200 },
+  });
+  assert.deepEqual(await logHabits(db, '2026-04-02'), {
+    Cigarettes: { value: 0 }, Lift: { value: false }, Core: { value: true }, Cardio: { value: true, note: 'Badminton' },
+  });
+  assert.deepEqual(await logHabits(db, '2026-04-03'), { Cardio: { value: false }, Steps: { value: 12000 } });
+  assert.deepEqual(await logHabits(db, '2026-04-04'), {}, 'a day with nothing recorded stays empty');
+  assert.equal(await count(db, `select count(*) as n from public.daily_logs where cigs = 3 and lift = 'yes'`), 1, 'the old columns are left as they were');
+});
+
+test('running the seed again changes nothing, but picks up days logged since and never overwrites a habit value', async () => {
+  const db = await seededWorld();
+  await runScript(db, SEED_HABITS);
+  const before = JSON.stringify((await db.query('select log_date::text, habits from public.daily_logs order by log_date')).rows);
+  await runScript(db, SEED_HABITS);
+  assert.equal(JSON.stringify((await db.query('select log_date::text, habits from public.daily_logs order by log_date')).rows), before, 'idempotent');
+  assert.equal(await count(db, 'select count(*) as n from public.habits'), 5, 'no duplicate habits');
+
+  // the new app already wrote a different cigarette count for the first day, and the old app logged a new day
+  const cig = (await db.query(`select id::text from public.habits where name = 'Cigarettes'`)).rows[0].id;
+  await db.query(`update public.daily_logs set habits = jsonb_set(habits, array[$1], '{"value": 99}') where log_date = '2026-04-01'`, [cig]);
+  await db.exec(`insert into public.daily_logs (log_date, cigs, lift) values ('2026-04-05', 1, 'yes')`);
+  await runScript(db, SEED_HABITS);
+  assert.equal((await logHabits(db, '2026-04-01')).Cigarettes.value, 99, 'a value already in habits is kept');
+  assert.deepEqual(await logHabits(db, '2026-04-05'), { Cigarettes: { value: 1 }, Lift: { value: true } }, 'the new day is filled in');
+});
+
+test('the seed leaves a habit a person already made alone, and only adds the ones that are missing', async () => {
+  const db = await seededWorld();
+  await db.exec(`insert into public.habits (user_id, name, kind, goal, better) values ('${OWNER}', 'Lift', 'count', 4, 'higher')`);
+  await runScript(db, SEED_HABITS);
+  const lift = (await habitsOf(db)).filter((h) => h.name === 'Lift');
+  assert.equal(lift.length, 1);
+  assert.equal(lift[0].kind, 'count', 'their version is kept');
+  assert.equal(await count(db, 'select count(*) as n from public.habits'), 5);
+});
+
+test('the seed refuses unless exactly one owner can receive the habits, and changes nothing', async () => {
+  for (const owners of [[], [OWNER, OTHER]]) {
+    const db = await seededWorld();
+    await db.exec('delete from public.app_owner');
+    for (const id of owners) await db.query('insert into public.app_owner (user_id) values ($1)', [id]);
+    await assert.rejects(() => runScript(db, SEED_HABITS), /expected exactly one row in app_owner/);
+    assert.equal(await count(db, 'select count(*) as n from public.habits'), 0);
+    assert.equal(await count(db, `select count(*) as n from public.daily_logs where habits <> '{}'::jsonb`), 0);
+  }
+});
+
+test('after the per-user migration the seed only fills in the owner\'s days, never another person\'s', async () => {
+  const db = await world({ stage: 'expanded', habits: 'after' });
+  await db.exec(`delete from public.daily_logs`);
+  await db.exec(`
+    insert into public.daily_logs (user_id, log_date, cigs, lift) values
+      ('${OWNER}', '2026-05-01', 2, 'yes'),
+      ('${OTHER}', '2026-05-02', 9, 'no');`);
+  await runScript(db, SEED_HABITS);
+  const mine = await db.query(`select habits::text as h from public.daily_logs where user_id = '${OWNER}'`);
+  const theirs = await db.query(`select habits::text as h from public.daily_logs where user_id = '${OTHER}'`);
+  assert.notEqual(mine.rows[0].h, '{}', 'the owner\'s day is filled in');
+  assert.equal(theirs.rows[0].h, '{}', 'the other person\'s day is untouched');
 });

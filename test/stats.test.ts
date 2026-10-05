@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { daysToGoal, programmeWeek, streak, weightStats } from '../src/features/today/stats.ts';
+import { daysToGoal, programmeWeek, weightStats } from '../src/features/today/stats.ts';
 import { programmeFromProfile } from '../src/lib/programme.ts';
 import type { DailyLog } from '../src/db/dailyLogs.ts';
 
@@ -10,9 +10,9 @@ const GAIN = programmeFromProfile({ start_weight: 70, goal_weight: 76, start_dat
 const STEADY = programmeFromProfile({ start_weight: 80, goal_weight: 80, start_date: '2026-10-01', goal_date: '2026-12-24' })!;
 
 const log = (log_date: string, over: Partial<DailyLog> = {}): DailyLog => ({
-  id: log_date, log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null, core: null,
+  id: log_date, user_id: 'u', log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null, core: null,
   cardio: null, cigs: 0, mood: null, mood_notes: null, supplements: null, saved_at: null, steps: null, water_ml: 0,
-  active_kcal: null, rings: null, ...over,
+  active_kcal: null, rings: null, habits: {}, ...over,
 });
 
 test('weight stats come from the newest weigh-in and skip days without one', () => {
@@ -82,10 +82,4 @@ test('a keep-steady goal reports distance from the goal weight and no percentage
   assert.equal(stats.percentDone, null);
   assert.equal(stats.progressKg, null);
   assert.equal(stats.fromStartKg, 2);
-});
-
-test('a streak stops at the first entry that does not count', () => {
-  const logs = [log('d4', { lift: 'yes' }), log('d3', { lift: 'yes' }), log('d2', { lift: 'no' }), log('d1', { lift: 'yes' })];
-  assert.equal(streak(logs, (l) => l.lift === 'yes'), 2);
-  assert.equal(streak([], (l) => l.lift === 'yes'), 0);
 });

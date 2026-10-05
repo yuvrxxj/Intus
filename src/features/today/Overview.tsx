@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import type { Direction } from '../../lib/programme.ts';
 import { shortDate } from '../../util/dates.ts';
+import { useHabits } from '../habits/HabitsContext.tsx';
+import { summarize, withUntouchedCounts } from '../habits/model.ts';
 import { useProgramme } from '../profile/ProfileContext.tsx';
 import type { TodayDraft } from './useToday.ts';
 import { daysToGoal, type WeightStats } from './stats.ts';
@@ -13,7 +15,8 @@ export function Overview({ stats, draft, today }: { stats: WeightStats; draft: T
   const cals = parseInt(draft.calories, 10) || 0;
   const target = programme?.calorieTarget ?? null;
   const remaining = target === null ? null : target - cals;
-  const cigs = draft.cigs;
+  const habits = useHabits();
+  const habitsToday = summarize(habits.habits, withUntouchedCounts(habits.habits, draft.habits));
   const pct = stats.percentDone;
   const days = programme ? daysToGoal(programme, today) : null;
   const fromStart = stats.fromStartKg;
@@ -50,12 +53,14 @@ export function Overview({ stats, draft, today }: { stats: WeightStats; draft: T
           )}
         </div>
         <div className="card stat stat-glow-red">
-          <div className="ct"><span className="dot dot-red" />Cigarettes</div>
-          <div className="val">{cigs}</div>
-          <div className="unit">today</div>
-          <div className={`delta ${cigs === 0 ? 'pos' : cigs <= 3 ? 'neu' : 'neg'}`}>
-            {cigs === 0 ? '🚭 smoke-free' : cigs <= 3 ? `${cigs} today` : `${cigs} · cut back`}
-          </div>
+          <div className="ct"><span className="dot dot-red" />Habits</div>
+          <div className="val">{habits.status !== 'ready' || habitsToday.total === 0 ? '–' : `${habitsToday.onTrack}/${habitsToday.total}`}</div>
+          <div className="unit">{habits.status === 'loading' ? 'loading' : habits.status === 'error' ? 'could not load' : 'on track today'}</div>
+          {habits.status === 'ready' && (habitsToday.total === 0
+            ? <div className="delta neu"><a href="#goals" style={{ color: 'var(--blue)' }}>Choose habits</a></div>
+            : <div className={`delta ${habitsToday.onTrack === habitsToday.total ? 'pos' : 'neu'}`}>
+                {habitsToday.onTrack === habitsToday.total ? '✓ all on track' : `${habitsToday.total - habitsToday.onTrack} to go`}
+              </div>)}
         </div>
       </div>
 

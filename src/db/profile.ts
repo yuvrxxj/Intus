@@ -19,7 +19,6 @@ export interface GoalValues {
   goal_date: string;
   calorie_target: number | null;
   protein_target: number | null;
-  step_target: number | null;
 }
 
 /** The signed-in person's own profile (the database only returns their rows), or null before it has been filled in. */

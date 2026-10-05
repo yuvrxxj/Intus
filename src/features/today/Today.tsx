@@ -5,7 +5,10 @@ import type { Programme } from '../../lib/programme.ts';
 import { useProgramme } from '../profile/ProfileContext.tsx';
 import { dosesDue, skippedToday, describeDays, type Dose } from '../supplements/schedule.ts';
 import { useSupplements } from '../supplements/useSupplements.ts';
-import type { Toggle, TodayForm } from './useToday.ts';
+import { useHabits } from '../habits/HabitsContext.tsx';
+import { HabitsToday } from '../habits/HabitsToday.tsx';
+import type { HabitEntry } from '../habits/model.ts';
+import type { TodayForm } from './useToday.ts';
 import { useHfmImage } from './hfmImage.ts';
 
 const MOODS = [
@@ -24,32 +27,6 @@ const SAVE_MESSAGES = [
   'Saved ✓ the data gods are pleased',
 ];
 
-function ToggleGroup(props: {
-  label: string;
-  value: Toggle | null;
-  options: { value: Toggle; text: string }[];
-  onChange: (value: Toggle) => void;
-}) {
-  return (
-    <div>
-      <label>{props.label}</label>
-      <div className="tg">
-        {props.options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            className={`tb${props.value === o.value ? (o.value === 'no' ? ' an' : o.value === 'bad' ? ' ab' : ' ay') : ''}`}
-            aria-pressed={props.value === o.value}
-            onClick={() => props.onChange(o.value)}
-          >
-            {o.text}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function calorieColor(total: number, programme: Programme | null): string {
   if (programme?.calorieOver == null || programme.calorieNear == null) return 'var(--txt)';
   return total > programme.calorieOver ? 'var(--red)' : total >= programme.calorieNear ? 'var(--yellow)' : 'var(--green)';
@@ -62,7 +39,6 @@ export function Today({ form, today, lastWeightDate, notify }: {
   notify: (message: string, error?: boolean) => void;
 }) {
   const { draft, set, save, saving } = form;
-  const cigRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { image, set: setImage } = useHfmImage();
   const [dragging, setDragging] = useState(false);
@@ -70,28 +46,18 @@ export function Today({ form, today, lastWeightDate, notify }: {
 
   const programme = useProgramme();
   const supplements = useSupplements();
+  const habits = useHabits();
   const due = dosesDue(supplements.items, today);
   const skipped = skippedToday(supplements.items, today);
   const total = parseInt(draft.calories, 10) || 0;
   const target = programme?.calorieTarget ?? null;
   const remaining = target === null ? null : target - total;
 
-  function changeCigs(delta: number) {
-    const next = Math.max(0, draft.cigs + delta);
-    set('cigs', next);
-    const box = cigRef.current?.getBoundingClientRect();
-    if (!box) return;
-    const x = box.left + box.width / 2;
-    const y = box.top + box.height / 2;
-    if (delta > 0) {
-      emojiBurst(x, y, '💨', 5);
-      sfx.puff();
-    } else if (next === 0) {
-      emojiBurst(x, y, '🚭', 6);
-      sfx.ding();
-    } else {
-      sparks(x, y, 6, ['#3dc47a', '#e8b84a']);
-    }
+  function setHabit(id: string, entry: HabitEntry | undefined) {
+    const next = { ...draft.habits };
+    if (entry === undefined) delete next[id];
+    else next[id] = entry;
+    set('habits', next);
   }
 
   function toggleSupplement(id: string) {
@@ -157,18 +123,39 @@ export function Today({ form, today, lastWeightDate, notify }: {
             value={draft.weight} onChange={(e) => set('weight', e.target.value)} />
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 7 }}>Last: <span>{lastWeightDate ?? '–'}</span></div>
         </div>
-        <div className="card">
-          <div className="corner-accent" />
-          <div className="ct"><span className="dot dot-green" />Activity</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            <ToggleGroup label="Lift" value={draft.lift} onChange={(v) => set('lift', v)}
-              options={[{ value: 'yes', text: '✓ Yes' }, { value: 'no', text: '✗ Rest' }]} />
-            <ToggleGroup label="Core" value={draft.core} onChange={(v) => set('core', v)}
-              options={[{ value: 'yes', text: '✓ Yes' }, { value: 'no', text: '✗ No' }]} />
-            <ToggleGroup label="Cardio" value={draft.cardio} onChange={(v) => set('cardio', v)}
-              options={[{ value: 'yes', text: '✓ Stairmaster' }, { value: 'no', text: '✗ No' }, { value: 'bad', text: '🏸 Badminton' }]} />
+    <div className="card">
+      <div className="ct"><span className="dot" style={{ background: 'linear-gradient(135deg,var(--blue),var(--red))' }} />Mood</div>
+      <div className="mood-row">
+        {MOODS.map((m) => (
+          <button key={m.value} type="button" className={`mb${draft.mood === m.value ? ' sel' : ''}`}
+            title={m.title} aria-label={m.title} aria-pressed={draft.mood === m.value}
+            onClick={(e) => chooseMood(m.value, e.currentTarget)}>
+            {m.emoji}
+          </button>
+        ))}
+      </div>
+      <label htmlFor="moodNotes">Notes</label>
+      <textarea id="moodNotes" placeholder="Sleep, energy, body feel..." value={draft.notes}
+        onChange={(e) => set('notes', e.target.value)} />
+    </div>
+      </div>
+
+      <div className="card sec">
+        <div className="ct"><span className="dot dot-green" />Habits</div>
+        {habits.status === 'loading' ? (
+          <div className="loading">Loading your habits</div>
+        ) : habits.status === 'error' ? (
+          <div className="notice notice-bad" role="alert">
+            Your habits could not be loaded ({habits.error}).{' '}
+            <button type="button" className="retry-btn" onClick={habits.reload}>Try again</button>
           </div>
-        </div>
+        ) : habits.active.length === 0 ? (
+          <div className="empty">
+            You are not tracking any habits yet. <a href="#goals" style={{ color: 'var(--blue)' }}>Choose what to track</a>, such as cigarettes, lifting, cardio or steps.
+          </div>
+        ) : (
+          <HabitsToday habits={habits.active} entries={draft.habits} onChange={setHabit} />
+        )}
       </div>
 
       <div className="card sec">
@@ -226,9 +213,10 @@ export function Today({ form, today, lastWeightDate, notify }: {
         )}
       </div>
 
-      <div className="g g2 sec">
-        <div className="card">
-          <div className="ct"><span className="dot dot-orange" />HealthifyMe</div>
+      <div className="card sec">
+        <div className="ct"><span className="dot dot-orange" />HealthifyMe</div>
+        <div className="nutri-grid">
+          <div>
           <div
             className={`hfm-drop${dragging ? ' drag' : ''}`}
             role="button"
@@ -254,6 +242,8 @@ export function Today({ form, today, lastWeightDate, notify }: {
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={(e) => readFile(e.target.files?.[0])} />
+          </div>
+          <div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
             <div><label htmlFor="inputCals">Calories</label>
               <input id="inputCals" type="number" placeholder="0" min="0" max="6000" value={draft.calories} onChange={(e) => set('calories', e.target.value)} /></div>
@@ -288,34 +278,6 @@ export function Today({ form, today, lastWeightDate, notify }: {
                 style={{ width: `${target === null ? 0 : Math.min(100, (total / target) * 100)}%` }} />
             </div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card">
-            <div className="ct"><span className="dot dot-red" />Cigarettes</div>
-            <div className="cig-wrap">
-              <button type="button" className="cbtn" aria-label="One fewer cigarette" onClick={() => changeCigs(-1)}>−</button>
-              <div ref={cigRef}>
-                <div className={`cnum ${draft.cigs === 0 ? 'z' : draft.cigs <= 3 ? 'l' : 'h'}`} aria-live="polite">{draft.cigs}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>today</div>
-              </div>
-              <button type="button" className="cbtn" aria-label="One more cigarette" onClick={() => changeCigs(1)}>+</button>
-            </div>
-          </div>
-          <div className="card" style={{ flex: 1 }}>
-            <div className="ct"><span className="dot" style={{ background: 'linear-gradient(135deg,var(--blue),var(--red))' }} />Mood</div>
-            <div className="mood-row">
-              {MOODS.map((m) => (
-                <button key={m.value} type="button" className={`mb${draft.mood === m.value ? ' sel' : ''}`}
-                  title={m.title} aria-label={m.title} aria-pressed={draft.mood === m.value}
-                  onClick={(e) => chooseMood(m.value, e.currentTarget)}>
-                  {m.emoji}
-                </button>
-              ))}
-            </div>
-            <label htmlFor="moodNotes">Notes</label>
-            <textarea id="moodNotes" placeholder="Sleep, energy, body feel..." value={draft.notes}
-              onChange={(e) => set('notes', e.target.value)} />
           </div>
         </div>
       </div>

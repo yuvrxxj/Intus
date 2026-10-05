@@ -5,7 +5,7 @@ import { DIRECTION_LABEL, directionOf, programmeFromProfile } from '../src/lib/p
 const goal = { start_weight: 82, goal_weight: 75, start_date: '2026-04-05', goal_date: '2026-07-14', calorie_target: 2100 };
 
 test('a complete goal becomes a programme with the direction, weeks and calorie lines worked out', () => {
-  const p = programmeFromProfile({ ...goal, protein_target: 165, step_target: 9000 })!;
+  const p = programmeFromProfile({ ...goal, protein_target: 165 })!;
   assert.deepEqual(
     [p.startDate, p.goalDate, p.startWeightKg, p.goalWeightKg, p.direction, p.weeks],
     ['2026-04-05', '2026-07-14', 82, 75, 'lose', 15],
@@ -15,7 +15,6 @@ test('a complete goal becomes a programme with the direction, weeks and calorie 
   assert.equal(p.calorieOver, 2200);
   assert.equal(p.calorieNear, 1900);
   assert.equal(p.proteinTarget, 165);
-  assert.equal(p.stepTarget, 9000);
 });
 
 test('the direction follows the two weights, and nearly equal weights mean keep steady', () => {
@@ -56,8 +55,8 @@ test('garbage in the stored values never throws', () => {
   assert.equal(programmeFromProfile({ ...goal, start_weight: 'abc' }), null);
   assert.equal(programmeFromProfile({ ...goal, start_date: 'soon' }), null);
   assert.equal(programmeFromProfile({ ...goal, goal_date: '2026-02-30' }), null);
-  const p = programmeFromProfile({ ...goal, protein_target: 'lots', step_target: '' })!;
-  assert.deepEqual([p.proteinTarget, p.stepTarget], [null, null]);
+  const p = programmeFromProfile({ ...goal, protein_target: 'lots' })!;
+  assert.equal(p.proteinTarget, null);
 });
 
 test('a goal of one day still counts as one week', () => {

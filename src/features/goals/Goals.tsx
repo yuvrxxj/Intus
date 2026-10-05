@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { saveGoals } from '../../db/profile.ts';
+import { HabitsManager } from '../habits/HabitsManager.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
 import {
   formFromProfile, newGoalFrom, summarizeGoal, validateGoalsForm, LIMITS, type GoalsErrors, type GoalsForm,
@@ -86,10 +87,6 @@ function GoalsFormCard({ initial, existingId, today, latestWeightKg, reload, not
           <input id="goal-protein" type="number" inputMode="numeric" step="1" min={LIMITS.proteinG.min} max={LIMITS.proteinG.max}
             value={form.protein_target} placeholder="165" onChange={(e) => set('protein_target', e.target.value)} />
         </Field>
-        <Field id="goal-steps" label="Steps" error={errors.step_target} hint="Optional. Used by your habits.">
-          <input id="goal-steps" type="number" inputMode="numeric" step="1" min={LIMITS.steps.min} max={LIMITS.steps.max}
-            value={form.step_target} placeholder="9000" onChange={(e) => set('step_target', e.target.value)} />
-        </Field>
       </div>
 
       {notes.map((n) => <div key={n} className="notice notice-warn">{n}</div>)}
@@ -119,10 +116,13 @@ export function Goals({ today, latestWeightKg, notify }: {
   if (status === 'loading') return <div className="loading">Loading your goal</div>;
   if (status === 'error') {
     return (
-      <div className="cbanner" role="alert">
-        <div className="cbanner-hdr">Your goal could not be loaded</div>
-        <div className="ci">{error}</div>
-        <button type="button" className="retry-btn" onClick={reload}>Try again</button>
+      <div>
+        <div className="cbanner" role="alert">
+          <div className="cbanner-hdr">Your goal could not be loaded</div>
+          <div className="ci">{error}</div>
+          <button type="button" className="retry-btn" onClick={reload}>Try again</button>
+        </div>
+        <HabitsManager notify={notify} />
       </div>
     );
   }
@@ -143,6 +143,7 @@ export function Goals({ today, latestWeightKg, notify }: {
         reload={reload}
         notify={notify}
       />
+      <HabitsManager notify={notify} />
     </div>
   );
 }
