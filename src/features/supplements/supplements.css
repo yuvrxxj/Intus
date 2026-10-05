@@ -1,29 +1,30 @@
+@layer components {
 .med-list{list-style:none;margin:0;padding:0}
-.med-item{display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid rgba(34,34,56,.5);flex-wrap:wrap}
+.med-item{display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .med-item:last-child{border-bottom:none}
 .med-item.med-ended{opacity:.7}
 .med-main{flex:1;min-width:220px}
-.med-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.med-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .med-name .tag{margin-left:0}
 .med-meta{font-size:12px;color:var(--txt2);margin-top:3px}
 .med-notes{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic}
 .med-actions{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
-.med-tag-current{background:var(--green3);color:var(--green);border:1px solid rgba(61,196,122,.3)}
-.med-tag-upcoming{background:var(--blue3);color:var(--blue);border:1px solid rgba(74,143,232,.3)}
+.med-tag-current{background:var(--green3);color:var(--green);border:1px solid rgb(18 105 95 / .25)}
+.med-tag-upcoming{background:var(--blue3);color:var(--blue);border:1px solid var(--line-strong)}
 .med-tag-ended{background:var(--s3);color:var(--muted);border:1px solid var(--b1)}
 
 /* what changed since you started: a closed row per supplement, a table of two periods inside */
 .fx-intro{font-size:12px;color:var(--txt2);line-height:1.55;margin:2px 0 10px}
 .fx-list{margin-top:12px}
-.fx-item{border-top:1px solid rgba(34,34,56,.5)}
-.fx-item:last-child{border-bottom:1px solid rgba(34,34,56,.5)}
+.fx-item{border-top:1px solid var(--line)}
+.fx-item:last-child{border-bottom:1px solid var(--line)}
 /* a block, not a flex column, so the open/closed marker sits inline with the name */
 .fx-item>summary{cursor:pointer;padding:12px 2px;display:block;list-style:none}
 .fx-item>summary::-webkit-details-marker{display:none}
 .fx-item>summary::before{content:'\25B8';color:var(--muted);margin-right:6px;display:inline-block;width:10px}
 .fx-item[open]>summary::before{content:'\25BE'}
 .fx-item>summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
-.fx-name{font-size:14px;font-weight:700}
+.fx-name{font-size:14px;font-weight:600}
 .fx-sub{display:block;font-size:12px;color:var(--txt2);margin-top:2px;padding-left:16px}
 .fx-body{padding:0 2px 16px}
 .fx-n{color:var(--muted);font-size:11px;margin-left:4px;white-space:nowrap}
@@ -35,8 +36,9 @@ table.fx-table{min-width:560px}
   table.fx-table{min-width:0}
   .fx-table thead{display:none}
   .fx-table tbody,.fx-table tr{display:block}
-  .fx-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:10px 2px;border-bottom:1px solid rgba(34,34,56,.5)}
+  .fx-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:10px 2px;border-bottom:1px solid var(--line)}
   .fx-table td{display:block;border:none;padding:0}
   .fx-table td:first-child{grid-column:1 / -1;font-weight:700}
   .fx-table td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+}
 }

@@ -66,7 +66,7 @@ export function Supplements({ today, notify }: {
           onCancel={() => setEditing(null)}
           onDone={() => {
             setEditing(null);
-            notify('Saved ✓');
+            notify('Saved');
             reload();
           }}
         />

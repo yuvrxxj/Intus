@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { Check, Minus, Plus, X } from 'lucide-react';
 import type { Habit } from '../../db/habits.ts';
-import { emojiBurst, freshGesture, gesture, sparks } from '../../fx/engine.ts';
-import { sfx } from '../../fx/sound.ts';
 import {
   MAX_COUNT, MAX_NOTE, describeGoal, fractionOfGoal, toneOf, type Entries, type HabitEntry, type Tone,
 } from './model.ts';
@@ -16,33 +15,14 @@ function HabitRow({ habit, entry, onChange }: {
   // a count nobody touched shows 0, so it is judged as 0 (and saved as 0), the same as the overview counts it
   const tone = toneOf(habit, entry ?? (habit.kind === 'count' ? { value: 0 } : undefined));
   const goal = describeGoal(habit);
-  const countRef = useRef<HTMLDivElement>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const fraction = habit.kind === 'amount' ? fractionOfGoal(habit, entry) : null;
   const lowerBetter = habit.better === 'lower';
-
-  function celebrate(good: boolean) {
-    if (!freshGesture()) return;
-    sparks(gesture.x, gesture.y, good ? 10 : 6, good ? ['#3dc47a', '#e8b84a'] : ['#d94f5c', '#e8b84a']);
-  }
 
   function changeCount(delta: number) {
     const current = typeof entry?.value === 'number' ? entry.value : 0;
     const next = Math.min(MAX_COUNT, Math.max(0, current + delta));
     onChange({ ...entry, value: next });
-    const box = countRef.current?.getBoundingClientRect();
-    if (!box) return;
-    const x = box.left + box.width / 2;
-    const y = box.top + box.height / 2;
-    if (lowerBetter && next === 0 && current > 0) {
-      emojiBurst(x, y, '🎉', 6);
-      sfx.ding();
-    } else if (delta > 0 && lowerBetter) {
-      sparks(x, y, 6, ['#d94f5c', '#e8b84a']);
-      sfx.puff();
-    } else {
-      sparks(x, y, 6, ['#3dc47a', '#e8b84a']);
-    }
   }
 
   function answer(yes: boolean) {
@@ -51,7 +31,6 @@ function HabitRow({ habit, entry, onChange }: {
       return;
     }
     onChange({ ...entry, value: yes });
-    celebrate(yes === !lowerBetter);
   }
 
   function setAmount(raw: string) {
@@ -74,18 +53,18 @@ function HabitRow({ habit, entry, onChange }: {
 
       {habit.kind === 'yesno' && (
         <div className="tg">
-          <button type="button" className={`tb${yes ? (lowerBetter ? ' an' : ' ay') : ''}`} aria-pressed={yes} onClick={() => answer(true)}>✓ Yes</button>
-          <button type="button" className={`tb${no ? (lowerBetter ? ' ay' : ' an') : ''}`} aria-pressed={no} onClick={() => answer(false)}>✗ No</button>
+          <button type="button" className={`tb${yes ? (lowerBetter ? ' an' : ' ay') : ''}`} aria-pressed={yes} onClick={() => answer(true)}><Check className="mr-1 inline size-3.5 align-[-2px]" aria-hidden="true" />Yes</button>
+          <button type="button" className={`tb${no ? (lowerBetter ? ' ay' : ' an') : ''}`} aria-pressed={no} onClick={() => answer(false)}><X className="mr-1 inline size-3.5 align-[-2px]" aria-hidden="true" />No</button>
         </div>
       )}
 
       {habit.kind === 'count' && (
         <div className="habit-count">
-          <button type="button" className="cbtn" aria-label={`One fewer ${habit.name}`} onClick={() => changeCount(-1)}>−</button>
-          <div ref={countRef} className={`habit-num tone-${tone}`} aria-live="polite" aria-label={`${habit.name} today`}>
+          <button type="button" className="cbtn" aria-label={`One fewer ${habit.name}`} onClick={() => changeCount(-1)}><Minus className="size-4" aria-hidden="true" /></button>
+          <div className={`habit-num tone-${tone}`} aria-live="polite" aria-label={`${habit.name} today`}>
             {typeof value === 'number' ? value : 0}
           </div>
-          <button type="button" className="cbtn" aria-label={`One more ${habit.name}`} onClick={() => changeCount(1)}>+</button>
+          <button type="button" className="cbtn" aria-label={`One more ${habit.name}`} onClick={() => changeCount(1)}><Plus className="size-4" aria-hidden="true" /></button>
         </div>
       )}
 

@@ -42,7 +42,7 @@ export function Bloodwork({ today, notify }: Props) {
 
   function saved() {
     setAdding(false);
-    notify('Result saved ✓');
+    notify('Result saved');
     reload();
   }
 

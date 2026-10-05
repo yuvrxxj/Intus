@@ -38,7 +38,7 @@ function Row({ item, records, today, notify, onChanged }: {
       await addScreeningRecord(item.code, date, notes.trim() === '' ? null : notes.trim());
       setRecording(false);
       setNotes('');
-      notify('Saved ✓');
+      notify('Saved');
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
