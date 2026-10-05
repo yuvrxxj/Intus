@@ -1,4 +1,4 @@
-import { dayNumber } from './dates.js';
+import { dayNumber } from './dates.ts';
 
 const SQRT_PI = Math.sqrt(Math.PI);
 
@@ -9,8 +9,33 @@ export const TREND = Object.freeze({
   INSUFFICIENT_DATA: 'insufficient_data',
 });
 
+export type TrendDirection = (typeof TREND)[keyof typeof TREND];
+
+export interface MannKendallOptions {
+  alpha?: number;
+  minPoints?: number;
+}
+
+export interface MannKendallResult {
+  direction: TrendDirection;
+  n: number;
+  s: number | null;
+  variance: number | null;
+  z: number | null;
+  p: number | null;
+}
+
+export interface TrendResult extends MannKendallResult {
+  slopePerDay: number | null;
+}
+
+export interface DatedReading {
+  measured_at: string;
+  value: number | string | null;
+}
+
 // positive-term series: no cancellation, so accurate for the small-to-moderate tail
-function erfSeries(x) {
+function erfSeries(x: number): number {
   let term = x;
   let sum = x;
   for (let k = 0; term > 1e-17 * sum; k++) {
@@ -21,23 +46,23 @@ function erfSeries(x) {
 }
 
 // continued fraction keeps relative accuracy where 1 - erf would round to zero
-function erfcTail(x) {
+function erfcTail(x: number): number {
   let denominator = x;
   for (let k = 60; k >= 1; k--) denominator = x + k / 2 / denominator;
   return Math.exp(-x * x) / (SQRT_PI * denominator);
 }
 
-export function twoSidedNormalP(z) {
+export function twoSidedNormalP(z: number): number {
   const x = Math.abs(z) / Math.SQRT2;
   return x < 2.5 ? 1 - erfSeries(x) : erfcTail(x);
 }
 
-function assertFinite(values) {
+function assertFinite(values: readonly number[]): void {
   if (!values.every(Number.isFinite)) throw new TypeError('values must be finite numbers');
 }
 
-function tieTerm(values) {
-  const counts = new Map();
+function tieTerm(values: readonly number[]): number {
+  const counts = new Map<number, number>();
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
   let sum = 0;
   for (const t of counts.values()) sum += t * (t - 1) * (2 * t + 5);
@@ -45,7 +70,10 @@ function tieTerm(values) {
 }
 
 /** values must be ordered oldest to newest */
-export function mannKendall(values, { alpha = 0.05, minPoints = 5 } = {}) {
+export function mannKendall(
+  values: readonly number[],
+  { alpha = 0.05, minPoints = 5 }: MannKendallOptions = {},
+): MannKendallResult {
   assertFinite(values);
   const n = values.length;
   if (n < minPoints) {
@@ -60,13 +88,13 @@ export function mannKendall(values, { alpha = 0.05, minPoints = 5 } = {}) {
 
   const z = s === 0 ? 0 : (s - Math.sign(s)) / Math.sqrt(variance);
   const p = twoSidedNormalP(z);
-  let direction = TREND.NO_TREND;
+  let direction: TrendDirection = TREND.NO_TREND;
   if (p < alpha) direction = z > 0 ? TREND.INCREASING : TREND.DECREASING;
   return { direction, n, s, variance, z, p };
 }
 
-export function theilSenSlope(xs, ys) {
-  const slopes = [];
+export function theilSenSlope(xs: readonly number[], ys: readonly number[]): number | null {
+  const slopes: number[] = [];
   for (let i = 0; i < xs.length - 1; i++) {
     for (let j = i + 1; j < xs.length; j++) {
       const dx = xs[j] - xs[i];
@@ -80,7 +108,7 @@ export function theilSenSlope(xs, ys) {
 }
 
 /** readings: [{ measured_at: 'YYYY-MM-DD', value }] in any order */
-export function trendOfReadings(readings, options) {
+export function trendOfReadings(readings: readonly DatedReading[], options?: MannKendallOptions): TrendResult {
   const points = readings
     .map((r) => ({ day: dayNumber(r.measured_at), value: Number(r.value ?? NaN) }))
     .sort((a, b) => a.day - b.day);

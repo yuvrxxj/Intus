@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkCritical, criticalFindings, markersWithoutThreshold, CRITICAL as C } from '../lib/safety.js';
+import {
+  checkCritical, criticalFindings, markersWithoutThreshold, CRITICAL as C, type BiomarkerLimits,
+} from '../src/lib/safety.ts';
 
 // shaped like Supabase rows: numeric columns arrive as strings, missing values as null
 const potassium = { id: 'b1', code: 'potassium', name: 'Potassium', unit: 'mmol/L', critical_low: '2.8', critical_high: '6.0' };
 const alt = { id: 'b2', code: 'alt', name: 'ALT', unit: 'U/L', critical_low: null, critical_high: '200' };
 const albumin = { id: 'b3', code: 'albumin', name: 'Albumin', unit: 'g/dl', critical_low: null, critical_high: null };
-const status = (biomarker, value) => checkCritical(biomarker, value).status;
+const status = (biomarker: BiomarkerLimits, value: unknown) => checkCritical(biomarker, value).status;
 
 test('a value exactly on a critical line is critical, and just inside it is not', () => {
   assert.equal(status(potassium, 6.0), C.HIGH);
@@ -46,7 +48,7 @@ test('unusable threshold data throws instead of guessing', () => {
   assert.throws(() => checkCritical({ ...potassium, critical_low: '6', critical_high: '6' }, 4), RangeError);
 });
 
-const reading = (id, biomarker_id, value, measured_at) => ({ id, biomarker_id, value, measured_at });
+const reading = (id: string, biomarker_id: string, value: string, measured_at: string) => ({ id, biomarker_id, value, measured_at });
 
 test('criticalFindings returns only critical readings, newest first, with the biomarker details', () => {
   const findings = criticalFindings(
