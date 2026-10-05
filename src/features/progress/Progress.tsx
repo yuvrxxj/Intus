@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ChartConfiguration, ChartOptions } from 'chart.js';
-import { PROGRAMME } from '../../config.ts';
 import type { DailyLog } from '../../db/dailyLogs.ts';
+import { useProgramme } from '../profile/ProfileContext.tsx';
 import { streak } from '../today/stats.ts';
 import { shortDate } from '../../util/dates.ts';
 import { ChartCanvas } from './ChartCanvas.tsx';
@@ -30,6 +30,7 @@ const bandColor = (value: number, over: number, near: number) =>
 
 /** logs: newest first. Charts read oldest to newest, over the latest 30 entries. */
 export function Progress({ logs }: { logs: readonly DailyLog[] }) {
+  const programme = useProgramme();
   const configs = useMemo(() => {
     const recent = logs.slice(0, 30).reverse();
     const labels = recent.map((d) => shortDate(d.log_date));
@@ -42,10 +43,20 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
         labels,
         datasets: [
           { data: recent.map((d) => d.weight), borderColor: '#4a8fe8', backgroundColor: 'rgba(74,143,232,.08)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#4a8fe8', fill: true, tension: 0.35, spanGaps: true },
-          { data: recent.map(() => PROGRAMME.goalWeightKg), borderColor: 'rgba(217,79,92,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false },
+          ...(programme
+            ? [{ data: recent.map(() => programme.goalWeightKg), borderColor: 'rgba(217,79,92,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }]
+            : []),
         ],
       },
-      options: { ...base, scales: { ...scales, y: { ...scales.y, min: PROGRAMME.goalWeightKg - 2, max: PROGRAMME.startWeightKg + 1 } } },
+      options: programme
+        ? {
+            ...base,
+            scales: {
+              ...scales,
+              y: { ...scales.y, min: Math.min(programme.startWeightKg, programme.goalWeightKg) - 2, max: Math.max(programme.startWeightKg, programme.goalWeightKg) + 1 },
+            },
+          }
+        : base,
     };
 
     const cals = recent.map((d) => d.total_cals);
@@ -54,8 +65,20 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
       data: {
         labels,
         datasets: [
-          { type: 'bar', data: cals, backgroundColor: cals.map((c) => (c == null ? 'transparent' : bandColor(c, PROGRAMME.calorieOver, PROGRAMME.calorieNear))), borderRadius: 5 },
-          { type: 'line', data: recent.map(() => PROGRAMME.calorieTarget), borderColor: 'rgba(74,143,232,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false },
+          {
+            type: 'bar',
+            data: cals,
+            backgroundColor: cals.map((c) => {
+              if (c == null) return 'transparent';
+              return programme?.calorieOver != null && programme.calorieNear != null
+                ? bandColor(c, programme.calorieOver, programme.calorieNear)
+                : 'rgba(74,143,232,.7)';
+            }),
+            borderRadius: 5,
+          },
+          ...(programme?.calorieTarget != null
+            ? [{ type: 'line' as const, data: recent.map(() => programme.calorieTarget as number), borderColor: 'rgba(74,143,232,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }]
+            : []),
         ],
       },
       options: base,
@@ -86,7 +109,7 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
       },
     };
     return { weight, calories, cigarettes, mood };
-  }, [logs]);
+  }, [logs, programme]);
 
   const lift = streak(logs, (l) => l.lift === 'yes');
   const cardio = streak(logs, (l) => l.cardio === 'yes' || l.cardio === 'bad');
@@ -95,7 +118,7 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
   return (
     <div>
       <div className="g g2 sec">
-        <div className="card"><div className="ct"><span className="dot dot-blue" />Weight ({PROGRAMME.startWeightKg}→{PROGRAMME.goalWeightKg}kg)</div>
+        <div className="card"><div className="ct"><span className="dot dot-blue" />{programme ? `Weight (${programme.startWeightKg}→${programme.goalWeightKg}kg)` : 'Weight'}</div>
           <ChartCanvas config={configs.weight} label="Weight over the latest entries" /></div>
         <div className="card"><div className="ct"><span className="dot dot-green" />Calories / Day</div>
           <ChartCanvas config={configs.calories} label="Calories per day" /></div>

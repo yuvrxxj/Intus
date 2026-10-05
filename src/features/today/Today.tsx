@@ -1,7 +1,9 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { PROGRAMME, SUPPLEMENTS } from '../../config.ts';
+import { SUPPLEMENTS } from '../../config.ts';
 import { confetti, emojiBurst, freshGesture, gesture, sparks } from '../../fx/engine.ts';
 import { sfx } from '../../fx/sound.ts';
+import type { Programme } from '../../lib/programme.ts';
+import { useProgramme } from '../profile/ProfileContext.tsx';
 import { isSunday } from '../../util/dates.ts';
 import type { Toggle, TodayForm } from './useToday.ts';
 import { useHfmImage } from './hfmImage.ts';
@@ -48,8 +50,9 @@ function ToggleGroup(props: {
   );
 }
 
-function calorieColor(total: number): string {
-  return total > PROGRAMME.calorieOver ? 'var(--red)' : total >= PROGRAMME.calorieNear ? 'var(--yellow)' : 'var(--green)';
+function calorieColor(total: number, programme: Programme | null): string {
+  if (programme?.calorieOver == null || programme.calorieNear == null) return 'var(--txt)';
+  return total > programme.calorieOver ? 'var(--red)' : total >= programme.calorieNear ? 'var(--yellow)' : 'var(--green)';
 }
 
 export function Today({ form, lastWeightDate, notify }: {
@@ -65,8 +68,10 @@ export function Today({ form, lastWeightDate, notify }: {
   const [dragging, setDragging] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const programme = useProgramme();
   const total = parseInt(draft.calories, 10) || 0;
-  const remaining = PROGRAMME.calorieTarget - total;
+  const target = programme?.calorieTarget ?? null;
+  const remaining = target === null ? null : target - total;
 
   function changeCigs(delta: number) {
     const next = Math.max(0, draft.cigs + delta);
@@ -243,18 +248,24 @@ export function Today({ form, lastWeightDate, notify }: {
             <div className="cal-totals">
               <div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 600 }}>Total</div>
-                <div className="cal-num" style={{ color: calorieColor(total) }}>{total}</div>
+                <div className="cal-num" style={{ color: calorieColor(total, programme) }}>{total}</div>
               </div>
               <div className="cal-meta">
-                <div>Target: {PROGRAMME.calorieTarget.toLocaleString('en-US')} kcal</div>
-                <div style={{ marginTop: 2, fontSize: 12, color: remaining < 0 ? 'var(--red)' : remaining < 200 ? 'var(--yellow)' : 'var(--muted)' }}>
-                  {remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`}
-                </div>
+                {target === null || remaining === null ? (
+                  <div>No calorie target set. <a href="#goals" style={{ color: 'var(--blue)' }}>Set one</a></div>
+                ) : (
+                  <>
+                    <div>Target: {target.toLocaleString('en-US')} kcal</div>
+                    <div style={{ marginTop: 2, fontSize: 12, color: remaining < 0 ? 'var(--red)' : remaining < 200 ? 'var(--yellow)' : 'var(--muted)' }}>
+                      {remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="cal-bar">
-              <div className={`cal-fill${total > PROGRAMME.calorieOver ? ' over' : ''}`}
-                style={{ width: `${Math.min(100, (total / PROGRAMME.calorieTarget) * 100)}%` }} />
+              <div className={`cal-fill${programme?.calorieOver != null && total > programme.calorieOver ? ' over' : ''}`}
+                style={{ width: `${target === null ? 0 : Math.min(100, (total / target) * 100)}%` }} />
             </div>
           </div>
         </div>

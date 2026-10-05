@@ -1,18 +1,4 @@
-// The cut programme the Today, Progress and header screens are measured against. The profile table that could hold
-// these is still empty, so they live here until it is filled in.
-export const PROGRAMME = {
-  startDate: '2026-04-05',
-  goalDate: '2026-07-14',
-  startWeightKg: 82,
-  goalWeightKg: 75,
-  calorieTarget: 2100,
-  calorieOver: 2200,
-  calorieNear: 1900,
-  weeks: 12,
-} as const;
-
-export const PROFILE_LINE = `26M · 179cm · B+ · Cut: ${PROGRAMME.startWeightKg}→${PROGRAMME.goalWeightKg}kg`;
-
+// Still hardcoded, and the next thing to become editable: the supplement checklist on the Today screen.
 export interface Supplement {
   id: string;
   name: string;

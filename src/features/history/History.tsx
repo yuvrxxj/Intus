@@ -1,16 +1,19 @@
 import type { DailyLog } from '../../db/dailyLogs.ts';
-import { PROGRAMME } from '../../config.ts';
+import type { Programme } from '../../lib/programme.ts';
 import { shortDate } from '../../util/dates.ts';
+import { useProgramme } from '../profile/ProfileContext.tsx';
 
 const MOOD_FACES = ['', '😤', '😞', '😐', '🙂', '🔥'];
 const CARDIO: Record<string, string> = { yes: '✓', no: '✗', bad: '🏸' };
 
-function calorieColor(c: number | null): string {
+function calorieColor(c: number | null, programme: Programme | null): string {
   if (!c) return 'var(--muted)';
-  return c > PROGRAMME.calorieOver ? 'var(--red)' : c >= PROGRAMME.calorieNear ? 'var(--yellow)' : 'var(--green)';
+  if (programme?.calorieOver == null || programme.calorieNear == null) return 'var(--txt)';
+  return c > programme.calorieOver ? 'var(--red)' : c >= programme.calorieNear ? 'var(--yellow)' : 'var(--green)';
 }
 
 export function History({ logs, loading, error }: { logs: readonly DailyLog[]; loading: boolean; error: string | null }) {
+  const programme = useProgramme();
   return (
     <div className="card">
       <div className="ct"><span className="dot dot-dim" />Log History</div>
@@ -34,7 +37,7 @@ export function History({ logs, loading, error }: { logs: readonly DailyLog[]; l
                   <tr key={d.log_date}>
                     <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{shortDate(d.log_date)}</td>
                     <td><strong>{d.weight ? `${d.weight}kg` : '–'}</strong></td>
-                    <td style={{ color: calorieColor(d.total_cals) }}>{d.total_cals || '–'}</td>
+                    <td style={{ color: calorieColor(d.total_cals, programme) }}>{d.total_cals || '–'}</td>
                     <td style={{ fontSize: 11, color: 'var(--muted)' }}>{macros}</td>
                     <td>{d.lift ? <span className={`pill ${d.lift === 'yes' ? 'pill-g' : 'pill-r'}`}>{d.lift === 'yes' ? '✓' : 'Rest'}</span> : '–'}</td>
                     <td>{d.core ? <span className={`pill ${d.core === 'yes' ? 'pill-g' : 'pill-r'}`}>{d.core === 'yes' ? '✓' : '✗'}</span> : '–'}</td>

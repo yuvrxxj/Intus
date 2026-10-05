@@ -84,7 +84,7 @@ export function SignIn() {
     <div id="lock">
       <form className="lock-card" onSubmit={submit} noValidate>
         <div className="lock-logo" aria-hidden="true">🩺</div>
-        <div className="lock-title">Yuvraaj's Health OS</div>
+        <div className="lock-title">Health OS</div>
         <div className="lock-sub">{signingUp ? 'Create your account' : 'Sign in to continue'}</div>
         <div className={`lock-input-wrap${shake && fieldErrors.email ? ' shake' : ''}`}>
           <input
