@@ -6,6 +6,8 @@ export const CRITICAL = Object.freeze({
   HIGH: 'critical_high',
   OK: 'ok',
   NO_THRESHOLD: 'no_threshold',
+  /** limits exist but no clinician has signed them off, so they are never used to raise or clear an alert */
+  UNVERIFIED: 'unverified',
 });
 
 export type CriticalStatus = (typeof CRITICAL)[keyof typeof CRITICAL];
@@ -18,6 +20,16 @@ export interface BiomarkerLimits {
   unit?: string;
   critical_low: NumericInput;
   critical_high: NumericInput;
+  /**
+   * When a clinician signed off this marker's critical limits. Absent, null or blank means nobody has, which is
+   * the default for every marker: an unsigned limit is a guess, and a guess must not alert or reassure.
+   */
+  threshold_verified_at?: string | null;
+}
+
+/** True only when the marker carries a sign-off date. */
+export function isVerified(biomarker: Pick<BiomarkerLimits, 'threshold_verified_at'>): boolean {
+  return typeof biomarker.threshold_verified_at === 'string' && biomarker.threshold_verified_at.trim() !== '';
 }
 
 export interface CriticalResult {
@@ -48,6 +60,8 @@ export interface CriticalFinding extends CriticalResult {
  * biomarker: a biomarkers row (critical_low / critical_high may be null or numeric strings).
  * A threshold counts as crossed when the value reaches it, so a value exactly on the line is critical.
  * With no threshold at all the answer is no_threshold, never ok: absence of a limit is not reassurance.
+ * With limits that no clinician has verified the answer is unverified, never ok and never critical: the numbers
+ * are still validated (an inverted pair throws) but they take no part in the decision.
  * checkedLow / checkedHigh say which sides actually had a limit, so a UI can avoid implying more.
  */
 export function checkCritical(biomarker: BiomarkerLimits, value: unknown): CriticalResult {
@@ -62,6 +76,7 @@ export function checkCritical(biomarker: BiomarkerLimits, value: unknown): Criti
   const checkedHigh = high !== null;
   let status: CriticalStatus = CRITICAL.OK;
   if (!checkedLow && !checkedHigh) status = CRITICAL.NO_THRESHOLD;
+  else if (!isVerified(biomarker)) status = CRITICAL.UNVERIFIED;
   else if (low !== null && reading <= low) status = CRITICAL.LOW;
   else if (high !== null && reading >= high) status = CRITICAL.HIGH;
   return { status, value: reading, critical_low: low, critical_high: high, checkedLow, checkedHigh };
@@ -95,7 +110,14 @@ export function criticalFindings(
   return findings.sort((a, b) => dayNumber(b.measured_at) - dayNumber(a.measured_at));
 }
 
-/** Biomarkers that can never raise a critical flag, so the UI can say they are not being watched. */
+/** Biomarkers that can never raise a critical flag because they have no limit, so the UI can say they are not being watched. */
 export function markersWithoutThreshold(biomarkers: readonly BiomarkerLimits[]): (string | undefined)[] {
   return biomarkers.filter((b) => b.critical_low == null && b.critical_high == null).map((b) => b.code);
+}
+
+/** Biomarkers that have limits stored but no clinician sign-off, so their limits are held back from every alert. */
+export function markersWithUnverifiedThreshold(biomarkers: readonly BiomarkerLimits[]): (string | undefined)[] {
+  return biomarkers
+    .filter((b) => (b.critical_low != null || b.critical_high != null) && !isVerified(b))
+    .map((b) => b.code);
 }

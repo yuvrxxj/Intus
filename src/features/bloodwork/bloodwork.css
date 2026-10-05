@@ -10,6 +10,9 @@
 .cbanner-sum{cursor:pointer;margin-bottom:0}
 .cbanner-past[open] .cbanner-sum{margin-bottom:10px}
 .cbanner-none{background:var(--green3);border-color:rgba(61,196,122,.25)}
+.cbanner-off{background:var(--yellow2);border-color:rgba(232,184,74,.3)}
+.cbanner-off .cbanner-hdr{color:var(--yellow)}
+.cbanner-off .cbanner-hdr::before{background:var(--yellow);animation:none}
 .ci::before{content:'\26A0'}
 .ci-src{color:var(--muted);margin-left:4px}
 .cb-note{font-size:11px;color:var(--muted);margin-top:8px}

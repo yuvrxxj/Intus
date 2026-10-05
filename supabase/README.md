@@ -13,6 +13,7 @@ if someone calls the API directly with the public key in the app.
 | `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day | Yes |
 | `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` | Yes |
 | `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` (activity level, diet, workouts a week, cardio notes, typical and desired day) | Yes |
+| `20261005000600_threshold_verification.sql` | Adds `threshold_verified_at` / `threshold_verified_by` to `biomarkers`. Nothing is marked verified, so no critical alert fires until a clinician signs a marker off | Not yet (written, not applied). Safe to apply any time: the new app reads a missing column as "unverified" |
 
 `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries the original owner's old hardcoded habits
 (cigarettes, lift, core, cardio, steps) into the new table and copies their old `daily_logs` columns into the new
