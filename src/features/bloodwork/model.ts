@@ -1,7 +1,9 @@
 import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { toNumber, toNumberOrNull } from '../../lib/numbers.ts';
-import { checkCritical, criticalFindings, type CriticalFinding, type CriticalResult } from '../../lib/safety.ts';
+import {
+  checkCritical, criticalFindings, isVerified, type CriticalFinding, type CriticalResult,
+} from '../../lib/safety.ts';
 import { trendOfReadings, TREND, type TrendResult } from '../../lib/trends.ts';
 
 /** Where a value sits against the lab reference range stored on the biomarker. */
@@ -60,6 +62,10 @@ export interface BloodworkView {
   pastCritical: CriticalFinding[];
   /** biomarkers with no critical limit at all, so a critical value could never be flagged for them */
   unwatched: string[];
+  /** biomarkers with limits stored but no clinician sign-off, so their limits are held back from every alert */
+  unverified: string[];
+  /** biomarkers whose limits a clinician has signed off, the only ones that can raise a critical alert */
+  verifiedCount: number;
   /** biomarkers that have no results yet */
   noResults: string[];
   /** how many markers have enough results for a statistical trend */
@@ -173,9 +179,10 @@ export function buildBloodworkView(input: {
   const days = new Set(readings.map((r) => r.measured_at));
   const latestDate = days.size === 0 ? null : [...days].sort((a, b) => dayNumber(a) - dayNumber(b)).at(-1) ?? null;
 
-  const unwatched = biomarkers
-    .filter((b) => b.critical_low == null && b.critical_high == null)
-    .map((b) => b.name);
+  const hasLimit = (b: Biomarker) => b.critical_low != null || b.critical_high != null;
+  const unwatched = biomarkers.filter((b) => !hasLimit(b)).map((b) => b.name);
+  const unverified = biomarkers.filter((b) => hasLimit(b) && !isVerified(b)).map((b) => b.name);
+  const verifiedCount = biomarkers.filter((b) => hasLimit(b) && isVerified(b)).length;
 
   return {
     groups,
@@ -185,6 +192,8 @@ export function buildBloodworkView(input: {
     currentCritical,
     pastCritical,
     unwatched,
+    unverified,
+    verifiedCount,
     noResults,
     trendable,
   };

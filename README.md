@@ -33,8 +33,9 @@ The app talks to the production Supabase project by default. `.env.example` list
 
 ## Bloodwork and safety
 
-- A reading counts as critical when it reaches a stored critical limit (inclusive). A marker with no limit is reported as unwatched, never as fine.
-- The critical limits in the database have not been verified by a clinician. The screen says so, and a quiet banner is not an all clear. A qualified person should check them before anyone else uses this app.
+- A reading counts as critical only when the marker's critical limits have been signed off by a clinician (`biomarkers.threshold_verified_at`) and the reading reaches one (inclusive). A marker with no limit is reported as unwatched, and a marker whose limits nobody has signed off is reported as unverified. Neither is ever shown as fine.
+- No limit has been signed off yet, so critical-value alerts are off, and the Bloodwork screen says so in place of a reassuring green banner. Results are still flagged against the stored reference range. To turn alerts on for a marker, a clinician reviews its limits and the project owner records the sign-off in SQL (see `supabase/migrations/20261005000600_threshold_verification.sql`). The reviewer's name is required, and the API cannot write to that table.
+- Results can be typed in on the Bloodwork screen. They are stored with the source `manual`, shown as "entered by you", and can be deleted from the screen. Only plain decimals are accepted, a second result for the same marker on the same day is refused, and a number ten times outside the usual range asks for confirmation in case it was typed in the wrong unit.
 - Arrows compare the latest result with the one before. A statistical trend (Mann-Kendall) needs five results, so most markers will not show one yet.
 - The app does not assess medicines or doses. Supplements are recorded as a list and nothing more.
 - Data the checks cannot trust (a reading with no biomarker, a threshold that is not a number) stops the screen with an error instead of being skipped.

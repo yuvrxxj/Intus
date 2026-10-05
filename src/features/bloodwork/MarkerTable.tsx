@@ -1,11 +1,12 @@
 import { Fragment } from 'react';
-import { CRITICAL, checkCritical } from '../../lib/safety.ts';
+import { CRITICAL, checkCritical, isVerified } from '../../lib/safety.ts';
 import { TREND } from '../../lib/trends.ts';
 import { rangeStatus, type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
 import {
   ARROW, DIRECTION_WORD, RANGE_LABEL, describeDays, formatDay, formatDelta, formatRange, formatValue,
 } from './format.ts';
 import { Sparkline } from './Sparkline.tsx';
+import { MANUAL_SOURCE } from './entry.ts';
 
 const VALUE_CLASS: Record<RangeStatus, string> = {
   in_range: 'bv-ok',
@@ -67,10 +68,11 @@ function StatusCell({ row }: { row: MarkerRow }) {
   );
 }
 
-function Detail({ row }: { row: MarkerRow }) {
+function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (point: Point, markerName: string) => void }) {
   const { biomarker, points } = row;
   const newestFirst = [...points].reverse();
   const noLimit = biomarker.critical_low == null && biomarker.critical_high == null;
+  const verified = isVerified(biomarker);
   const limits = [
     biomarker.critical_low != null ? `low ${formatValue(Number(biomarker.critical_low))}` : null,
     biomarker.critical_high != null ? `high ${formatValue(Number(biomarker.critical_high))}` : null,
@@ -88,6 +90,9 @@ function Detail({ row }: { row: MarkerRow }) {
             <div>
               Critical limits: {limits.join(', ')} {biomarker.unit}
               {biomarker.threshold_source ? <span className="ci-src"> Source: {biomarker.threshold_source}</span> : null}
+              {verified
+                ? <span className="ci-src"> Verified by a clinician.</span>
+                : <div className="bt-nolimit">Not verified by a clinician, so these limits are not used to raise an alert.</div>}
             </div>
           )}
           {biomarker.description ? <div className="bt-desc">{biomarker.description}</div> : null}
@@ -113,7 +118,11 @@ function Detail({ row }: { row: MarkerRow }) {
                 <td>
                   <div className="bt-notes">
                   {isDemo(p) ? <span className="tag tag-demo" title="This row was loaded as demo data, not from a lab report.">demo data</span> : null}
+                  {p.source === MANUAL_SOURCE ? <span className="tag tag-warn" title="You typed this result in. It was not imported from a lab.">entered by you</span> : null}
                   {p.notes ? <span>{p.notes}</span> : null}
+                  {p.source === MANUAL_SOURCE && onDeleteReading
+                    ? <button type="button" className="btn btn-danger" onClick={() => onDeleteReading(p, biomarker.name)}>Delete</button>
+                    : null}
                   </div>
                 </td>
               </tr>
@@ -130,9 +139,11 @@ interface Props {
   rows: readonly MarkerRow[];
   expanded: ReadonlySet<string>;
   onToggle: (biomarkerId: string) => void;
+  /** offered only for results the person typed in themselves */
+  onDeleteReading?: (point: Point, markerName: string) => void;
 }
 
-export function MarkerTable({ rows, expanded, onToggle }: Props) {
+export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props) {
   return (
     <div className="bt-wrap">
       <table className="bt bt-main">
@@ -175,7 +186,7 @@ export function MarkerTable({ rows, expanded, onToggle }: Props) {
                 </tr>
                 {open && (
                   <tr className="bt-detail" id={`detail-${row.biomarker.id}`}>
-                    <td colSpan={5}><Detail row={row} /></td>
+                    <td colSpan={5}><Detail row={row} onDeleteReading={onDeleteReading} /></td>
                   </tr>
                 )}
               </Fragment>

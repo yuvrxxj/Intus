@@ -154,7 +154,7 @@ function Dashboard() {
           )}
           {tab === 'goals' && <Goals today={today} latestWeightKg={stats.latest?.weight ?? null} notify={notify} />}
           {tab === 'history' && <History logs={recent.logs} loading={recent.loading} error={recent.error} />}
-          {tab === 'bloodwork' && <Bloodwork />}
+          {tab === 'bloodwork' && <Bloodwork today={today} notify={notify} />}
           {tab === 'screening' && <Screening today={today} notify={notify} onProfileSaved={reloadProfile} />}
           {tab === 'supplements' && <Supplements today={today} notify={notify} />}
         </div>
