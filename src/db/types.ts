@@ -473,12 +473,16 @@ export type Database = {
       };
       profile: {
         Row: {
+          activity_level: string | null;
           age: number | null;
           bf_goal: number | null;
           bf_start: number | null;
           blood_type: string | null;
           calorie_target: number | null;
           carb_target: number | null;
+          cardio_notes: string | null;
+          desired_day: string | null;
+          diet: string | null;
           family_colorectal_cancer: boolean;
           family_prostate_cancer: boolean;
           fat_target: number | null;
@@ -496,17 +500,23 @@ export type Database = {
           start_date: string | null;
           start_weight: number | null;
           step_target: number | null;
+          typical_day: string | null;
           updated_at: string | null;
           user_id: string;
           water_target: number | null;
+          workout_days_per_week: number | null;
         };
         Insert: {
+          activity_level?: string | null;
           age?: number | null;
           bf_goal?: number | null;
           bf_start?: number | null;
           blood_type?: string | null;
           calorie_target?: number | null;
           carb_target?: number | null;
+          cardio_notes?: string | null;
+          desired_day?: string | null;
+          diet?: string | null;
           family_colorectal_cancer?: boolean;
           family_prostate_cancer?: boolean;
           fat_target?: number | null;
@@ -524,17 +534,23 @@ export type Database = {
           start_date?: string | null;
           start_weight?: number | null;
           step_target?: number | null;
+          typical_day?: string | null;
           updated_at?: string | null;
           user_id?: string;
           water_target?: number | null;
+          workout_days_per_week?: number | null;
         };
         Update: {
+          activity_level?: string | null;
           age?: number | null;
           bf_goal?: number | null;
           bf_start?: number | null;
           blood_type?: string | null;
           calorie_target?: number | null;
           carb_target?: number | null;
+          cardio_notes?: string | null;
+          desired_day?: string | null;
+          diet?: string | null;
           family_colorectal_cancer?: boolean;
           family_prostate_cancer?: boolean;
           fat_target?: number | null;
@@ -552,9 +568,11 @@ export type Database = {
           start_date?: string | null;
           start_weight?: number | null;
           step_target?: number | null;
+          typical_day?: string | null;
           updated_at?: string | null;
           user_id?: string;
           water_target?: number | null;
+          workout_days_per_week?: number | null;
         };
         Relationships: [];
       };

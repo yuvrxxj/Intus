@@ -17,6 +17,8 @@ const CONTRACT = migration('20261005000200_drop_single_user_unique');
 const SCHEDULE = migration('20261005000300_supplement_schedule');
 // Also independent of the per-user pair: the habits table and the daily log's habits column.
 const HABITS = migration('20261005000400_habits');
+// And the first-run answers on the profile.
+const ONBOARDING = migration('20261005000500_onboarding_answers');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
 const SEED_HABITS = read(`${process.env.ONE_OFF_DIR ?? '../one-off'}/20261005_seed_owner_habits.sql`);
 
@@ -68,7 +70,7 @@ async function runScript(db, sql) {
  * per-user migration), contracted (plus the second). owners: accounts registered in app_owner.
  * schedule, habits: when each of those independent migrations goes in, 'before' or 'after' the per-user one (or not at all).
  */
-async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none', habits = 'none' } = {}) {
+async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none', habits = 'none', onboarding = 'none' } = {}) {
   const db = new PGlite();
   await db.exec(read('./fixtures/supabase-stub.sql'));
   await db.exec(read('./fixtures/pre-lockdown.sql'));
@@ -82,10 +84,12 @@ async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none', 
   await runScript(db, LOCKDOWN);
   if (schedule === 'before') await runScript(db, SCHEDULE);
   if (habits === 'before') await runScript(db, HABITS);
+  if (onboarding === 'before') await runScript(db, ONBOARDING);
   if (stage === 'live') return db;
   await runScript(db, EXPAND);
   if (schedule === 'after') await runScript(db, SCHEDULE);
   if (habits === 'after') await runScript(db, HABITS);
+  if (onboarding === 'after') await runScript(db, ONBOARDING);
   if (stage === 'expanded') return db;
   await runScript(db, CONTRACT);
   return db;
@@ -649,4 +653,86 @@ test('after the per-user migration the seed only fills in the owner\'s days, nev
   const theirs = await db.query(`select habits::text as h from public.daily_logs where user_id = '${OTHER}'`);
   assert.notEqual(mine.rows[0].h, '{}', 'the owner\'s day is filled in');
   assert.equal(theirs.rows[0].h, '{}', 'the other person\'s day is untouched');
+});
+
+// ── first-run answers on the profile ─────────────────────────────────────────────────────────────────
+
+const answers = async (db, where = 'true') => (await db.query(
+  `select activity_level, diet, workout_days_per_week, cardio_notes, typical_day, desired_day from public.profile where ${where}`)).rows;
+
+test('the onboarding columns start empty, and the old app\'s profile saves still work without them', async () => {
+  const db = await world({ stage: 'live', onboarding: 'before' });
+  assert.deepEqual((await answers(db))[0], { activity_level: null, diet: null, workout_days_per_week: null, cardio_notes: null, typical_day: null, desired_day: null });
+  await db.exec(`update public.profile set age = 27, sex = 'male'`);
+  await db.exec(`insert into public.profile (name, age) values ('second', 31)`);
+  assert.equal(await count(db, 'select count(*) as n from public.profile'), 2);
+});
+
+test('activity, diet and workout days only take the values the app offers, and free text is capped', async () => {
+  const db = await world({ stage: 'live', onboarding: 'before' });
+  const set = (assignment) => db.exec(`update public.profile set ${assignment}`);
+  for (const [what, assignment, rule] of [
+    ['activity', `activity_level = 'couch'`, /profile_activity_level_valid/],
+    ['diet', `diet = 'carnivore'`, /profile_diet_valid/],
+    ['workout days low', `workout_days_per_week = -1`, /profile_workout_days_valid/],
+    ['workout days high', `workout_days_per_week = 8`, /profile_workout_days_valid/],
+    ['cardio too long', `cardio_notes = '${'x'.repeat(201)}'`, /profile_free_text_short/],
+    ['typical day too long', `typical_day = '${'x'.repeat(1001)}'`, /profile_free_text_short/],
+    ['desired day too long', `desired_day = '${'x'.repeat(1001)}'`, /profile_free_text_short/],
+  ]) await assert.rejects(() => set(assignment), rule, what);
+  for (const level of ['sedentary', 'light', 'moderate', 'active', 'very_active']) await set(`activity_level = '${level}'`);
+  for (const diet of ['vegetarian', 'non_vegetarian', 'vegan', 'other']) await set(`diet = '${diet}'`);
+  for (const days of [0, 3, 7]) await set(`workout_days_per_week = ${days}`);
+  await set(`cardio_notes = '${'x'.repeat(200)}', typical_day = '${'x'.repeat(1000)}', desired_day = '${'x'.repeat(1000)}'`);
+  await set(`activity_level = null, diet = null, workout_days_per_week = null, cardio_notes = null, typical_day = null, desired_day = null`);
+});
+
+test('the onboarding migration can be applied twice, and in either order with the per-user one', async () => {
+  const db = await world({ stage: 'live', onboarding: 'before' });
+  await db.exec(`update public.profile set diet = 'vegan', workout_days_per_week = 4`);
+  await runScript(db, ONBOARDING);
+  assert.deepEqual((await answers(db))[0].diet, 'vegan', 'a second run keeps the answers');
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.profile'::regclass and conname in ('profile_activity_level_valid', 'profile_diet_valid', 'profile_workout_days_valid', 'profile_free_text_short')`), 4);
+  for (const order of ['before', 'after']) {
+    const w = await world({ stage: 'expanded', onboarding: order });
+    await asUser(w, OWNER, async () => {
+      await w.exec(`update public.profile set activity_level = 'active'`);
+      assert.equal((await answers(w))[0].activity_level, 'active', order);
+    });
+  }
+});
+
+// the exact statement the app uses to save the wizard: one row per person, created or updated in one go
+const SAVE_ANSWERS = (age, diet) => `
+  insert into public.profile (age, sex, diet, activity_level, onboarded)
+  values (${age}, 'female', '${diet}', 'light', true)
+  on conflict (user_id) do update set age = excluded.age, sex = excluded.sex, diet = excluded.diet,
+    activity_level = excluded.activity_level, onboarded = excluded.onboarded`;
+
+test('saving the wizard updates the owner\'s one profile row, and creates a new person\'s first one', async () => {
+  const db = await world({ stage: 'expanded', onboarding: 'after' });
+  await asUser(db, OWNER, async () => {
+    await db.exec(SAVE_ANSWERS(40, 'vegan'));
+    assert.equal(await rowsOf(db, 'profile'), 1, 'still one row');
+    assert.equal((await answers(db))[0].diet, 'vegan');
+  });
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'profile'), 0, 'a new person starts with none');
+    await db.exec(SAVE_ANSWERS(29, 'vegetarian'));
+    assert.equal(await rowsOf(db, 'profile'), 1);
+    await db.exec(SAVE_ANSWERS(30, 'other'));
+    assert.equal(await rowsOf(db, 'profile'), 1, 'saving again updates rather than adding');
+    assert.equal((await db.query('select age from public.profile')).rows[0].age, 30);
+  });
+  await asUser(db, OWNER, async () => assert.equal((await db.query('select age from public.profile')).rows[0].age, 40, 'the owner\'s row is untouched by the other person'));
+});
+
+test('a person\'s answers are private', async () => {
+  const db = await world({ stage: 'expanded', onboarding: 'after' });
+  await asUser(db, OWNER, () => db.exec(`update public.profile set typical_day = 'secret', diet = 'vegan'`));
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'profile'), 0);
+    await db.exec(`update public.profile set typical_day = 'overwritten'`);
+  });
+  assert.equal((await db.query(`select typical_day from public.profile where user_id = '${OWNER}'`)).rows[0].typical_day, 'secret');
 });

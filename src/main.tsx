@@ -6,6 +6,7 @@ import './styles/forms.css';
 import './features/bloodwork/bloodwork.css';
 import './features/supplements/supplements.css';
 import './features/habits/habits.css';
+import './features/onboarding/onboarding.css';
 import './features/screening/screening.css';
 import './styles/overrides.css';
 

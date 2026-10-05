@@ -12,6 +12,7 @@ if someone calls the API directly with the public key in the app.
 | `20261005000200_drop_single_user_unique.sql` | Drops the one-person `unique(log_date)` on `daily_logs` | **No, apply last** |
 | `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day | Yes |
 | `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` | Yes |
+| `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` (activity level, diet, workouts a week, cardio notes, typical and desired day) | Yes |
 
 `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries the original owner's old hardcoded habits
 (cigarettes, lift, core, cardio, steps) into the new table and copies their old `daily_logs` columns into the new
@@ -70,4 +71,5 @@ To check that the tests would notice a mistake, point them at a deliberately bro
 `MIGRATIONS_DIR=/path/to/broken/copy npm --prefix supabase/tests test` (and `ONE_OFF_DIR` for the seed). Thirteen
 such breaks of the per-user migration, eight of the supplement schedule one, and nineteen of the habits migration
 and seed were tried when this was written (a policy opened to everyone, writes allowed on shared tables, existing
-rows not assigned, values overwritten by the seed, and so on), and each one fails at least one test.
+rows not assigned, values overwritten by the seed, and so on). Each one fails at least one test, except one that
+changes nothing: leaving `WITH CHECK` off a `FOR ALL` policy makes Postgres reuse the `USING` rule for writes.

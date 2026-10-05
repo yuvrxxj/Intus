@@ -4,6 +4,8 @@ import { SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Bloodwork } from './features/bloodwork/Bloodwork.tsx';
 import { Goals } from './features/goals/Goals.tsx';
+import { Onboarding } from './features/onboarding/Onboarding.tsx';
+import { needsOnboarding } from './features/onboarding/model.ts';
 import { HabitsProvider, useHabits } from './features/habits/HabitsContext.tsx';
 import { History } from './features/history/History.tsx';
 import { ProfileProvider, useProfile } from './features/profile/ProfileContext.tsx';
@@ -175,6 +177,15 @@ function Dashboard() {
   );
 }
 
+/** New accounts answer the first-run questions before seeing the dashboard. Anyone can skip them for now. */
+function Gate() {
+  const { status, profile } = useProfile();
+  const [skipped, setSkipped] = useState(false);
+  if (status === 'loading') return <div className="boot"><div className="loading">Loading</div></div>;
+  if (status === 'ready' && needsOnboarding(profile) && !skipped) return <Onboarding onSkip={() => setSkipped(true)} />;
+  return <Dashboard />;
+}
+
 export function App() {
   const session = useSession();
   return (
@@ -182,7 +193,7 @@ export function App() {
       {session.status === 'signed_in' && (
         <ProfileProvider>
           <HabitsProvider>
-            <Dashboard />
+            <Gate />
           </HabitsProvider>
         </ProfileProvider>
       )}
