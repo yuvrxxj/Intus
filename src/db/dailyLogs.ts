@@ -22,6 +22,7 @@ export async function fetchLog(date: string): Promise<DailyLog | null> {
 }
 
 export async function saveLog(record: DailyLogInsert): Promise<void> {
-  const { error } = await supabase.from('daily_logs').upsert(record, { onConflict: 'log_date' });
+  // One log per person per day: user_id fills itself in from the signed-in user, so the key is the pair.
+  const { error } = await supabase.from('daily_logs').upsert(record, { onConflict: 'user_id,log_date' });
   if (error) throw new Error(error.message);
 }

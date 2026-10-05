@@ -7,7 +7,7 @@ import type { Medication } from '../src/db/medications.ts';
 
 const form = (over: Partial<SupplementForm> = {}): SupplementForm => ({ ...EMPTY_SUPPLEMENT_FORM, name: 'Creatine', ...over });
 const item = (over: Partial<Medication> & Pick<Medication, 'name'>): Medication => ({
-  id: over.name, active: true, created_at: '2026-01-01T00:00:00Z', dosage: null, doses_per_day: null, end_date: null,
+  id: over.name, user_id: 'u', active: true, created_at: '2026-01-01T00:00:00Z', dosage: null, doses_per_day: null, end_date: null,
   frequency: null, notes: null, paracetamol_mg_per_dose: null, start_date: null, ...over,
 });
 

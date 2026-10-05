@@ -4,7 +4,7 @@ import { EMPTY_DRAFT, draftFromLog, recordFromDraft } from '../src/features/toda
 import type { DailyLog } from '../src/db/dailyLogs.ts';
 
 const log = (over: Partial<DailyLog> = {}): DailyLog => ({
-  id: 'x', log_date: '2026-10-01', weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null,
+  id: 'x', user_id: 'u', log_date: '2026-10-01', weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null,
   core: null, cardio: null, cigs: null, mood: null, mood_notes: null, supplements: null, saved_at: null, steps: null,
   water_ml: 0, active_kcal: null, rings: null, ...over,
 });

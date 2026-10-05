@@ -4,7 +4,7 @@ import { daysToGoal, programmeBlock, programmeWeek, streak, weightStats } from '
 import type { DailyLog } from '../src/db/dailyLogs.ts';
 
 const log = (log_date: string, over: Partial<DailyLog> = {}): DailyLog => ({
-  id: log_date, log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null, core: null,
+  id: log_date, user_id: 'u', log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null, core: null,
   cardio: null, cigs: 0, mood: null, mood_notes: null, supplements: null, saved_at: null, steps: null, water_ml: 0,
   active_kcal: null, rings: null, ...over,
 });

@@ -5,7 +5,7 @@ import { SCREENING_STATUS as S, type ScreeningItem } from '../src/lib/screening.
 import type { Profile } from '../src/db/profile.ts';
 
 const profile = (over: Partial<Profile> = {}): Profile => ({
-  id: 'p', age: 26, sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: true, noise_or_blast_exposure: false,
+  id: 'p', user_id: 'u', age: 26, sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: true, noise_or_blast_exposure: false,
   bf_goal: null, bf_start: null, blood_type: null, calorie_target: null, carb_target: null, fat_target: null, goal_date: null,
   goal_weight: null, height_cm: null, initials: null, name: null, onboarded: false, protein_target: null, sleep_goal: null,
   start_date: null, start_weight: null, step_target: null, updated_at: null, water_target: null, ...over,

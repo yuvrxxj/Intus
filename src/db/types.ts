@@ -53,6 +53,7 @@ export type Database = {
           source: string | null;
           status: string | null;
           value: number;
+          user_id: string;
         };
         Insert: {
           biomarker_id: string;
@@ -63,6 +64,7 @@ export type Database = {
           source?: string | null;
           status?: string | null;
           value: number;
+          user_id?: string;
         };
         Update: {
           biomarker_id?: string;
@@ -73,6 +75,7 @@ export type Database = {
           source?: string | null;
           status?: string | null;
           value?: number;
+          user_id?: string;
         };
         Relationships: [
           {
@@ -237,6 +240,7 @@ export type Database = {
           total_cals: number | null;
           water_ml: number | null;
           weight: number | null;
+          user_id: string;
         };
         Insert: {
           active_kcal?: number | null;
@@ -258,6 +262,7 @@ export type Database = {
           total_cals?: number | null;
           water_ml?: number | null;
           weight?: number | null;
+          user_id?: string;
         };
         Update: {
           active_kcal?: number | null;
@@ -279,6 +284,7 @@ export type Database = {
           total_cals?: number | null;
           water_ml?: number | null;
           weight?: number | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -367,6 +373,7 @@ export type Database = {
           notes: string | null;
           paracetamol_mg_per_dose: number | null;
           start_date: string | null;
+          user_id: string;
         };
         Insert: {
           active?: boolean | null;
@@ -380,6 +387,7 @@ export type Database = {
           notes?: string | null;
           paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
+          user_id?: string;
         };
         Update: {
           active?: boolean | null;
@@ -393,6 +401,7 @@ export type Database = {
           notes?: string | null;
           paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -429,6 +438,7 @@ export type Database = {
           step_target: number | null;
           updated_at: string | null;
           water_target: number | null;
+          user_id: string;
         };
         Insert: {
           age?: number | null;
@@ -456,6 +466,7 @@ export type Database = {
           step_target?: number | null;
           updated_at?: string | null;
           water_target?: number | null;
+          user_id?: string;
         };
         Update: {
           age?: number | null;
@@ -483,13 +494,14 @@ export type Database = {
           step_target?: number | null;
           updated_at?: string | null;
           water_target?: number | null;
+          user_id?: string;
         };
         Relationships: [];
       };
       screening_history: {
-        Row: { created_at: string; done_date: string; id: string; notes: string | null; screening_code: string };
-        Insert: { created_at?: string; done_date: string; id?: string; notes?: string | null; screening_code: string };
-        Update: { created_at?: string; done_date?: string; id?: string; notes?: string | null; screening_code?: string };
+        Row: { created_at: string; done_date: string; id: string; notes: string | null; screening_code: string; user_id: string };
+        Insert: { created_at?: string; done_date: string; id?: string; notes?: string | null; screening_code: string; user_id?: string };
+        Update: { created_at?: string; done_date?: string; id?: string; notes?: string | null; screening_code?: string; user_id?: string };
         Relationships: [
           {
             foreignKeyName: 'screening_history_screening_code_fkey';

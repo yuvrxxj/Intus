@@ -1,6 +1,6 @@
 # Yuvraaj's Health OS
 
-A personal health tracker: daily log, progress charts, history and bloodwork, on a Supabase database that only answers to the owner's login. React, TypeScript and Vite, deployed on Vercel.
+A health tracker: daily log, progress charts, history and bloodwork, on a Supabase database where each person sees only their own rows. React, TypeScript and Vite, deployed on Vercel. Today it still has a single user; `supabase/README.md` covers the move to many.
 
 ## Run it
 
@@ -28,7 +28,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/auth/` | Email and password sign-in through Supabase Auth |
 | `src/db/` | Supabase client, generated table types and the queries |
 | `src/fx/` | The playful layer: particles, cursor, sounds. Decoration only, and it honours reduced motion |
-| `supabase/` | Migrations and the notes on the owner-only lock-down |
+| `supabase/` | Migrations, the notes on who can see what, and the row-level security checks in `supabase/tests/` |
 | `test/` | Unit tests for `src/lib` and for the view logic |
 
 ## Bloodwork and safety

@@ -11,7 +11,7 @@ export interface ProfileValues {
   noise_or_blast_exposure: boolean;
 }
 
-/** There is one person in this database, so the profile is the first row, or null before it has been filled in. */
+/** Row-level security shows each person only their own profile, so it is the first row, or null before it has been filled in. */
 export async function fetchProfile(): Promise<Profile | null> {
   const { data, error } = await supabase.from('profile').select('*').limit(1).maybeSingle();
   if (error) throw new Error(`Could not load your profile: ${error.message}`);

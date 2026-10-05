@@ -34,6 +34,7 @@ const reading = (id: string, biomarker_id: string, measured_at: string, value: n
   created_at: '2026-01-01T00:00:00Z',
   status: null,
   source: 'lab',
+  user_id: 'u',
 });
 
 const potassium = marker({ id: 'k', code: 'potassium', ref_low: 3.5, ref_high: 5.1, critical_low: 2.8, critical_high: 6 });
