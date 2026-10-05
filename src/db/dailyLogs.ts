@@ -22,6 +22,6 @@ export async function fetchLog(date: string): Promise<DailyLog | null> {
 }
 
 export async function saveLog(record: DailyLogInsert): Promise<void> {
-  const { error } = await supabase.from('daily_logs').upsert(record, { onConflict: 'log_date' });
+  const { error } = await supabase.from('daily_logs').upsert(record, { onConflict: 'user_id,log_date' });
   if (error) throw new Error(error.message);
 }

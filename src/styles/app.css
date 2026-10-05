@@ -32,6 +32,8 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
 .lock-btn:active{transform:translateY(0)}
 .lock-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px;transition:opacity .2s}
 .lock-err.hidden{opacity:0}
+.lock-link{background:none;border:none;color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px;margin-top:14px;padding:6px 4px}
+.lock-link:hover{text-decoration:underline}
 .lock-dots{display:flex;justify-content:center;gap:5px;margin-top:20px}
 .lock-dot{width:5px;height:5px;border-radius:50%;background:var(--b2)}
 .lock-dot.active{background:var(--blue)}

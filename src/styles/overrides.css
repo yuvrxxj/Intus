@@ -9,7 +9,7 @@
 .panel{animation:fadeUp .3s ease}
 
 /* visible keyboard focus on the controls that were mouse-only before */
-.si:focus-visible,.hfm-drop:focus-visible,.tab:focus-visible,.bn-tab:focus-visible,.tb:focus-visible,.mb:focus-visible,.cbtn:focus-visible,.save-btn:focus-visible,.signout:focus-visible,.lock-btn:focus-visible,.lock-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.si:focus-visible,.hfm-drop:focus-visible,.tab:focus-visible,.bn-tab:focus-visible,.tb:focus-visible,.mb:focus-visible,.cbtn:focus-visible,.save-btn:focus-visible,.signout:focus-visible,.lock-btn:focus-visible,.lock-toggle:focus-visible,.lock-link:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
