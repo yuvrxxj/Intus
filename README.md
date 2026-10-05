@@ -24,7 +24,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/bloodwork/` | The Bloodwork screen. `model.ts` turns table rows into what is shown, and the components only draw it |
 | `src/features/today`, `progress`, `history` | The daily log, charts and history table |
 | `src/features/screening/` | Your details and the screening calendar, with a way to record a screening as done |
-| `src/features/supplements/` | A plain list of the supplements you take (a multivitamin, creatine) with start and end dates. No dose checks or warnings |
+| `src/features/supplements/` | The supplements you take (a multivitamin, creatine) with start and end dates, and a before/after comparison against what you log. No dose checks or warnings |
 | `src/features/auth/` | Email and password sign-in through Supabase Auth |
 | `src/db/` | Supabase client, generated table types and the queries |
 | `src/fx/` | The playful layer: particles, cursor, sounds. Decoration only, and it honours reduced motion |
@@ -37,5 +37,6 @@ The app talks to the production Supabase project by default. `.env.example` list
 - No limit has been signed off yet, so critical-value alerts are off, and the Bloodwork screen says so in place of a reassuring green banner. Results are still flagged against the stored reference range. To turn alerts on for a marker, a clinician reviews its limits and the project owner records the sign-off in SQL (see `supabase/migrations/20261005000600_threshold_verification.sql`). The reviewer's name is required, and the API cannot write to that table.
 - Results can be typed in on the Bloodwork screen. They are stored with the source `manual`, shown as "entered by you", and can be deleted from the screen. Only plain decimals are accepted, a second result for the same marker on the same day is refused, and a number ten times outside the usual range asks for confirmation in case it was typed in the wrong unit.
 - Arrows compare the latest result with the one before. A statistical trend (Mann-Kendall) needs five results, so most markers will not show one yet.
-- The app does not assess medicines or doses. Supplements are recorded as a list and nothing more.
+- The app does not assess medicines or doses. Supplements are recorded with their dates and schedule, and nothing more.
+- "What changed since you started" (Supplements tab) sets the 28 days before a supplement's start date against days 8 to 63 after it, using only days you logged. It says nothing until each period has 10 logged days, calls a change only when it is both a medium-sized shift and clearly larger than ordinary day-to-day variation, never colours a change good or bad, and flags other supplements started or stopped close to the same time. Bloodwork is shown as one result before and one after, never as a trend. It is an observation of two periods and cannot show that a supplement works. The rules and their numbers live in `src/features/supplements/effect.ts` and are pinned by `test/supplements.effect.test.ts`.
 - Data the checks cannot trust (a reading with no biomarker, a threshold that is not a number) stops the screen with an error instead of being skipped.

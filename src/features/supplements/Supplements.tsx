@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { deleteMedication, saveMedication, type Medication as Supplement, type MedicationInput as SupplementInput } from '../../db/medications.ts';
 import { formatDay } from '../bloodwork/format.ts';
+import { SupplementEffects } from './SupplementEffects.tsx';
 import { SupplementFormCard } from './SupplementFormCard.tsx';
 import { courseStatus, sortSupplements, type CourseStatus } from './model.ts';
 import { describeSchedule, dosesOf, normalizeDays } from './schedule.ts';
@@ -118,6 +119,8 @@ export function Supplements({ today, notify }: {
           </ul>
         )}
       </div>
+
+      <SupplementEffects items={items} today={today} />
     </div>
   );
 }
