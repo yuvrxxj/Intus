@@ -141,7 +141,7 @@ function Dashboard() {
 
         <div className="panel" key={tab} role="tabpanel">
           {tab === 'today' && (
-            <Today form={form} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} />
+            <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} />
           )}
           {tab === 'progress' && (
             <Suspense fallback={<div className="loading">Loading</div>}>

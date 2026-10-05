@@ -358,6 +358,7 @@ export type Database = {
         Row: {
           active: boolean | null;
           created_at: string;
+          days_of_week: number[];
           dosage: string | null;
           doses_per_day: number | null;
           end_date: string | null;
@@ -371,6 +372,7 @@ export type Database = {
         Insert: {
           active?: boolean | null;
           created_at?: string;
+          days_of_week?: number[];
           dosage?: string | null;
           doses_per_day?: number | null;
           end_date?: string | null;
@@ -384,6 +386,7 @@ export type Database = {
         Update: {
           active?: boolean | null;
           created_at?: string;
+          days_of_week?: number[];
           dosage?: string | null;
           doses_per_day?: number | null;
           end_date?: string | null;

@@ -1,10 +1,10 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { SUPPLEMENTS } from '../../config.ts';
 import { confetti, emojiBurst, freshGesture, gesture, sparks } from '../../fx/engine.ts';
 import { sfx } from '../../fx/sound.ts';
 import type { Programme } from '../../lib/programme.ts';
 import { useProgramme } from '../profile/ProfileContext.tsx';
-import { isSunday } from '../../util/dates.ts';
+import { dosesDue, skippedToday, describeDays, type Dose } from '../supplements/schedule.ts';
+import { useSupplements } from '../supplements/useSupplements.ts';
 import type { Toggle, TodayForm } from './useToday.ts';
 import { useHfmImage } from './hfmImage.ts';
 
@@ -55,13 +55,13 @@ function calorieColor(total: number, programme: Programme | null): string {
   return total > programme.calorieOver ? 'var(--red)' : total >= programme.calorieNear ? 'var(--yellow)' : 'var(--green)';
 }
 
-export function Today({ form, lastWeightDate, notify }: {
+export function Today({ form, today, lastWeightDate, notify }: {
   form: TodayForm;
+  today: string;
   lastWeightDate: string | null;
   notify: (message: string, error?: boolean) => void;
 }) {
   const { draft, set, save, saving } = form;
-  const sunday = isSunday();
   const cigRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { image, set: setImage } = useHfmImage();
@@ -69,6 +69,9 @@ export function Today({ form, lastWeightDate, notify }: {
   const [saved, setSaved] = useState(false);
 
   const programme = useProgramme();
+  const supplements = useSupplements();
+  const due = dosesDue(supplements.items, today);
+  const skipped = skippedToday(supplements.items, today);
   const total = parseInt(draft.calories, 10) || 0;
   const target = programme?.calorieTarget ?? null;
   const remaining = target === null ? null : target - total;
@@ -97,8 +100,7 @@ export function Today({ form, lastWeightDate, notify }: {
     set('supplements', supplements);
     if (nowOn && freshGesture()) {
       sparks(gesture.x, gesture.y, 12, ['#3dc47a', '#e8b84a']);
-      const due = SUPPLEMENTS.filter((s) => !s.sundayOnly || sunday);
-      if (due.every((s) => supplements[s.id])) {
+      if (due.every((d) => supplements[d.key])) {
         confetti(gesture.x, gesture.y, 60);
         sfx.ding();
         notify('Full stack complete 💊✨');
@@ -171,39 +173,57 @@ export function Today({ form, lastWeightDate, notify }: {
 
       <div className="card sec">
         <div className="ct"><span className="dot dot-yellow" />Supplements</div>
-        {!sunday && <div className="sun-notice">📅 D3 is Sunday only, not today</div>}
-        <div className="glow-line" />
-        <div className="supp-list">
-          {SUPPLEMENTS.map((s) => {
-            const checked = !!draft.supplements[s.id];
-            const disabled = s.sundayOnly && !sunday;
-            return (
-              <div
-                key={s.id}
-                role="checkbox"
-                aria-checked={checked}
-                aria-disabled={disabled}
-                tabIndex={disabled ? -1 : 0}
-                className={`si${checked ? ' ck' : ''}${s.sundayOnly ? ' sun-only' : ''}`}
-                style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                onClick={() => !disabled && toggleSupplement(s.id)}
-                onKeyDown={(e) => {
-                  if (!disabled && (e.key === ' ' || e.key === 'Enter')) {
-                    e.preventDefault();
-                    toggleSupplement(s.id);
-                  }
-                }}
-              >
-                <div className="scheck">{checked ? '✓' : ''}</div>
-                <div style={{ flex: 1 }}>
-                  <div className="sn">{s.name}</div>
-                  <div className="sd">{s.dose}</div>
-                </div>
-                <span className={`stag ${s.sundayOnly ? 'sun' : s.id === 'zinc' || s.id === 'magnesium' ? 'daily' : ''}`}>{s.tag}</span>
-              </div>
-            );
-          })}
-        </div>
+        {supplements.loading ? (
+          <div className="loading">Loading your supplements</div>
+        ) : supplements.error ? (
+          <div className="notice notice-bad" role="alert">
+            Your supplements could not be loaded ({supplements.error}).{' '}
+            <button type="button" className="retry-btn" onClick={supplements.reload}>Try again</button>
+          </div>
+        ) : due.length === 0 ? (
+          <div className="empty">
+            {supplements.items.length === 0
+              ? <>You have not added any supplements. <a href="#supplements" style={{ color: 'var(--blue)' }}>Add what you take</a> and it shows here each day it is due.</>
+              : <>Nothing is due today. <a href="#supplements" style={{ color: 'var(--blue)' }}>Change your schedule</a></>}
+          </div>
+        ) : (
+          <>
+            {skipped.length > 0 && (
+              <div className="sun-notice">📅 Not due today: {skipped.map((i) => `${i.name} (${describeDays(i.days_of_week ?? [])})`).join(', ')}</div>
+            )}
+            <div className="glow-line" />
+            <div className="supp-list">
+              {due.map((d: Dose) => {
+                const checked = !!draft.supplements[d.key];
+                const detail = [d.dosage, d.of > 1 ? `Dose ${d.n} of ${d.of}` : null].filter(Boolean).join(' · ');
+                const everyDay = d.days.length === 7;
+                return (
+                  <div
+                    key={d.key}
+                    role="checkbox"
+                    aria-checked={checked}
+                    tabIndex={0}
+                    className={`si${checked ? ' ck' : ''}${everyDay ? '' : ' sun-only'}`}
+                    onClick={() => toggleSupplement(d.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        toggleSupplement(d.key);
+                      }
+                    }}
+                  >
+                    <div className="scheck">{checked ? '✓' : ''}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="sn">{d.name}</div>
+                      {detail && <div className="sd">{detail}</div>}
+                    </div>
+                    <span className={`stag ${everyDay ? 'daily' : 'sun'}`}>{d.of > 1 ? `${d.of}×/day` : everyDay ? 'daily' : describeDays(d.days)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="g g2 sec">

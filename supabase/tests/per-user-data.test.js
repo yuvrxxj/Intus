@@ -13,6 +13,8 @@ const LOCKDOWN = migration('20261001000200_owner_lockdown');
 // What this change adds.
 const EXPAND = migration('20261005000100_per_user_data');
 const CONTRACT = migration('20261005000200_drop_single_user_unique');
+// Independent of the two above: when each supplement is taken.
+const SCHEDULE = migration('20261005000300_supplement_schedule');
 
 const OWNER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -60,8 +62,9 @@ async function runScript(db, sql) {
 /**
  * stage: live (as the database is today, owner's data in every table), expanded (plus the first
  * per-user migration), contracted (plus the second). owners: accounts registered in app_owner.
+ * schedule: when the supplement schedule migration goes in, 'before' or 'after' the per-user one (or not at all).
  */
-async function world({ stage = 'expanded', owners = [OWNER] } = {}) {
+async function world({ stage = 'expanded', owners = [OWNER], schedule = 'none' } = {}) {
   const db = new PGlite();
   await db.exec(read('./fixtures/supabase-stub.sql'));
   await db.exec(read('./fixtures/pre-lockdown.sql'));
@@ -73,8 +76,10 @@ async function world({ stage = 'expanded', owners = [OWNER] } = {}) {
   for (const sql of OWNER_SETUP) await runScript(db, sql);
   for (const id of owners) await db.query('insert into public.app_owner (user_id) values ($1)', [id]);
   await runScript(db, LOCKDOWN);
+  if (schedule === 'before') await runScript(db, SCHEDULE);
   if (stage === 'live') return db;
   await runScript(db, EXPAND);
+  if (schedule === 'after') await runScript(db, SCHEDULE);
   if (stage === 'expanded') return db;
   await runScript(db, CONTRACT);
   return db;
@@ -376,4 +381,68 @@ test('tables created after the migration are closed to the signed-out role', asy
   await db.exec('create table public.created_later (id int)');
   assert.equal((await db.query(`select has_table_privilege('anon', 'public.created_later', 'select') as ok`)).rows[0].ok, false);
   assert.equal((await db.query(`select has_table_privilege('authenticated', 'public.created_later', 'select') as ok`)).rows[0].ok, true);
+});
+
+// ── supplement schedule ──────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_DAYS = '{0,1,2,3,4,5,6}';
+const scheduleOf = async (db, name) => (await db.query('select days_of_week::text as days, doses_per_day from public.medications where name = $1', [name])).rows[0];
+
+test('the schedule migration gives every existing supplement every day, and the old app\'s inserts still work', async () => {
+  const db = await world({ stage: 'live', schedule: 'before' });
+  assert.equal((await scheduleOf(db, 'med1')).days, DEFAULT_DAYS, 'existing row');
+  await db.exec(`insert into public.medications (name, dosage, frequency) values ('old app', '5 g', 'daily')`);
+  assert.equal((await scheduleOf(db, 'old app')).days, DEFAULT_DAYS, 'insert that does not mention the column');
+});
+
+test('days of the week must be between 0 and 6, at least one and at most seven', async () => {
+  const db = await world({ stage: 'live', schedule: 'before' });
+  const days = (value) => db.exec(`insert into public.medications (name, days_of_week) values ('t', '${value}')`);
+  for (const bad of ['{}', '{7}', '{-1}', '{0,1,2,3,4,5,6,0}', '{1,9}']) {
+    await assert.rejects(() => days(bad), /medications_days_of_week_valid/, bad);
+  }
+  for (const good of ['{0}', '{1,3,5}', '{6,0}', DEFAULT_DAYS]) await days(good);
+  await assert.rejects(() => db.exec(`insert into public.medications (name, days_of_week) values ('t', null)`), /null value/);
+});
+
+test('doses a day must be a whole number from 1 to 6, or blank', async () => {
+  const db = await world({ stage: 'live', schedule: 'before' });
+  const doses = (value) => db.exec(`insert into public.medications (name, doses_per_day) values ('t', ${value})`);
+  for (const bad of ['0', '7', '1.5', '-1', '100']) await assert.rejects(() => doses(bad), /medications_doses_per_day_valid/, bad);
+  for (const good of ['null', '1', '2', '6', '3.0']) await doses(good);
+});
+
+test('the schedule migration can be applied twice without changing the result', async () => {
+  const db = await world({ stage: 'live', schedule: 'before' });
+  await db.exec(`update public.medications set days_of_week = '{1,3}' where name = 'med1'`);
+  await runScript(db, SCHEDULE);
+  assert.equal((await scheduleOf(db, 'med1')).days, '{1,3}', 'a saved schedule survives a second run');
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.medications'::regclass and conname like 'medications_%_valid'`), 2);
+});
+
+test('the schedule migration and the per-user one work in either order, and a schedule survives both', async () => {
+  for (const order of ['before', 'after']) {
+    const db = await world({ stage: 'expanded', schedule: order });
+    await asUser(db, OWNER, async () => {
+      await db.exec(`update public.medications set days_of_week = '{0}', doses_per_day = 2 where name = 'med1'`);
+      const row = await scheduleOf(db, 'med1');
+      assert.equal(row.days, '{0}', `${order}: days`);
+      assert.equal(Number(row.doses_per_day), 2, `${order}: doses`);
+    });
+    await db.exec('delete from public.medications');
+  }
+});
+
+test('a second person cannot see or change the owner\'s supplement schedule', async () => {
+  const db = await world({ stage: 'expanded', schedule: 'after' });
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'medications'), 0, 'cannot read');
+    await db.exec(`update public.medications set days_of_week = '{3}'`);
+  });
+  assert.equal((await scheduleOf(db, 'med1')).days, DEFAULT_DAYS, 'owner\'s schedule unchanged');
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.medications (name, days_of_week) values ('mine', '{2,4}')`);
+    assert.equal((await scheduleOf(db, 'mine')).days, '{2,4}');
+  });
+  await asUser(db, OWNER, async () => assert.equal(await count(db, `select count(*) as n from public.medications where name = 'mine'`), 0, 'owner cannot see theirs'));
 });

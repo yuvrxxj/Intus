@@ -3,14 +3,15 @@ import { deleteMedication, saveMedication, type Medication as Supplement, type M
 import { formatDay } from '../bloodwork/format.ts';
 import { SupplementFormCard } from './SupplementFormCard.tsx';
 import { courseStatus, sortSupplements, type CourseStatus } from './model.ts';
+import { describeSchedule, dosesOf, normalizeDays } from './schedule.ts';
 import { useSupplements } from './useSupplements.ts';
 
 const STATUS_LABEL: Record<CourseStatus, string> = { current: 'Taking now', ended: 'Ended', upcoming: 'Starts later' };
 
 function inputFrom(item: Supplement, over: Partial<SupplementInput>): SupplementInput {
   return {
-    name: item.name, dosage: item.dosage, frequency: item.frequency, start_date: item.start_date, end_date: item.end_date,
-    notes: item.notes, ...over,
+    name: item.name, dosage: item.dosage, doses_per_day: dosesOf(item), days_of_week: normalizeDays(item.days_of_week),
+    start_date: item.start_date, end_date: item.end_date, notes: item.notes, ...over,
   };
 }
 
@@ -78,7 +79,7 @@ export function Supplements({ today, notify }: {
         <div className="ct"><span className="dot dot-dim" />Supplements</div>
         {sorted.length === 0 ? (
           <div className="empty">
-            Nothing recorded yet. Add what you take, such as a multivitamin or creatine, with start and end dates.
+            Nothing recorded yet. Add what you take, such as a multivitamin or creatine, with how many times a day and on which days. What is due each day shows on your Today checklist.
           </div>
         ) : (
           <ul className="med-list">
@@ -92,7 +93,7 @@ export function Supplements({ today, notify }: {
                       {item.name}
                       <span className={`tag med-tag-${status}`}>{STATUS_LABEL[status]}</span>
                     </div>
-                    <div className="med-meta">{[item.dosage, item.frequency].filter(Boolean).join(' · ') || 'No dosage recorded'}</div>
+                    <div className="med-meta">{[item.dosage, describeSchedule(dosesOf(item), normalizeDays(item.days_of_week))].filter(Boolean).join(' · ')}</div>
                     <div className="med-meta">{dates(item)}</div>
                     {item.notes && <div className="med-notes">{item.notes}</div>}
                   </div>

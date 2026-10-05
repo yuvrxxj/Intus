@@ -4,6 +4,7 @@ import { saveMedication } from '../../db/medications.ts';
 import {
   EMPTY_SUPPLEMENT_FORM, formFromSupplement, validateSupplementForm, type SupplementForm, type SupplementFormErrors,
 } from './model.ts';
+import { ALL_DAYS, DAY_LONG, DAY_SHORT, MAX_DOSES, WEEKDAYS, WEEKEND, describeSchedule } from './schedule.ts';
 
 interface Props {
   editing: Supplement | null;
@@ -27,7 +28,10 @@ export function SupplementFormCard({ editing, onDone, onCancel }: Props) {
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const set = <K extends keyof SupplementForm>(key: K, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = <K extends keyof SupplementForm>(key: K, value: SupplementForm[K]) => setForm((f) => ({ ...f, [key]: value }));
+  const toggleDay = (day: number) => set('days', form.days.includes(day) ? form.days.filter((d) => d !== day) : [...form.days, day].sort((a, b) => a - b));
+  const sameDays = (days: readonly number[]) => days.length === form.days.length && days.every((d) => form.days.includes(d));
+  const summary = form.days.length > 0 ? describeSchedule(Number(form.doses_per_day) || 1, form.days) : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -56,12 +60,31 @@ export function SupplementFormCard({ editing, onDone, onCancel }: Props) {
         <Field id="sup-name" label="Name" error={errors.name} wide>
           <input id="sup-name" type="text" value={form.name} placeholder="Creatine monohydrate" autoComplete="off" onChange={(e) => set('name', e.target.value)} />
         </Field>
-        <Field id="sup-dosage" label="Dosage" error={errors.dosage}>
+        <Field id="sup-dosage" label="Dosage each time" error={errors.dosage} hint="For example 3.5 g or 1 tablet.">
           <input id="sup-dosage" type="text" value={form.dosage} placeholder="5 g" onChange={(e) => set('dosage', e.target.value)} />
         </Field>
-        <Field id="sup-frequency" label="Frequency" error={errors.frequency}>
-          <input id="sup-frequency" type="text" value={form.frequency} placeholder="Once a day" onChange={(e) => set('frequency', e.target.value)} />
+        <Field id="sup-doses" label="Times a day" error={errors.doses_per_day}>
+          <select id="sup-doses" value={form.doses_per_day} onChange={(e) => set('doses_per_day', e.target.value)}>
+            {Array.from({ length: MAX_DOSES }, (_, i) => i + 1).map((n) => <option key={n} value={String(n)}>{n === 1 ? 'Once' : n === 2 ? 'Twice' : `${n} times`}</option>)}
+          </select>
         </Field>
+        <div className="fld wide">
+          <label id="sup-days-label">Days</label>
+          <div className="day-chips" role="group" aria-labelledby="sup-days-label">
+            {ALL_DAYS.map((d) => (
+              <button key={d} type="button" className={`day-chip${form.days.includes(d) ? ' on' : ''}`} aria-pressed={form.days.includes(d)}
+                aria-label={DAY_LONG[d]} onClick={() => toggleDay(d)}>
+                {DAY_SHORT[d]}
+              </button>
+            ))}
+          </div>
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button type="button" className="btn" aria-pressed={sameDays(ALL_DAYS)} onClick={() => set('days', [...ALL_DAYS])}>Every day</button>
+            <button type="button" className="btn" aria-pressed={sameDays(WEEKDAYS)} onClick={() => set('days', [...WEEKDAYS])}>Weekdays</button>
+            <button type="button" className="btn" aria-pressed={sameDays(WEEKEND)} onClick={() => set('days', [...WEEKEND])}>Weekends</button>
+          </div>
+          {errors.days && form.days.length === 0 ? <div className="fld-err" role="alert">{errors.days}</div> : summary ? <div className="fld-hint">{summary}. Only the days you pick show on your Today checklist.</div> : null}
+        </div>
         <Field id="sup-start" label="Started" error={errors.start_date} hint="Leave blank if unknown. A blank start counts as already taking it.">
           <input id="sup-start" type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} />
         </Field>

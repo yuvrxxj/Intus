@@ -1,27 +1,24 @@
 import type { Medication as Supplement, MedicationInput as SupplementInput } from '../../db/medications.ts';
 import { dayNumber } from '../../lib/dates.ts';
+import { courseStatus, type CourseStatus } from './course.ts';
+import { ALL_DAYS, MAX_DOSES, dosesOf, normalizeDays } from './schedule.ts';
 
-/** Judged by the dates, never by the generated `active` column, which says "active" for a course that has not started. */
-export type CourseStatus = 'current' | 'ended' | 'upcoming';
-
-export function courseStatus(item: Pick<Supplement, 'start_date' | 'end_date'>, today: string): CourseStatus {
-  const day = dayNumber(today);
-  if (item.start_date != null && dayNumber(item.start_date) > day) return 'upcoming';
-  if (item.end_date != null && dayNumber(item.end_date) < day) return 'ended';
-  return 'current';
-}
+export { courseStatus, type CourseStatus };
 
 export interface SupplementForm {
   name: string;
   dosage: string;
-  frequency: string;
+  /** how many times a day, as typed: '1' to '6' */
+  doses_per_day: string;
+  /** the weekdays it is taken on, Sunday as 0 */
+  days: number[];
   start_date: string;
   end_date: string;
   notes: string;
 }
 
 export const EMPTY_SUPPLEMENT_FORM: SupplementForm = {
-  name: '', dosage: '', frequency: '', start_date: '', end_date: '', notes: '',
+  name: '', dosage: '', doses_per_day: '1', days: [...ALL_DAYS], start_date: '', end_date: '', notes: '',
 };
 
 export function formFromSupplement(item: Supplement): SupplementForm {
@@ -29,7 +26,8 @@ export function formFromSupplement(item: Supplement): SupplementForm {
   return {
     name: item.name,
     dosage: text(item.dosage),
-    frequency: text(item.frequency),
+    doses_per_day: String(dosesOf(item)),
+    days: normalizeDays(item.days_of_week),
     start_date: text(item.start_date),
     end_date: text(item.end_date),
     notes: text(item.notes),
@@ -61,6 +59,12 @@ export function validateSupplementForm(form: SupplementForm): SupplementFormResu
   if (name === '') errors.name = 'Enter a name';
   else if (name.length > 120) errors.name = 'Keep the name under 120 characters';
 
+  const doses = Number(form.doses_per_day.trim() === '' ? Number.NaN : form.doses_per_day);
+  if (!Number.isInteger(doses) || doses < 1 || doses > MAX_DOSES) errors.doses_per_day = `Choose 1 to ${MAX_DOSES} doses a day`;
+
+  const days = [...new Set(form.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b);
+  if (days.length === 0) errors.days = 'Choose at least one day';
+
   const start = parseDate(form.start_date, 'Start date', errors, 'start_date');
   const end = parseDate(form.end_date, 'End date', errors, 'end_date');
   if (start && end && dayNumber(end) < dayNumber(start)) errors.end_date = 'End date is before the start date';
@@ -73,7 +77,8 @@ export function validateSupplementForm(form: SupplementForm): SupplementFormResu
     value: {
       name,
       dosage: orNull(form.dosage),
-      frequency: orNull(form.frequency),
+      doses_per_day: doses,
+      days_of_week: days,
       start_date: start,
       end_date: end,
       notes: orNull(form.notes),
