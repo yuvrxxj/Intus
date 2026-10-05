@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/*
+ * Health OS design tokens. Five brand colours: red #A31621, paper #E5ECE9, green #12695F, ink #1F1300 and the
+ * background dot #A3988F. Everything else is a tint of those, plus one ochre for "close" and "check this" states.
+ */
+:root {
+  --paper: #e5ece9;
+  --surface: #f2f5f3;
+  --surface-2: #fbfcfb;
+  --surface-3: #e9eeeb;
+  --ink: #1f1300;
+  --ink-2: #5e584b;
+  --ink-3: #6b665a;
+  --dot: #a3988f;
+  --red: #a31621;
+  --red-ink: #8c121c;
+  --green: #12695f;
+  --warn: #8a5a14;
+  --line: rgb(31 19 0 / 0.12);
+  --line-strong: rgb(31 19 0 / 0.22);
+
+  /* the dot grid: one dot per cell, centred, shared with the cursor trail so lit dots land on grey ones */
+  --dot-pitch: 28px;
+  --dot-size: 8px;
+
+  /* shadcn names, so components copied from the registry pick up the theme */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --primary: var(--red);
+  --primary-foreground: var(--paper);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--ink);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-3);
+  --accent-foreground: var(--ink);
+  --success: var(--green);
+  --warning: var(--warn);
+  --destructive: var(--red);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--red);
+  --radius: 14px;
+
+  /* the names the feature stylesheets were written against, mapped onto the new palette */
+  --bg: var(--paper);
+  --s1: var(--surface);
+  --s2: var(--surface-2);
+  --s3: var(--surface-3);
+  --s4: #dfe6e2;
+  --b1: var(--line);
+  --b2: var(--line-strong);
+  --red2: rgb(163 22 33 / 0.16);
+  --red3: rgb(163 22 33 / 0.07);
+  --blue: var(--ink);
+  --blue2: rgb(31 19 0 / 0.12);
+  --blue3: rgb(31 19 0 / 0.05);
+  --green2: rgb(18 105 95 / 0.16);
+  --green3: rgb(18 105 95 / 0.08);
+  --yellow: var(--warn);
+  --yellow2: rgb(138 90 20 / 0.1);
+  --orange: var(--warn);
+  --txt: var(--ink);
+  --txt2: var(--ink-2);
+  /* the old sheets use --muted for quiet text, so Tailwind's muted colour is wired to the surface directly below */
+  --muted: var(--ink-3);
+  --r: 16px;
+  --rs: 10px;
+  --rss: 7px;
+  --transition: 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--surface-3);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-dot: var(--dot);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: var(--radius);
+  --radius-xl: 20px;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  *, *::before, *::after { border-color: var(--line); }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--red); color: var(--paper); }
+  :focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  button, [role="button"], summary { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  .tabular, input[type="number"] { font-variant-numeric: tabular-nums; }
+}
+
+/* the page ground: grey dots on paper, fixed to the viewport so the cursor trail lines up with it */
+.dot-ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle at center, var(--dot) calc(var(--dot-size) / 2 - 0.25px), transparent calc(var(--dot-size) / 2 + 0.5px));
+  background-size: var(--dot-pitch) var(--dot-pitch);
+  background-position: 0 0;
+}
+
+/* text that sits straight on the dot grid gets a soft paper halo, so no dot ever cuts through a letter */
+.on-dots { text-shadow: 0 0 3px var(--paper), 0 0 3px var(--paper), 0 0 6px var(--paper), 0 0 6px var(--paper), 0 0 10px var(--paper), 0 0 14px var(--paper); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

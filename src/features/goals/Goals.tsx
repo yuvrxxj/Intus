@@ -47,7 +47,7 @@ function GoalsFormCard({ initial, existingId, today, latestWeightKg, reload, not
     setBusy(true);
     try {
       await saveGoals(existingId, result.value);
-      notify('Goal saved ✓');
+      notify('Goal saved');
       reload();
     } catch (e) {
       setFailure(e instanceof Error ? e.message : String(e));

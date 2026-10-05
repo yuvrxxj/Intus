@@ -1,6 +1,6 @@
 # Yuvraaj's Health OS
 
-A personal health tracker: daily log, progress charts, history and bloodwork, on a Supabase database that only answers to the owner's login. React, TypeScript and Vite, deployed on Vercel.
+A personal health tracker: daily log, progress charts, history and bloodwork, on a Supabase database that only answers to the owner's login. React, TypeScript, Vite and Tailwind, deployed on Vercel.
 
 ## Run it
 
@@ -22,14 +22,27 @@ The app talks to the production Supabase project by default. `.env.example` list
 | --- | --- |
 | `src/lib/` | Plain logic with no UI or network: trend detection, screening calendar, critical-value checks |
 | `src/features/bloodwork/` | The Bloodwork screen. `model.ts` turns table rows into what is shown, and the components only draw it |
+| `src/features/dashboard/` | The single page: numbered sections, the index (left rail on desktop, tab bar and sheet on phones), scroll tracking and the toast |
 | `src/features/today`, `progress`, `history` | The daily log, charts and history table |
 | `src/features/screening/` | Your details and the screening calendar, with a way to record a screening as done |
 | `src/features/supplements/` | The supplements you take (a multivitamin, creatine) with start and end dates, and a before/after comparison against what you log. No dose checks or warnings |
 | `src/features/auth/` | Email and password sign-in through Supabase Auth |
 | `src/db/` | Supabase client, generated table types and the queries |
-| `src/fx/` | The playful layer: particles, cursor, sounds. Decoration only, and it honours reduced motion |
+| `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` (shapes drawn in characters), buttons, segmented control, number ticker |
+| `src/components/hooks/` | `use-debounced-dimensions` and `use-screen-size`, used by the trail and the overview |
+| `src/styles/` | `index.css` holds Tailwind and the design tokens, `components.css` the shared classes the feature screens use |
 | `supabase/` | Migrations and the notes on the owner-only lock-down |
 | `test/` | Unit tests for `src/lib` and for the view logic |
+
+## Design
+
+One page, inspired by Apple's large titles and grouped cards, in a Swiss red and paper palette with an ASCII streak. The tokens live in `src/styles/index.css`.
+
+- Colours: red `#A31621` for actions and the current section, paper `#E5ECE9`, green `#12695F` for on track, ink `#1F1300` for text, and `#A3988F` for the background dots. An ochre (`#8A5A14`) marks "close" and "check this".
+- Type: Inter for titles and text, JetBrains Mono for numbers, labels and the ASCII art. Both are bundled, so no font request leaves the browser.
+- Background: a grid of dots (8 px on a 28 px pitch, set in `src/components/dot-ground.tsx`). On a desktop pointer the dots under the cursor light red and fade.
+- Motion: sections fade up once, numbers settle into place, bars fill, the ASCII shapes turn slowly and pause off screen. Everything stops under reduced motion. No confetti, particles, sounds or emojis.
+- The UX journey, onboarding questions, page map and visual language are on the Miro board "Health OS: UI/UX revamp".
 
 ## Bloodwork and safety
 

@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
 import { CRITICAL, checkCritical, isVerified } from '../../lib/safety.ts';
 import { TREND } from '../../lib/trends.ts';
@@ -171,7 +172,7 @@ export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props
                       aria-controls={`detail-${row.biomarker.id}`}
                       onClick={() => onToggle(row.biomarker.id)}
                     >
-                      <span className="bt-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                      <span className="bt-caret" aria-hidden="true">{open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</span>
                       {row.biomarker.name}
                     </button>
                     {isDemo(row.latest) ? <span className="tag tag-demo" title="The latest result is demo data.">demo data</span> : null}
