@@ -1,4 +1,4 @@
-/* Shared form and button styles for the screens that write data (Medications, Screening). */
+/* Shared form and button styles for the screens that write data (Supplements, Screening). */
 input[type=date],input[type=email],select{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);color:var(--txt);padding:10px 12px;font-size:14px;width:100%;outline:none;transition:border-color var(--transition),box-shadow var(--transition);font-family:inherit;color-scheme:dark}
 select{appearance:auto}
 input[type=date]:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue3)}

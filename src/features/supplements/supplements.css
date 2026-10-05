@@ -1,0 +1,13 @@
+.med-list{list-style:none;margin:0;padding:0}
+.med-item{display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid rgba(34,34,56,.5);flex-wrap:wrap}
+.med-item:last-child{border-bottom:none}
+.med-item.med-ended{opacity:.7}
+.med-main{flex:1;min-width:220px}
+.med-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.med-name .tag{margin-left:0}
+.med-meta{font-size:12px;color:var(--txt2);margin-top:3px}
+.med-notes{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic}
+.med-actions{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+.med-tag-current{background:var(--green3);color:var(--green);border:1px solid rgba(61,196,122,.3)}
+.med-tag-upcoming{background:var(--blue3);color:var(--blue);border:1px solid rgba(74,143,232,.3)}
+.med-tag-ended{background:var(--s3);color:var(--muted);border:1px solid var(--b1)}

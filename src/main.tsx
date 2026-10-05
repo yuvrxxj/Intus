@@ -4,7 +4,7 @@ import { App } from './App.tsx';
 import './styles/app.css';
 import './styles/forms.css';
 import './features/bloodwork/bloodwork.css';
-import './features/meds/meds.css';
+import './features/supplements/supplements.css';
 import './features/screening/screening.css';
 import './styles/overrides.css';
 

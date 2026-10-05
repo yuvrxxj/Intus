@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchMedications, type Medication } from '../../db/medications.ts';
+import { fetchMedications, type Medication as Supplement } from '../../db/medications.ts';
 
-export interface MedicationsState {
-  meds: Medication[];
+export interface SupplementsState {
+  items: Supplement[];
   loading: boolean;
   error: string | null;
   reload: () => void;
 }
 
-export function useMedications(): MedicationsState {
+export function useSupplements(): SupplementsState {
   const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<{ meds: Medication[]; loading: boolean; error: string | null }>({
-    meds: [], loading: true, error: null,
+  const [state, setState] = useState<{ items: Supplement[]; loading: boolean; error: string | null }>({
+    items: [], loading: true, error: null,
   });
   useEffect(() => {
     let cancelled = false;
     fetchMedications().then(
-      (meds) => !cancelled && setState({ meds, loading: false, error: null }),
+      (items) => !cancelled && setState({ items, loading: false, error: null }),
       (e: unknown) => !cancelled && setState((s) => ({ ...s, loading: false, error: e instanceof Error ? e.message : String(e) })),
     );
     return () => {

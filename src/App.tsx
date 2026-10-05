@@ -1,21 +1,18 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { PROFILE_LINE } from './config.ts';
 import { supabase } from './db/client.ts';
 import { SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Bloodwork } from './features/bloodwork/Bloodwork.tsx';
 import { History } from './features/history/History.tsx';
-import { Meds } from './features/meds/Meds.tsx';
-import { ParacetamolAlert } from './features/meds/ParacetamolAlert.tsx';
-import { useMedications } from './features/meds/useMedications.ts';
 import { Screening } from './features/screening/Screening.tsx';
+import { Supplements } from './features/supplements/Supplements.tsx';
 import { Overview } from './features/today/Overview.tsx';
 import { programmeBlock, programmeWeek, weightStats } from './features/today/stats.ts';
 import { Today } from './features/today/Today.tsx';
 import { useRecentLogs } from './features/today/useRecentLogs.ts';
 import { useToday } from './features/today/useToday.ts';
 import { FxLayer } from './fx/FxLayer.tsx';
-import { paracetamolDailyTotal, type ParacetamolTotal } from './lib/drugChecks.ts';
 import { emojiBurst, reducedMotion } from './fx/engine.ts';
 import { sfx } from './fx/sound.ts';
 import { clockParts, shortDate, todayKey } from './util/dates.ts';
@@ -23,7 +20,7 @@ import { clockParts, shortDate, todayKey } from './util/dates.ts';
 // Chart.js is the heaviest dependency and only the Progress tab needs it, so it loads on first visit to that tab.
 const Progress = lazy(() => import('./features/progress/Progress.tsx').then((m) => ({ default: m.Progress })));
 
-type TabId = 'today' | 'progress' | 'history' | 'bloodwork' | 'screening' | 'meds';
+type TabId = 'today' | 'progress' | 'history' | 'bloodwork' | 'screening' | 'supplements';
 
 const TABS: { id: TabId; label: string; short: string; icon: string }[] = [
   { id: 'today', label: 'Today', short: 'Today', icon: '📋' },
@@ -31,7 +28,7 @@ const TABS: { id: TabId; label: string; short: string; icon: string }[] = [
   { id: 'history', label: 'History', short: 'History', icon: '📅' },
   { id: 'bloodwork', label: 'Bloodwork', short: 'Blood', icon: '🩸' },
   { id: 'screening', label: 'Screening', short: 'Screen', icon: '🔎' },
-  { id: 'meds', label: 'Meds', short: 'Meds', icon: '💊' },
+  { id: 'supplements', label: 'Supplements', short: 'Supps', icon: '💊' },
 ];
 
 const PUNS = [
@@ -88,23 +85,11 @@ function Dashboard() {
   const today = todayKey(now);
   const { toast, notify } = useToast();
   const recent = useRecentLogs(40);
-  const medications = useMedications();
   const form = useToday(recent.reload);
   const stats = weightStats(recent.logs);
   const week = programmeWeek(today);
   const clock = clockParts(now);
   const titleRef = useRef<HTMLHeadingElement>(null);
-
-  // Worked out here, above the tabs, so a risky total shows on every screen and not only on Meds.
-  const paracetamol = useMemo<{ total: ParacetamolTotal | null; unavailable: string | null }>(() => {
-    if (medications.loading) return { total: null, unavailable: null };
-    if (medications.error) return { total: null, unavailable: `Medications could not be loaded (${medications.error}).` };
-    try {
-      return { total: paracetamolDailyTotal(medications.meds, { today }), unavailable: null };
-    } catch (e) {
-      return { total: null, unavailable: `Today's total could not be worked out (${e instanceof Error ? e.message : String(e)}).` };
-    }
-  }, [medications.loading, medications.error, medications.meds, today]);
 
   function titleClicked() {
     const el = titleRef.current;
@@ -138,8 +123,6 @@ function Dashboard() {
 
         <Overview stats={stats} draft={form.draft} today={today} />
 
-        <ParacetamolAlert total={paracetamol.total} unavailable={paracetamol.unavailable} onOpen={() => chooseTab('meds')} />
-
         <div className="tabs anim-5" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
@@ -161,7 +144,7 @@ function Dashboard() {
           {tab === 'history' && <History logs={recent.logs} loading={recent.loading} error={recent.error} />}
           {tab === 'bloodwork' && <Bloodwork />}
           {tab === 'screening' && <Screening today={today} notify={notify} />}
-          {tab === 'meds' && <Meds state={medications} today={today} notify={notify} />}
+          {tab === 'supplements' && <Supplements today={today} notify={notify} />}
         </div>
       </div>
 

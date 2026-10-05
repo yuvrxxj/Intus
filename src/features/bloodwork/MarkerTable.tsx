@@ -70,7 +70,6 @@ function StatusCell({ row }: { row: MarkerRow }) {
 function Detail({ row }: { row: MarkerRow }) {
   const { biomarker, points } = row;
   const newestFirst = [...points].reverse();
-  const biotinFor = (id: string) => row.biotin.filter((w) => w.reading_id === id);
   const noLimit = biomarker.critical_low == null && biomarker.critical_high == null;
   const limits = [
     biomarker.critical_low != null ? `low ${formatValue(Number(biomarker.critical_low))}` : null,
@@ -103,7 +102,6 @@ function Detail({ row }: { row: MarkerRow }) {
           {newestFirst.map((p) => {
             const range = rangeStatus(biomarker, p.value);
             const crit = checkCritical(biomarker, p.value).status;
-            const biotin = biotinFor(p.id);
             return (
               <tr key={p.id}>
                 <td>{formatDay(p.measured_at)}</td>
@@ -115,11 +113,6 @@ function Detail({ row }: { row: MarkerRow }) {
                 <td>
                   <div className="bt-notes">
                   {isDemo(p) ? <span className="tag tag-demo" title="This row was loaded as demo data, not from a lab report.">demo data</span> : null}
-                  {biotin.map((w) => (
-                    <span key={w.medication} className="tag tag-warn" title={`Taken while on ${w.medication}${w.dosage ? ` (${w.dosage})` : ''}. Biotin can distort some lab assays.`}>
-                      biotin: {w.medication}
-                    </span>
-                  ))}
                   {p.notes ? <span>{p.notes}</span> : null}
                   </div>
                 </td>
@@ -156,7 +149,6 @@ export function MarkerTable({ rows, expanded, onToggle }: Props) {
         <tbody>
           {rows.map((row) => {
             const open = expanded.has(row.biomarker.id);
-            const latestBiotin = row.biotin.some((w) => w.reading_id === row.latest.id);
             return (
               <Fragment key={row.biomarker.id}>
                 <tr className={`bt-row${open ? ' bt-open' : ''}`}>
@@ -172,7 +164,6 @@ export function MarkerTable({ rows, expanded, onToggle }: Props) {
                       {row.biomarker.name}
                     </button>
                     {isDemo(row.latest) ? <span className="tag tag-demo" title="The latest result is demo data.">demo data</span> : null}
-                    {latestBiotin ? <span className="tag tag-warn" title="The latest result was taken while on biotin, which can distort some lab assays.">biotin</span> : null}
                   </td>
                   <td data-label="Latest">
                     <span className={VALUE_CLASS[row.range]}>{formatValue(row.latest.value)}</span>{' '}

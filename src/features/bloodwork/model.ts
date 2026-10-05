@@ -1,6 +1,5 @@
-import type { Biomarker, BiomarkerReading, Medication } from '../../db/queries.ts';
+import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { dayNumber } from '../../lib/dates.ts';
-import { biotinWarnings, type BiotinWarning } from '../../lib/drugChecks.ts';
 import { toNumber, toNumberOrNull } from '../../lib/numbers.ts';
 import { checkCritical, criticalFindings, type CriticalFinding, type CriticalResult } from '../../lib/safety.ts';
 import { trendOfReadings, TREND, type TrendResult } from '../../lib/trends.ts';
@@ -42,8 +41,6 @@ export interface MarkerRow {
   change: Change | null;
   /** Mann-Kendall over all results; insufficient_data until there are five */
   trend: TrendResult;
-  /** biotin warnings for any of this marker's results, matched to readings by id */
-  biotin: BiotinWarning[];
 }
 
 export interface Group {
@@ -109,32 +106,20 @@ function byTime(a: Point, b: Point): number {
 }
 
 /**
- * Everything the Bloodwork screen shows, derived from three table reads. It throws on data it cannot trust
+ * Everything the Bloodwork screen shows, derived from two table reads. It throws on data it cannot trust
  * (a reading with no biomarker, a threshold that is not a number, an inverted range) rather than skipping it,
  * because a skipped reading could be the dangerous one.
  */
 export function buildBloodworkView(input: {
   biomarkers: readonly Biomarker[];
   readings: readonly BiomarkerReading[];
-  medications: readonly Medication[];
 }): BloodworkView {
-  const { biomarkers, readings, medications } = input;
+  const { biomarkers, readings } = input;
 
   // Throws for any reading whose biomarker is missing, so orphans surface here and never get dropped below.
   const allFindings = criticalFindings(biomarkers, readings);
 
-  const readingById = new Map(readings.map((r) => [r.id, r]));
   const markerById = new Map(biomarkers.map((b) => [b.id, b]));
-
-  const biotin = biotinWarnings({ medications, readings, biomarkers });
-  const biotinByMarker = new Map<string, BiotinWarning[]>();
-  for (const warning of biotin) {
-    const reading = warning.reading_id === null ? undefined : readingById.get(warning.reading_id);
-    if (!reading) continue;
-    const list = biotinByMarker.get(reading.biomarker_id) ?? [];
-    list.push(warning);
-    biotinByMarker.set(reading.biomarker_id, list);
-  }
 
   const pointsByMarker = new Map<string, Point[]>();
   for (const reading of readings) {
@@ -172,7 +157,6 @@ export function buildBloodworkView(input: {
       critical: checkCritical(biomarker, latest.value),
       change: previous ? changeBetween(previous, latest) : null,
       trend,
-      biotin: biotinByMarker.get(biomarker.id) ?? [],
     };
 
     let group = groups.find((g) => g.category === biomarker.category);

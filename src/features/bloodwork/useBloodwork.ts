@@ -12,7 +12,7 @@ function messageOf(error: unknown): string {
 }
 
 /**
- * Loads the three tables and turns them into the screen's view. A failure to load and a failure to interpret
+ * Loads the two tables and turns them into the screen's view. A failure to load and a failure to interpret
  * (a reading with no biomarker, a threshold that is not a number) both end in the error state, never in a
  * half-drawn screen, so a result that could not be checked is never shown as if it had been.
  */
