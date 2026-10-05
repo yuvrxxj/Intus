@@ -59,7 +59,7 @@ export function ProfileCard({ profile, onSaved }: Props) {
       <div className="ct"><span className="dot dot-blue" />Your details</div>
       {!ready && (
         <div className="notice notice-warn">
-          Which screenings apply depends on your age, sex and family history. {profile ? 'Fill in what is missing.' : 'These are prefilled from the header, and nothing is saved until you press Save.'}
+          Which screenings apply depends on your age, sex and family history. {profile ? 'Fill in what is missing.' : 'Nothing is saved until you press Save.'}
         </div>
       )}
       <div className="form-grid" style={{ marginTop: 12 }}>

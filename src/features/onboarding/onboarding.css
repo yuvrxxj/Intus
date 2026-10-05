@@ -1,0 +1,30 @@
+.ob{min-height:100vh;display:flex;justify-content:center;padding:20px 16px 60px}
+.ob-inner{width:100%;max-width:560px}
+.ob-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ob-brand{font-weight:700;font-size:15px}
+.ob-skip{background:none;border:none;color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;padding:6px 4px}
+.ob-skip:hover{color:var(--txt2)}
+.ob-skip:focus-visible,.ob-choice:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.ob-progress{background:var(--s3);border-radius:99px;height:5px;overflow:hidden}
+.ob-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .35s cubic-bezier(.4,0,.2,1)}
+.ob-step{font-size:11px;color:var(--muted);margin:8px 0 12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.ob-title{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.ob-lead{font-size:13px;color:var(--txt2);margin-bottom:4px}
+.form-grid .wide{grid-column:1 / -1}
+.ob-choices{display:flex;gap:8px;flex-wrap:wrap}
+.ob-choice{flex:1 1 150px;display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);color:var(--txt2);padding:10px 12px;font-family:inherit;cursor:pointer;transition:border-color var(--transition),background var(--transition)}
+.ob-choice:hover{border-color:var(--b2)}
+.ob-choice[aria-pressed=true]{background:var(--blue3);border-color:var(--blue);color:var(--txt)}
+.ob-choices-compact .ob-choice{flex:1 1 100px}
+.ob-choice-label{font-size:13px;font-weight:700}
+.ob-choice-hint{font-size:11px;color:var(--muted)}
+.ob-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ob-inline input{flex:1;min-width:120px}
+.ob-review{list-style:none;margin:14px 0 0;padding:0}
+.ob-review li{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-bottom:1px solid rgba(34,34,56,.5)}
+.ob-review li:last-child{border-bottom:none}
+.ob-review strong{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.ob-review span{font-size:13px;color:var(--txt2);line-height:1.5}
+.ob-nav{justify-content:space-between}
+.ob-next{margin-left:auto}
+.boot{min-height:100vh;display:flex;align-items:center;justify-content:center}

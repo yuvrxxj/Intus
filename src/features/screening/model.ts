@@ -36,9 +36,9 @@ export interface ProfileForm {
   noise_or_blast_exposure: boolean;
 }
 
-/** What the header already says about you (26M). Used to prefill the form, never saved until you press save. */
+/** A blank form: nothing about any particular person is assumed. */
 export const PROFILE_FORM_DEFAULTS: ProfileForm = {
-  age: '26', sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: false, noise_or_blast_exposure: false,
+  age: '', sex: '', family_colorectal_cancer: false, family_prostate_cancer: false, noise_or_blast_exposure: false,
 };
 
 export function formFromProfile(profile: Profile | null): ProfileForm {

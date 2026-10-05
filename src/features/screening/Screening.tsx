@@ -113,7 +113,12 @@ function Row({ item, records, today, notify, onChanged }: {
   );
 }
 
-export function Screening({ today, notify }: { today: string; notify: (message: string, error?: boolean) => void }) {
+export function Screening({ today, notify, onProfileSaved }: {
+  today: string;
+  notify: (message: string, error?: boolean) => void;
+  /** called after the person's details are saved, so the rest of the app can reload them */
+  onProfileSaved?: () => void;
+}) {
   const state = useScreening();
 
   const calendar = useMemo<{ kind: 'ok'; items: ScreeningItem[] } | { kind: 'error'; error: string } | null>(() => {
@@ -163,7 +168,7 @@ export function Screening({ today, notify }: { today: string; notify: (message: 
 
   return (
     <div>
-      <ProfileCard key={state.profile?.id ?? 'none'} profile={state.profile} onSaved={state.reload} />
+      <ProfileCard key={state.profile?.id ?? 'none'} profile={state.profile} onSaved={() => { state.reload(); onProfileSaved?.(); }} />
 
       {calendar?.kind === 'error' && (
         <div className="cbanner" role="alert">

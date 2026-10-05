@@ -1,9 +1,14 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { PROGRAMME, SUPPLEMENTS } from '../../config.ts';
 import { confetti, emojiBurst, freshGesture, gesture, sparks } from '../../fx/engine.ts';
 import { sfx } from '../../fx/sound.ts';
-import { isSunday } from '../../util/dates.ts';
-import type { Toggle, TodayForm } from './useToday.ts';
+import type { Programme } from '../../lib/programme.ts';
+import { useProgramme } from '../profile/ProfileContext.tsx';
+import { dosesDue, skippedToday, describeDays, type Dose } from '../supplements/schedule.ts';
+import { useSupplements } from '../supplements/useSupplements.ts';
+import { useHabits } from '../habits/HabitsContext.tsx';
+import { HabitsToday } from '../habits/HabitsToday.tsx';
+import type { HabitEntry } from '../habits/model.ts';
+import type { TodayForm } from './useToday.ts';
 import { useHfmImage } from './hfmImage.ts';
 
 const MOODS = [
@@ -22,68 +27,37 @@ const SAVE_MESSAGES = [
   'Saved ✓ the data gods are pleased',
 ];
 
-function ToggleGroup(props: {
-  label: string;
-  value: Toggle | null;
-  options: { value: Toggle; text: string }[];
-  onChange: (value: Toggle) => void;
-}) {
-  return (
-    <div>
-      <label>{props.label}</label>
-      <div className="tg">
-        {props.options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            className={`tb${props.value === o.value ? (o.value === 'no' ? ' an' : o.value === 'bad' ? ' ab' : ' ay') : ''}`}
-            aria-pressed={props.value === o.value}
-            onClick={() => props.onChange(o.value)}
-          >
-            {o.text}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function calorieColor(total: number, programme: Programme | null): string {
+  if (programme?.calorieOver == null || programme.calorieNear == null) return 'var(--txt)';
+  return total > programme.calorieOver ? 'var(--red)' : total >= programme.calorieNear ? 'var(--yellow)' : 'var(--green)';
 }
 
-function calorieColor(total: number): string {
-  return total > PROGRAMME.calorieOver ? 'var(--red)' : total >= PROGRAMME.calorieNear ? 'var(--yellow)' : 'var(--green)';
-}
-
-export function Today({ form, lastWeightDate, notify }: {
+export function Today({ form, today, lastWeightDate, notify }: {
   form: TodayForm;
+  today: string;
   lastWeightDate: string | null;
   notify: (message: string, error?: boolean) => void;
 }) {
   const { draft, set, save, saving } = form;
-  const sunday = isSunday();
-  const cigRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { image, set: setImage } = useHfmImage();
   const [dragging, setDragging] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const programme = useProgramme();
+  const supplements = useSupplements();
+  const habits = useHabits();
+  const due = dosesDue(supplements.items, today);
+  const skipped = skippedToday(supplements.items, today);
   const total = parseInt(draft.calories, 10) || 0;
-  const remaining = PROGRAMME.calorieTarget - total;
+  const target = programme?.calorieTarget ?? null;
+  const remaining = target === null ? null : target - total;
 
-  function changeCigs(delta: number) {
-    const next = Math.max(0, draft.cigs + delta);
-    set('cigs', next);
-    const box = cigRef.current?.getBoundingClientRect();
-    if (!box) return;
-    const x = box.left + box.width / 2;
-    const y = box.top + box.height / 2;
-    if (delta > 0) {
-      emojiBurst(x, y, '💨', 5);
-      sfx.puff();
-    } else if (next === 0) {
-      emojiBurst(x, y, '🚭', 6);
-      sfx.ding();
-    } else {
-      sparks(x, y, 6, ['#3dc47a', '#e8b84a']);
-    }
+  function setHabit(id: string, entry: HabitEntry | undefined) {
+    const next = { ...draft.habits };
+    if (entry === undefined) delete next[id];
+    else next[id] = entry;
+    set('habits', next);
   }
 
   function toggleSupplement(id: string) {
@@ -92,8 +66,7 @@ export function Today({ form, lastWeightDate, notify }: {
     set('supplements', supplements);
     if (nowOn && freshGesture()) {
       sparks(gesture.x, gesture.y, 12, ['#3dc47a', '#e8b84a']);
-      const due = SUPPLEMENTS.filter((s) => !s.sundayOnly || sunday);
-      if (due.every((s) => supplements[s.id])) {
+      if (due.every((d) => supplements[d.key])) {
         confetti(gesture.x, gesture.y, 60);
         sfx.ding();
         notify('Full stack complete 💊✨');
@@ -150,60 +123,100 @@ export function Today({ form, lastWeightDate, notify }: {
             value={draft.weight} onChange={(e) => set('weight', e.target.value)} />
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 7 }}>Last: <span>{lastWeightDate ?? '–'}</span></div>
         </div>
-        <div className="card">
-          <div className="corner-accent" />
-          <div className="ct"><span className="dot dot-green" />Activity</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            <ToggleGroup label="Lift" value={draft.lift} onChange={(v) => set('lift', v)}
-              options={[{ value: 'yes', text: '✓ Yes' }, { value: 'no', text: '✗ Rest' }]} />
-            <ToggleGroup label="Core" value={draft.core} onChange={(v) => set('core', v)}
-              options={[{ value: 'yes', text: '✓ Yes' }, { value: 'no', text: '✗ No' }]} />
-            <ToggleGroup label="Cardio" value={draft.cardio} onChange={(v) => set('cardio', v)}
-              options={[{ value: 'yes', text: '✓ Stairmaster' }, { value: 'no', text: '✗ No' }, { value: 'bad', text: '🏸 Badminton' }]} />
+    <div className="card">
+      <div className="ct"><span className="dot" style={{ background: 'linear-gradient(135deg,var(--blue),var(--red))' }} />Mood</div>
+      <div className="mood-row">
+        {MOODS.map((m) => (
+          <button key={m.value} type="button" className={`mb${draft.mood === m.value ? ' sel' : ''}`}
+            title={m.title} aria-label={m.title} aria-pressed={draft.mood === m.value}
+            onClick={(e) => chooseMood(m.value, e.currentTarget)}>
+            {m.emoji}
+          </button>
+        ))}
+      </div>
+      <label htmlFor="moodNotes">Notes</label>
+      <textarea id="moodNotes" placeholder="Sleep, energy, body feel..." value={draft.notes}
+        onChange={(e) => set('notes', e.target.value)} />
+    </div>
+      </div>
+
+      <div className="card sec">
+        <div className="ct"><span className="dot dot-green" />Habits</div>
+        {habits.status === 'loading' ? (
+          <div className="loading">Loading your habits</div>
+        ) : habits.status === 'error' ? (
+          <div className="notice notice-bad" role="alert">
+            Your habits could not be loaded ({habits.error}).{' '}
+            <button type="button" className="retry-btn" onClick={habits.reload}>Try again</button>
           </div>
-        </div>
+        ) : habits.active.length === 0 ? (
+          <div className="empty">
+            You are not tracking any habits yet. <a href="#goals" style={{ color: 'var(--blue)' }}>Choose what to track</a>, such as cigarettes, lifting, cardio or steps.
+          </div>
+        ) : (
+          <HabitsToday habits={habits.active} entries={draft.habits} onChange={setHabit} />
+        )}
       </div>
 
       <div className="card sec">
         <div className="ct"><span className="dot dot-yellow" />Supplements</div>
-        {!sunday && <div className="sun-notice">📅 D3 is Sunday only, not today</div>}
-        <div className="glow-line" />
-        <div className="supp-list">
-          {SUPPLEMENTS.map((s) => {
-            const checked = !!draft.supplements[s.id];
-            const disabled = s.sundayOnly && !sunday;
-            return (
-              <div
-                key={s.id}
-                role="checkbox"
-                aria-checked={checked}
-                aria-disabled={disabled}
-                tabIndex={disabled ? -1 : 0}
-                className={`si${checked ? ' ck' : ''}${s.sundayOnly ? ' sun-only' : ''}`}
-                style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                onClick={() => !disabled && toggleSupplement(s.id)}
-                onKeyDown={(e) => {
-                  if (!disabled && (e.key === ' ' || e.key === 'Enter')) {
-                    e.preventDefault();
-                    toggleSupplement(s.id);
-                  }
-                }}
-              >
-                <div className="scheck">{checked ? '✓' : ''}</div>
-                <div style={{ flex: 1 }}>
-                  <div className="sn">{s.name}</div>
-                  <div className="sd">{s.dose}</div>
-                </div>
-                <span className={`stag ${s.sundayOnly ? 'sun' : s.id === 'zinc' || s.id === 'magnesium' ? 'daily' : ''}`}>{s.tag}</span>
-              </div>
-            );
-          })}
-        </div>
+        {supplements.loading ? (
+          <div className="loading">Loading your supplements</div>
+        ) : supplements.error ? (
+          <div className="notice notice-bad" role="alert">
+            Your supplements could not be loaded ({supplements.error}).{' '}
+            <button type="button" className="retry-btn" onClick={supplements.reload}>Try again</button>
+          </div>
+        ) : due.length === 0 ? (
+          <div className="empty">
+            {supplements.items.length === 0
+              ? <>You have not added any supplements. <a href="#supplements" style={{ color: 'var(--blue)' }}>Add what you take</a> and it shows here each day it is due.</>
+              : <>Nothing is due today. <a href="#supplements" style={{ color: 'var(--blue)' }}>Change your schedule</a></>}
+          </div>
+        ) : (
+          <>
+            {skipped.length > 0 && (
+              <div className="sun-notice">📅 Not due today: {skipped.map((i) => `${i.name} (${describeDays(i.days_of_week ?? [])})`).join(', ')}</div>
+            )}
+            <div className="glow-line" />
+            <div className="supp-list">
+              {due.map((d: Dose) => {
+                const checked = !!draft.supplements[d.key];
+                const detail = [d.dosage, d.of > 1 ? `Dose ${d.n} of ${d.of}` : null].filter(Boolean).join(' · ');
+                const everyDay = d.days.length === 7;
+                return (
+                  <div
+                    key={d.key}
+                    role="checkbox"
+                    aria-checked={checked}
+                    tabIndex={0}
+                    className={`si${checked ? ' ck' : ''}${everyDay ? '' : ' sun-only'}`}
+                    onClick={() => toggleSupplement(d.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        toggleSupplement(d.key);
+                      }
+                    }}
+                  >
+                    <div className="scheck">{checked ? '✓' : ''}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="sn">{d.name}</div>
+                      {detail && <div className="sd">{detail}</div>}
+                    </div>
+                    <span className={`stag ${everyDay ? 'daily' : 'sun'}`}>{d.of > 1 ? `${d.of}×/day` : everyDay ? 'daily' : describeDays(d.days)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="g g2 sec">
-        <div className="card">
-          <div className="ct"><span className="dot dot-orange" />HealthifyMe</div>
+      <div className="card sec">
+        <div className="ct"><span className="dot dot-orange" />HealthifyMe</div>
+        <div className="nutri-grid">
+          <div>
           <div
             className={`hfm-drop${dragging ? ' drag' : ''}`}
             role="button"
@@ -229,6 +242,8 @@ export function Today({ form, lastWeightDate, notify }: {
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={(e) => readFile(e.target.files?.[0])} />
+          </div>
+          <div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
             <div><label htmlFor="inputCals">Calories</label>
               <input id="inputCals" type="number" placeholder="0" min="0" max="6000" value={draft.calories} onChange={(e) => set('calories', e.target.value)} /></div>
@@ -243,48 +258,26 @@ export function Today({ form, lastWeightDate, notify }: {
             <div className="cal-totals">
               <div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 600 }}>Total</div>
-                <div className="cal-num" style={{ color: calorieColor(total) }}>{total}</div>
+                <div className="cal-num" style={{ color: calorieColor(total, programme) }}>{total}</div>
               </div>
               <div className="cal-meta">
-                <div>Target: {PROGRAMME.calorieTarget.toLocaleString('en-US')} kcal</div>
-                <div style={{ marginTop: 2, fontSize: 12, color: remaining < 0 ? 'var(--red)' : remaining < 200 ? 'var(--yellow)' : 'var(--muted)' }}>
-                  {remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`}
-                </div>
+                {target === null || remaining === null ? (
+                  <div>No calorie target set. <a href="#goals" style={{ color: 'var(--blue)' }}>Set one</a></div>
+                ) : (
+                  <>
+                    <div>Target: {target.toLocaleString('en-US')} kcal</div>
+                    <div style={{ marginTop: 2, fontSize: 12, color: remaining < 0 ? 'var(--red)' : remaining < 200 ? 'var(--yellow)' : 'var(--muted)' }}>
+                      {remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="cal-bar">
-              <div className={`cal-fill${total > PROGRAMME.calorieOver ? ' over' : ''}`}
-                style={{ width: `${Math.min(100, (total / PROGRAMME.calorieTarget) * 100)}%` }} />
+              <div className={`cal-fill${programme?.calorieOver != null && total > programme.calorieOver ? ' over' : ''}`}
+                style={{ width: `${target === null ? 0 : Math.min(100, (total / target) * 100)}%` }} />
             </div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card">
-            <div className="ct"><span className="dot dot-red" />Cigarettes</div>
-            <div className="cig-wrap">
-              <button type="button" className="cbtn" aria-label="One fewer cigarette" onClick={() => changeCigs(-1)}>−</button>
-              <div ref={cigRef}>
-                <div className={`cnum ${draft.cigs === 0 ? 'z' : draft.cigs <= 3 ? 'l' : 'h'}`} aria-live="polite">{draft.cigs}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>today</div>
-              </div>
-              <button type="button" className="cbtn" aria-label="One more cigarette" onClick={() => changeCigs(1)}>+</button>
-            </div>
-          </div>
-          <div className="card" style={{ flex: 1 }}>
-            <div className="ct"><span className="dot" style={{ background: 'linear-gradient(135deg,var(--blue),var(--red))' }} />Mood</div>
-            <div className="mood-row">
-              {MOODS.map((m) => (
-                <button key={m.value} type="button" className={`mb${draft.mood === m.value ? ' sel' : ''}`}
-                  title={m.title} aria-label={m.title} aria-pressed={draft.mood === m.value}
-                  onClick={(e) => chooseMood(m.value, e.currentTarget)}>
-                  {m.emoji}
-                </button>
-              ))}
-            </div>
-            <label htmlFor="moodNotes">Notes</label>
-            <textarea id="moodNotes" placeholder="Sleep, energy, body feel..." value={draft.notes}
-              onChange={(e) => set('notes', e.target.value)} />
           </div>
         </div>
       </div>

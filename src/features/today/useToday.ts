@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchLog, saveLog } from '../../db/dailyLogs.ts';
+import type { Habit } from '../../db/habits.ts';
 import { todayKey } from '../../util/dates.ts';
 import { EMPTY_DRAFT, draftFromLog, recordFromDraft, type TodayDraft } from './draft.ts';
 
-export type { TodayDraft, Toggle } from './draft.ts';
+export type { TodayDraft } from './draft.ts';
 
 export interface TodayForm {
   draft: TodayDraft;
@@ -16,7 +17,7 @@ export interface TodayForm {
 }
 
 /** Today's form lives above the tabs so the header stats can follow it live and switching tabs keeps what was typed. */
-export function useToday(onSaved: () => void): TodayForm {
+export function useToday(onSaved: () => void, habits: readonly Habit[]): TodayForm {
   const [draft, setDraft] = useState<TodayDraft>(EMPTY_DRAFT);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -48,12 +49,12 @@ export function useToday(onSaved: () => void): TodayForm {
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      await saveLog(recordFromDraft(draft, todayKey(), new Date().toISOString()));
+      await saveLog(recordFromDraft(draft, todayKey(), new Date().toISOString(), habits));
       onSaved();
     } finally {
       setSaving(false);
     }
-  }, [draft, onSaved]);
+  }, [draft, onSaved, habits]);
 
   return { draft, loading, loadError, saving, set, save };
 }

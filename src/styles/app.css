@@ -32,6 +32,8 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
 .lock-btn:active{transform:translateY(0)}
 .lock-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px;transition:opacity .2s}
 .lock-err.hidden{opacity:0}
+.lock-link{background:none;border:none;color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px;margin-top:14px;padding:6px 4px}
+.lock-link:hover{text-decoration:underline}
 .lock-dots{display:flex;justify-content:center;gap:5px;margin-top:20px}
 .lock-dot{width:5px;height:5px;border-radius:50%;background:var(--b2)}
 .lock-dot.active{background:var(--blue)}
@@ -236,10 +238,11 @@ table.bt tr:hover td{background:var(--s2)}
 /* ── MOBILE BOTTOM NAV ── */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(13,13,28,.95);backdrop-filter:blur(16px);border-top:1px solid var(--b1);padding:8px 0 env(safe-area-inset-bottom,8px)}
 .bn-inner{display:flex}
-.bn-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;transition:color var(--transition);font-family:inherit}
+.bn-tab{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;transition:color var(--transition);font-family:inherit}
 .bn-tab.on{color:var(--blue)}
 .bn-icon{font-size:18px;line-height:1}
 @media(max-width:600px){.bottom-nav{display:block}.tabs{display:none}.app-inner{padding-bottom:20px}}
+@media(max-width:380px){.bn-tab{font-size:9px;letter-spacing:.02em;padding:6px 1px}}
 
 /* ── SCORE RING ── */
 .score-ring{display:flex;align-items:center;gap:14px}

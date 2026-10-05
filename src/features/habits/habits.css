@@ -1,0 +1,43 @@
+.habit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.habit{background:var(--s2);border:1px solid var(--b1);border-left:3px solid var(--b2);border-radius:var(--rs);padding:12px 12px 10px;display:flex;flex-direction:column;gap:10px;transition:border-color var(--transition)}
+.habit.tone-good{border-left-color:var(--green)}
+.habit.tone-ok{border-left-color:var(--yellow)}
+.habit.tone-bad{border-left-color:var(--red)}
+.habit-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.habit-name{font-size:14px;font-weight:700}
+.habit-goal{font-size:11px;color:var(--muted)}
+.habit-tone{margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.habit-tone.tone-good{color:var(--green)}.habit-tone.tone-ok{color:var(--yellow)}.habit-tone.tone-bad{color:var(--red)}
+.habit-count{display:flex;align-items:center;justify-content:center;gap:16px}
+.habit-num{font-size:36px;font-weight:800;letter-spacing:-2px;min-width:64px;text-align:center;color:var(--txt)}
+.habit-num.tone-good{color:var(--green)}.habit-num.tone-ok{color:var(--yellow)}.habit-num.tone-bad{color:var(--red)}
+.habit-amount{display:flex;align-items:center;gap:8px}
+.habit-amount input{flex:1;min-width:0}
+.habit-unit{font-size:12px;color:var(--muted)}
+.habit-bar{margin-top:8px}
+.habit-fill.tone-good{background:var(--green)}.habit-fill.tone-ok{background:var(--yellow)}.habit-fill.tone-bad{background:var(--red)}
+.habit-note{width:100%;font-size:12px;padding:7px 10px}
+.habit-add-note{align-self:flex-start;background:none;border:none;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;padding:0}
+.habit-add-note:hover{color:var(--txt2)}
+.habit-add-note:focus-visible,.habit .tb:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.nutri-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media(max-width:700px){.nutri-grid{grid-template-columns:1fr}}
+
+.habit-manage{list-style:none;margin:0;padding:0}
+.habit-manage li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(34,34,56,.5);flex-wrap:wrap}
+.habit-manage li:last-child{border-bottom:none}
+.habit-manage .hm-main{flex:1;min-width:200px}
+.habit-manage .hm-name{font-size:14px;font-weight:700}
+.habit-manage .hm-meta{font-size:12px;color:var(--txt2);margin-top:2px}
+.habit-manage .hm-actions{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap}
+.preset{background:var(--s2);border:1px dashed var(--b2);color:var(--txt2);border-radius:99px;padding:6px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.preset:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+.preset:disabled{opacity:.5;cursor:not-allowed}
+.preset:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .btn[aria-pressed=true]{background:var(--blue3)}
+.habit-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.hist-note{display:block;font-size:10px;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.ht th{white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}

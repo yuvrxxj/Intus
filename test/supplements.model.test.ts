@@ -7,8 +7,8 @@ import type { Medication } from '../src/db/medications.ts';
 
 const form = (over: Partial<SupplementForm> = {}): SupplementForm => ({ ...EMPTY_SUPPLEMENT_FORM, name: 'Creatine', ...over });
 const item = (over: Partial<Medication> & Pick<Medication, 'name'>): Medication => ({
-  id: over.name, active: true, created_at: '2026-01-01T00:00:00Z', dosage: null, doses_per_day: null, end_date: null,
-  frequency: null, notes: null, paracetamol_mg_per_dose: null, start_date: null, ...over,
+  id: over.name, user_id: 'u', active: true, created_at: '2026-01-01T00:00:00Z', days_of_week: [0, 1, 2, 3, 4, 5, 6], dosage: null,
+  doses_per_day: null, end_date: null, frequency: null, notes: null, paracetamol_mg_per_dose: null, start_date: null, ...over,
 });
 
 test('course status follows the dates, inclusive at both ends, and ignores the generated active flag', () => {
@@ -23,11 +23,12 @@ test('course status follows the dates, inclusive at both ends, and ignores the g
 });
 
 test('a valid form becomes a row with blanks as null and text trimmed', () => {
-  const r = validateSupplementForm(form({ name: '  Creatine monohydrate  ', dosage: ' 5 g ', frequency: '', start_date: '2026-10-01', notes: ' with water ' }));
+  const r = validateSupplementForm(form({ name: '  Creatine monohydrate  ', dosage: ' 5 g ', start_date: '2026-10-01', notes: ' with water ' }));
   assert.equal(r.ok, true);
   if (!r.ok) return;
   assert.deepEqual(r.value, {
-    name: 'Creatine monohydrate', dosage: '5 g', frequency: null, start_date: '2026-10-01', end_date: null, notes: 'with water',
+    name: 'Creatine monohydrate', dosage: '5 g', doses_per_day: 1, days_of_week: [0, 1, 2, 3, 4, 5, 6],
+    start_date: '2026-10-01', end_date: null, notes: 'with water',
   });
 });
 
@@ -35,7 +36,7 @@ test('a saved row never carries dose-check columns, so editing cannot change the
   const r = validateSupplementForm(form());
   assert.equal(r.ok, true);
   if (!r.ok) return;
-  assert.deepEqual(Object.keys(r.value).sort(), ['dosage', 'end_date', 'frequency', 'name', 'notes', 'start_date']);
+  assert.deepEqual(Object.keys(r.value).sort(), ['days_of_week', 'dosage', 'doses_per_day', 'end_date', 'name', 'notes', 'start_date']);
 });
 
 test('a name is required and dates must be real and in order', () => {
@@ -50,12 +51,12 @@ test('a name is required and dates must be real and in order', () => {
 });
 
 test('editing a saved row round-trips through the form unchanged', () => {
-  const original = item({ name: 'Multivitamin', dosage: '1 tablet', frequency: 'daily', start_date: '2026-10-01', end_date: '2026-10-05', notes: 'n' });
+  const original = item({ name: 'Multivitamin', dosage: '1 tablet', doses_per_day: 2, days_of_week: [1, 3, 5], start_date: '2026-10-01', end_date: '2026-10-05', notes: 'n' });
   const r = validateSupplementForm(formFromSupplement(original));
   assert.equal(r.ok, true);
   if (!r.ok) return;
-  for (const key of ['name', 'dosage', 'frequency', 'start_date', 'end_date', 'notes'] as const) {
-    assert.equal(r.value[key], original[key], key);
+  for (const key of ['name', 'dosage', 'doses_per_day', 'days_of_week', 'start_date', 'end_date', 'notes'] as const) {
+    assert.deepEqual(r.value[key], original[key], key);
   }
 });
 
@@ -68,4 +69,29 @@ test('supplements sort current, upcoming then ended', () => {
     item({ name: 'new current', start_date: '2026-09-01' }),
   ], today);
   assert.deepEqual(sorted.map((m) => m.name), ['new current', 'old current', 'upcoming', 'ended']);
+});
+
+test('doses a day must be 1 to 6, and at least one day must be chosen', () => {
+  for (const bad of ['0', '7', '1.5', '', 'twice', '-1']) {
+    const r = validateSupplementForm(form({ doses_per_day: bad }));
+    assert.equal(r.ok === false && r.errors.doses_per_day, 'Choose 1 to 6 doses a day', bad);
+  }
+  for (const good of ['1', '2', '6']) assert.equal(validateSupplementForm(form({ doses_per_day: good })).ok, true, good);
+  const noDays = validateSupplementForm(form({ days: [] }));
+  assert.equal(noDays.ok === false && noDays.errors.days, 'Choose at least one day');
+});
+
+test('days are sorted and repeats or impossible days are dropped before saving', () => {
+  const r = validateSupplementForm(form({ days: [5, 1, 1, 3, 9, -1, 2.5] }));
+  assert.equal(r.ok, true);
+  if (!r.ok) return;
+  assert.deepEqual(r.value.days_of_week, [1, 3, 5]);
+  assert.equal(validateSupplementForm(form({ days: [9] })).ok, false, 'only impossible days leaves none');
+});
+
+test('a row from before the schedule columns existed opens as once a day, every day', () => {
+  const old = { ...item({ name: 'Zinc' }), days_of_week: undefined, doses_per_day: null } as unknown as Medication;
+  const f = formFromSupplement(old);
+  assert.equal(f.doses_per_day, '1');
+  assert.deepEqual(f.days, [0, 1, 2, 3, 4, 5, 6]);
 });

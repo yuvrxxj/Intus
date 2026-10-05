@@ -5,7 +5,7 @@ import { SCREENING_STATUS as S, type ScreeningItem } from '../src/lib/screening.
 import type { Profile } from '../src/db/profile.ts';
 
 const profile = (over: Partial<Profile> = {}): Profile => ({
-  id: 'p', age: 26, sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: true, noise_or_blast_exposure: false,
+  id: 'p', user_id: 'u', activity_level: null, cardio_notes: null, desired_day: null, diet: null, typical_day: null, workout_days_per_week: null, age: 26, sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: true, noise_or_blast_exposure: false,
   bf_goal: null, bf_start: null, blood_type: null, calorie_target: null, carb_target: null, fat_target: null, goal_date: null,
   goal_weight: null, height_cm: null, initials: null, name: null, onboarded: false, protein_target: null, sleep_goal: null,
   start_date: null, start_weight: null, step_target: null, updated_at: null, water_target: null, ...over,
@@ -21,8 +21,10 @@ test('sex is normalised and anything else is blank', () => {
   assert.deepEqual(['M', ' female ', 'f', 'Male', 'other', '', null, undefined].map(normalizeSex), ['male', 'female', 'female', 'male', '', '', '', '']);
 });
 
-test('the profile form loads from a saved row, and prefills from the header only when there is none', () => {
+test('the profile form loads from a saved row, and starts blank when there is none', () => {
   assert.deepEqual(formFromProfile(null), PROFILE_FORM_DEFAULTS);
+  // nothing about any particular person is assumed
+  assert.deepEqual([PROFILE_FORM_DEFAULTS.age, PROFILE_FORM_DEFAULTS.sex], ['', '']);
   assert.deepEqual(formFromProfile(profile({ age: 31, sex: 'F' })), {
     age: '31', sex: 'female', family_colorectal_cancer: false, family_prostate_cancer: true, noise_or_blast_exposure: false,
   });
@@ -30,12 +32,14 @@ test('the profile form loads from a saved row, and prefills from the header only
 });
 
 test('the profile form needs a whole-number age and an explicit sex', () => {
-  const ok = validateProfileForm({ ...PROFILE_FORM_DEFAULTS });
+  const filled = { ...PROFILE_FORM_DEFAULTS, age: '26', sex: 'male' as const };
+  assert.equal(validateProfileForm({ ...PROFILE_FORM_DEFAULTS }).ok, false, 'a blank form is not valid');
+  const ok = validateProfileForm(filled);
   assert.deepEqual(ok.ok && ok.value, { age: 26, sex: 'male', family_colorectal_cancer: false, family_prostate_cancer: false, noise_or_blast_exposure: false });
   for (const age of ['', 'abc', '26.5', '-1', '121']) {
-    assert.equal(validateProfileForm({ ...PROFILE_FORM_DEFAULTS, age }).ok, false, age);
+    assert.equal(validateProfileForm({ ...filled, age }).ok, false, age);
   }
-  const noSex = validateProfileForm({ ...PROFILE_FORM_DEFAULTS, sex: '' });
+  const noSex = validateProfileForm({ ...filled, sex: '' });
   assert.equal(noSex.ok === false && !!noSex.errors.sex, true);
 });
 

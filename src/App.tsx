@@ -1,18 +1,24 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { PROFILE_LINE } from './config.ts';
 import { supabase } from './db/client.ts';
 import { SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Bloodwork } from './features/bloodwork/Bloodwork.tsx';
+import { Goals } from './features/goals/Goals.tsx';
+import { Onboarding } from './features/onboarding/Onboarding.tsx';
+import { needsOnboarding } from './features/onboarding/model.ts';
+import { HabitsProvider, useHabits } from './features/habits/HabitsContext.tsx';
 import { History } from './features/history/History.tsx';
+import { ProfileProvider, useProfile } from './features/profile/ProfileContext.tsx';
+import { profileLine, titleFor } from './features/profile/profileLine.ts';
 import { Screening } from './features/screening/Screening.tsx';
 import { Supplements } from './features/supplements/Supplements.tsx';
 import { Overview } from './features/today/Overview.tsx';
-import { programmeBlock, programmeWeek, weightStats } from './features/today/stats.ts';
+import { programmeWeek, weightStats } from './features/today/stats.ts';
 import { Today } from './features/today/Today.tsx';
 import { useRecentLogs } from './features/today/useRecentLogs.ts';
 import { useToday } from './features/today/useToday.ts';
 import { FxLayer } from './fx/FxLayer.tsx';
+import { DIRECTION_LABEL } from './lib/programme.ts';
 import { emojiBurst, reducedMotion } from './fx/engine.ts';
 import { sfx } from './fx/sound.ts';
 import { clockParts, shortDate, todayKey } from './util/dates.ts';
@@ -20,11 +26,12 @@ import { clockParts, shortDate, todayKey } from './util/dates.ts';
 // Chart.js is the heaviest dependency and only the Progress tab needs it, so it loads on first visit to that tab.
 const Progress = lazy(() => import('./features/progress/Progress.tsx').then((m) => ({ default: m.Progress })));
 
-type TabId = 'today' | 'progress' | 'history' | 'bloodwork' | 'screening' | 'supplements';
+type TabId = 'today' | 'progress' | 'goals' | 'history' | 'bloodwork' | 'screening' | 'supplements';
 
 const TABS: { id: TabId; label: string; short: string; icon: string }[] = [
   { id: 'today', label: 'Today', short: 'Today', icon: '📋' },
-  { id: 'progress', label: 'Progress', short: 'Progress', icon: '📈' },
+  { id: 'progress', label: 'Progress', short: 'Charts', icon: '📈' },
+  { id: 'goals', label: 'Goals', short: 'Goals', icon: '🎯' },
   { id: 'history', label: 'History', short: 'History', icon: '📅' },
   { id: 'bloodwork', label: 'Bloodwork', short: 'Blood', icon: '🩸' },
   { id: 'screening', label: 'Screening', short: 'Screen', icon: '🔎' },
@@ -85,9 +92,11 @@ function Dashboard() {
   const today = todayKey(now);
   const { toast, notify } = useToast();
   const recent = useRecentLogs(40);
-  const form = useToday(recent.reload);
-  const stats = weightStats(recent.logs);
-  const week = programmeWeek(today);
+  const habits = useHabits();
+  const form = useToday(recent.reload, habits.habits);
+  const { profile, programme, reload: reloadProfile } = useProfile();
+  const stats = weightStats(recent.logs, programme);
+  const week = programme ? programmeWeek(programme, today) : null;
   const clock = clockParts(now);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -110,9 +119,11 @@ function Dashboard() {
       <div className="app-inner">
         <div className="hdr anim-1">
           <div className="hdr-left">
-            <div className="badge">Week {week} · Block {programmeBlock(week)} · Cut</div>
-            <h1 ref={titleRef} onClick={titleClicked}>Yuvraaj's Health OS</h1>
-            <div className="sub">{PROFILE_LINE}</div>
+            <div className="badge">
+              {programme ? `Week ${week} of ${programme.weeks} · ${DIRECTION_LABEL[programme.direction]}` : 'No goal set yet'}
+            </div>
+            <h1 ref={titleRef} onClick={titleClicked}>{titleFor(profile)}</h1>
+            <div className="sub">{profileLine(profile, programme)}</div>
           </div>
           <div className="date-chip">
             <div className="d">{clock.date}</div>
@@ -134,16 +145,17 @@ function Dashboard() {
 
         <div className="panel" key={tab} role="tabpanel">
           {tab === 'today' && (
-            <Today form={form} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} />
+            <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} />
           )}
           {tab === 'progress' && (
             <Suspense fallback={<div className="loading">Loading</div>}>
               <Progress logs={recent.logs} />
             </Suspense>
           )}
+          {tab === 'goals' && <Goals today={today} latestWeightKg={stats.latest?.weight ?? null} notify={notify} />}
           {tab === 'history' && <History logs={recent.logs} loading={recent.loading} error={recent.error} />}
           {tab === 'bloodwork' && <Bloodwork />}
-          {tab === 'screening' && <Screening today={today} notify={notify} />}
+          {tab === 'screening' && <Screening today={today} notify={notify} onProfileSaved={reloadProfile} />}
           {tab === 'supplements' && <Supplements today={today} notify={notify} />}
         </div>
       </div>
@@ -165,11 +177,26 @@ function Dashboard() {
   );
 }
 
+/** New accounts answer the first-run questions before seeing the dashboard. Anyone can skip them for now. */
+function Gate() {
+  const { status, profile } = useProfile();
+  const [skipped, setSkipped] = useState(false);
+  if (status === 'loading') return <div className="boot"><div className="loading">Loading</div></div>;
+  if (status === 'ready' && needsOnboarding(profile) && !skipped) return <Onboarding onSkip={() => setSkipped(true)} />;
+  return <Dashboard />;
+}
+
 export function App() {
   const session = useSession();
   return (
     <>
-      {session.status === 'signed_in' && <Dashboard />}
+      {session.status === 'signed_in' && (
+        <ProfileProvider>
+          <HabitsProvider>
+            <Gate />
+          </HabitsProvider>
+        </ProfileProvider>
+      )}
       {session.status === 'signed_out' && <SignIn />}
       <FxLayer />
     </>
