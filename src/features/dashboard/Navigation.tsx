@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { RIBS_COLS, RIBS_ROWS, RIBS_SOLID, RIBS_SUB, RIBS_TEXT } from '@/components/art/ribs';
 import { Brand } from '@/components/brand';
+import { AsciiPicture } from '@/components/ui/ascii-picture';
 import { cn } from '@/lib/utils';
 import { SECTIONS, type SectionId } from './sections.ts';
 
@@ -13,8 +15,8 @@ export function SectionRail({ active, onJump, onSignOut, clock }: {
   clock: { date: string; time: string };
 }) {
   return (
-    <aside className="on-dots fixed top-0 left-0 z-20 hidden h-dvh w-[calc(var(--rail-w)-40px)] flex-col justify-between py-8 pl-8 lg:flex">
-      <div>
+    <aside className="on-dots fixed top-0 left-0 z-20 hidden h-dvh w-[calc(var(--rail-w)-40px)] flex-col pt-8 pl-8 [--rail-art-w:calc(var(--rail-w)-12px)] lg:flex">
+      <div className="relative z-10">
         <Brand />
         <div className="mt-2 font-mono text-[11px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase tabular-nums">
           <div>{clock.date}</div>
@@ -44,12 +46,25 @@ export function SectionRail({ active, onJump, onSignOut, clock }: {
             })}
           </ol>
         </nav>
+        <div className="mt-6 grid gap-3 pl-3">
+          <p className="font-mono text-[10px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase">Press 1 to 7 to jump</p>
+          <button type="button" onClick={onSignOut} className="flex items-center gap-2 text-[13px] text-ink-3 hover:text-ink">
+            <LogOut className="size-3.5" aria-hidden="true" /> Sign out
+          </button>
+        </div>
       </div>
-      <div className="grid gap-3">
-        <p className="font-mono text-[10px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase">Press 1 to 7 to jump</p>
-        <button type="button" onClick={onSignOut} className="flex items-center gap-2 text-[13px] text-ink-3 hover:text-ink">
-          <LogOut className="size-3.5" aria-hidden="true" /> Sign out
-        </button>
+      {/* the ribs fill what is left of the rail, bleeding off the bottom-left corner of the screen */}
+      <div className="pointer-events-none relative -ml-8 min-h-0 flex-1 [@media(max-height:640px)]:hidden">
+        <AsciiPicture
+          text={RIBS_TEXT}
+          solid={RIBS_SOLID}
+          cols={RIBS_COLS}
+          rows={RIBS_ROWS}
+          sub={RIBS_SUB}
+          // as tall as the art at full width, or the space left if that is less; the fade then always sits on the art
+          style={{ height: `min(100%, calc(var(--rail-art-w) * ${RIBS_ROWS * 10} / ${RIBS_COLS * 6}))` }}
+          className="absolute bottom-0 left-0 w-[var(--rail-art-w)] animate-[rail-art-in_1.2s_var(--ease-out-quint)_both] [mask-image:linear-gradient(to_bottom,transparent,black_22%)]"
+        />
       </div>
     </aside>
   );
