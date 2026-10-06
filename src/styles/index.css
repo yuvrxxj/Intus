@@ -161,7 +161,7 @@
  */
 @layer components {
   .glass {
-    background: rgb(229 236 233 / 0.55);
+    background: rgb(229 236 233 / 0.2);
     -webkit-backdrop-filter: blur(6px) saturate(1.05);
     backdrop-filter: blur(6px) saturate(1.05);
     border: 1px solid rgb(255 255 255 / 0.5);
@@ -169,7 +169,7 @@
     border-radius: 12px;
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass { background: rgb(229 236 233 / 0.88); }
+    .glass { background: rgb(229 236 233 / 0.4); }
   }
   .glass-text {
     --gy: 12px;
