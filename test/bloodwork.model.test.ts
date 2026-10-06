@@ -23,12 +23,8 @@ const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biom
   critical_low: null,
   critical_high: null,
   threshold_source: null,
-  threshold_verified_at: null,
-  threshold_verified_by: null,
   ...over,
 });
-// stands in for a clinician sign-off; without it a marker's limits are held back from every alert
-const SIGNED_OFF = { threshold_verified_at: '2026-01-01T00:00:00Z', threshold_verified_by: 'test fixture' };
 const reading = (id: string, biomarker_id: string, measured_at: string, value: number | string): BiomarkerReading => ({
   id,
   biomarker_id,
@@ -41,7 +37,7 @@ const reading = (id: string, biomarker_id: string, measured_at: string, value: n
   user_id: 'u',
 });
 
-const potassium = marker({ id: 'k', code: 'potassium', ref_low: 3.5, ref_high: 5.1, critical_low: 2.8, critical_high: 6, ...SIGNED_OFF });
+const potassium = marker({ id: 'k', code: 'potassium', ref_low: 3.5, ref_high: 5.1, critical_low: 2.8, critical_high: 6 });
 const albumin = marker({ id: 'a', code: 'albumin', category: 'Group B', ref_low: 3.4, ref_high: 4.8 });
 const tsh = marker({ id: 't', code: 'tsh', category: 'Group B', ref_high: 4.78 });
 const unmeasured = marker({ id: 'u', code: 'ferritin', name: 'Ferritin' });
@@ -129,41 +125,22 @@ test('a critical result is current when it is the marker\'s latest, and past onc
   assert.equal(now.groups[0].rows[0].critical.status, CRITICAL.LOW);
 });
 
-test('markers with no critical limit are listed as unwatched and never read as ok', () => {
+test('markers with no critical limit never read as ok', () => {
   const view = buildBloodworkView({
     biomarkers,
     readings: [reading('r1', 'a', '2026-06-06', 0.1)],
   });
-  assert.deepEqual(view.unwatched, ['ALBUMIN', 'TSH', 'Ferritin']);
   assert.equal(view.groups[0].rows[0].critical.status, CRITICAL.NO_THRESHOLD);
   assert.deepEqual(view.currentCritical, []);
 });
 
-test('with no signed-off limits the view raises no critical alert at all, and says which markers were held back', () => {
-  const unsigned = { ...potassium, threshold_verified_at: null, threshold_verified_by: null };
+test('stored limits raise an alert on their own, with no sign-off step', () => {
+  const sodium = marker({ id: 'n', code: 'sodium', ref_low: 135, ref_high: 145, critical_low: 120, critical_high: 160 });
   const view = buildBloodworkView({
-    biomarkers: [unsigned, albumin],
-    readings: [reading('r1', 'k', '2022-04-10', 9), reading('r2', 'k', '2026-06-06', 1.5), reading('r3', 'a', '2026-06-06', 4)],
+    biomarkers: [potassium, sodium, albumin],
+    readings: [reading('r1', 'k', '2026-06-06', 6.4), reading('r2', 'n', '2026-06-06', 170), reading('r3', 'a', '2026-06-06', 4)],
   });
-  assert.deepEqual([view.currentCritical, view.pastCritical], [[], []]);
-  assert.equal(view.verifiedCount, 0);
-  assert.deepEqual(view.unverified, ['POTASSIUM']);
-  assert.deepEqual(view.unwatched, ['ALBUMIN']);
-  const row = view.groups[0].rows[0];
-  assert.equal(row.critical.status, CRITICAL.UNVERIFIED);
-  // the lab reference range still applies: a value far below it is flagged as below range, not as critical
-  assert.equal(row.range, 'below');
-});
-
-test('signed-off and unsigned markers sit side by side: only the signed-off one can alert', () => {
-  const unsigned = marker({ id: 'n', code: 'sodium', ref_low: 135, ref_high: 145, critical_low: 120, critical_high: 160 });
-  const view = buildBloodworkView({
-    biomarkers: [potassium, unsigned],
-    readings: [reading('r1', 'k', '2026-06-06', 6.4), reading('r2', 'n', '2026-06-06', 170)],
-  });
-  assert.deepEqual(view.currentCritical.map((f) => [f.code, f.status]), [['potassium', CRITICAL.HIGH]]);
-  assert.equal(view.verifiedCount, 1);
-  assert.deepEqual(view.unverified, ['SODIUM']);
+  assert.deepEqual(view.currentCritical.map((f) => [f.code, f.status]), [['potassium', CRITICAL.HIGH], ['sodium', CRITICAL.HIGH]]);
 });
 
 test('data that cannot be trusted throws instead of being skipped', () => {

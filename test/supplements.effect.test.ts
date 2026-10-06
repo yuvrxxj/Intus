@@ -22,7 +22,7 @@ const log = (log_date: string, over: Partial<DailyLog> = {}): DailyLog => ({
 const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biomarker => ({
   name: over.code.toUpperCase(), unit: 'u', category: 'Group A', organ_systems: [], ref_low: null, ref_high: null,
   optimal_low: null, optimal_high: null, description: null, sort_order: 0, created_at: '2026-01-01T00:00:00Z',
-  critical_low: null, critical_high: null, threshold_source: null, threshold_verified_at: null, threshold_verified_by: null,
+  critical_low: null, critical_high: null, threshold_source: null,
   ...over,
 });
 const reading = (id: string, biomarker_id: string, measured_at: string, value: number | string): BiomarkerReading => ({

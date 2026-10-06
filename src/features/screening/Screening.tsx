@@ -179,10 +179,6 @@ export function Screening({ today, notify, onProfileSaved }: {
 
       {groups && (
         <>
-          <div className="notice scr-caveat">
-            General screening intervals, used as a prompt to ask your doctor, not as advice. The defaults have not been checked by a
-            clinician yet.
-          </div>
           {([
             ['Overdue', groups.overdue, 'dot-red'],
             ['Due', groups.due, 'dot-yellow'],

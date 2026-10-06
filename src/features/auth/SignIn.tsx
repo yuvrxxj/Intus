@@ -13,7 +13,7 @@ import { describeAuthError, MIN_PASSWORD_LENGTH, validateCredentials, type AuthM
 const PRINCIPLES = [
   ['01', 'Your numbers, kept plain', 'Weight, food, habits and bloodwork in one place, without scores you cannot check.'],
   ['02', 'Only you can see it', 'Every row in the database answers to your login and nobody else.'],
-  ['03', 'Honest about limits', 'Nothing is called good or bad until a clinician has signed off the range.'],
+  ['03', 'Flagged against the range', 'Every lab result is set against its reference range, so what is out of range stands out.'],
 ] as const;
 
 function Shell({ children }: { children: React.ReactNode }) {

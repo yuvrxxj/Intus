@@ -159,9 +159,6 @@ export function SupplementEffectsView({ items, today, state }: {
       <div className="fx-intro">
         Sets the {BEFORE_DAYS} days before you started each supplement against the days from the second week on. Only days you logged count, and nothing is compared until each period has {MIN_DAYS} of them.
       </div>
-      <div className="notice" role="note">
-        This shows what happened alongside a supplement, not what it did. Food, training, sleep, the season and other supplements can all produce the same shift, and a change in a number is not good or bad until it is weighed against your own goal. Talk to a doctor before starting, stopping or changing anything you take.
-      </div>
 
       {withStart.length === 0 ? (
         <div className="empty">Add a start date to a supplement and, as you log, this compares how you were doing before and after.</div>

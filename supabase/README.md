@@ -52,10 +52,9 @@ One log per person per day (`unique (user_id, log_date)`), and one profile per p
 | `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day |
 | `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` |
 | `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` |
-| `20261005000600_threshold_verification.sql` | Adds `threshold_verified_at` / `threshold_verified_by` to `biomarkers` |
 
-The first eight are applied to the live project and listed in `baseline.txt`. `20261005000600` is not applied yet;
-the workflow applies it on its first real run. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
+All eight are applied to the live project and listed in `baseline.txt`, so the workflow's first run has nothing to
+apply. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
 the original owner's old hardcoded habits (cigarettes, lift, core, cardio, steps) into the new table and copies
 their old `daily_logs` columns into the new `habits` column. It is safe to run more than once, and only adds what
 is missing.

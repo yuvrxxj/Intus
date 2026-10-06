@@ -70,14 +70,7 @@ export function Bloodwork({ today, notify }: Props) {
   if (view.readingCount === 0) {
     return (
       <div>
-        <CriticalBanner
-          current={view.currentCritical}
-          past={view.pastCritical}
-          biomarkers={data.biomarkers}
-          unwatched={view.unwatched}
-          unverified={view.unverified}
-          verifiedCount={view.verifiedCount}
-        />
+        <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
         <div className="card sec">
           <div className="ct"><span className="dot dot-red" />Bloodwork</div>
           <div className="empty">No results yet. Add your first one below, straight from your lab report.</div>
@@ -94,14 +87,7 @@ export function Bloodwork({ today, notify }: Props) {
 
   return (
     <div>
-      <CriticalBanner
-        current={view.currentCritical}
-        past={view.pastCritical}
-        biomarkers={data.biomarkers}
-        unwatched={view.unwatched}
-        unverified={view.unverified}
-        verifiedCount={view.verifiedCount}
-      />
+      <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
 
       {adding ? (
         form
