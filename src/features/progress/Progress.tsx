@@ -13,7 +13,7 @@ const INK = '#1f1300';
 const RED = '#a31621';
 const GRID = 'rgba(31,19,0,.07)';
 const MONO = '"JetBrains Mono Variable", ui-monospace, monospace';
-const TICK = { color: '#6b665a', font: { size: 10, family: MONO } };
+const TICK = { color: '#5a5446', font: { size: 10, family: MONO, weight: 560 } };
 
 function baseOptions(): ChartOptions {
   return {

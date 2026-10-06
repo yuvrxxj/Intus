@@ -7,8 +7,8 @@ export function Section({ meta, children, aside }: { meta: SectionMeta; children
   return (
     <section id={meta.id} aria-labelledby={`${meta.id}-title`} className="scroll-mt-20 border-t border-line-strong pt-8 pb-16 lg:scroll-mt-8">
       <Reveal>
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div className="glass glass-text">
+        <div className="on-dots mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
             <div className="font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">
               <span className="text-primary">{meta.n}</span> / 07
             </div>

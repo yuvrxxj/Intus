@@ -67,9 +67,9 @@ export function Dashboard() {
       <main className="mx-auto min-w-0 max-w-[1640px] pb-32 lg:pb-24">
         <MobileNav active={active} onJump={jump} onSignOut={signOut} />
 
-        <header className="flex items-end justify-between gap-6 pt-8 pb-10 lg:pt-14">
+        <header className="on-dots flex items-end justify-between gap-6 pt-8 pb-10 lg:pt-14">
           <motion.div
-            className="glass glass-text min-w-0"
+            className="min-w-0"
             initial={reduced ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -83,7 +83,7 @@ export function Dashboard() {
             <p className="mt-3 font-mono text-xs text-ink-2 tabular-nums">{profileLine(profile, programme)}</p>
             <p className="mt-1 font-mono text-xs text-ink-3 tabular-nums lg:hidden">{clock.date} / {clock.time}</p>
           </motion.div>
-          <div className="glass -mb-3 hidden shrink-0 p-3 md:block"><AsciiArt shape="heart" cols={40} rows={20} label="A heart drawn in characters, turning slowly" className="text-[9px] text-primary xl:text-[10px]" /></div>
+          <AsciiArt shape="heart" cols={40} rows={20} label="A heart drawn in characters, turning slowly" className="on-dots hidden shrink-0 text-[9px] text-primary md:block xl:text-[10px]" />
         </header>
 
         <div className="pb-16">
@@ -122,7 +122,7 @@ export function Dashboard() {
           <History logs={recent.logs} loading={recent.loading} error={recent.error} />
         </Section>
 
-        <footer className="glass flex flex-wrap items-center justify-between gap-3 px-4 py-3 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">
+        <footer className="on-dots flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-6 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">
           <span>Health OS</span>
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
         </footer>

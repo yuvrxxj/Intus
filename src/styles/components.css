@@ -20,7 +20,7 @@
     margin-bottom: 14px;
     font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 650;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-2);
@@ -47,7 +47,7 @@
     display: block;
     margin-bottom: 6px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 650;
     color: var(--ink-2);
   }
   input[type="number"], input[type="text"], input[type="password"], input[type="email"], input[type="date"], select, textarea {
@@ -91,7 +91,7 @@
     padding: 8px 14px;
     font: inherit;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 560;
     color: var(--ink);
     background: var(--surface-2);
     border: 1px solid var(--line-strong);
@@ -152,7 +152,7 @@
     padding: 8px;
     font: inherit;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 560;
     color: var(--ink-2);
     text-align: center;
     background: var(--surface-2);
@@ -173,9 +173,9 @@
   .si.sun-only { border-style: dashed; }
   .scheck { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; color: var(--paper); border: 1.5px solid var(--line-strong); border-radius: 6px; transition: background var(--transition), border-color var(--transition); }
   .si.ck .scheck { background: var(--green); border-color: var(--green); }
-  .sn { font-size: 14px; font-weight: 500; }
+  .sn { font-size: 14px; font-weight: 560; }
   .sd { margin-top: 1px; font-size: 12px; color: var(--ink-3); }
-  .stag { padding: 2px 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-3); border-radius: 99px; }
+  .stag { padding: 2px 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 560; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-3); border-radius: 99px; }
   .stag.sun { color: var(--warn); background: var(--yellow2); }
   .stag.daily { color: var(--ink-2); }
   .sun-notice { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 10px 12px; font-size: 13px; color: var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); border: 1px solid rgb(138 90 20 / 0.22); border-radius: var(--rs); }
@@ -189,19 +189,19 @@
   .ht-wrap, .bt-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.ht, table.bt { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.ht { min-width: 520px; }
-  table.ht th, table.bt th { padding: 8px; text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line-strong); }
+  table.ht th, table.bt th { padding: 8px; text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 560; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line-strong); }
   table.ht td, table.bt td { padding: 10px 8px; vertical-align: middle; border-bottom: 1px solid var(--line); }
   table.ht td { font-variant-numeric: tabular-nums; }
   table.ht tr:hover td, table.bt tr:hover td { background: rgb(31 19 0 / 0.025); }
-  .pill { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; font-size: 11px; font-weight: 600; border-radius: 99px; }
+  .pill { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; font-size: 11px; font-weight: 650; border-radius: 99px; }
   .pill-g { color: var(--green); background: var(--green3); }
   .pill-r { color: var(--red); background: var(--red3); }
   .pill-b { color: var(--ink); background: var(--blue3); }
-  .bio-sec { margin: 22px 0 8px; padding-bottom: 8px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line); }
-  .bv-ok { font-weight: 600; color: var(--green); }
-  .bv-hi { font-weight: 600; color: var(--red); }
-  .bv-lo { font-weight: 600; color: var(--warn); }
-  .bk { display: inline-block; padding: 2px 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 99px; }
+  .bio-sec { margin: 22px 0 8px; padding-bottom: 8px; font-family: var(--font-mono); font-size: 11px; font-weight: 560; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line); }
+  .bv-ok { font-weight: 650; color: var(--green); }
+  .bv-hi { font-weight: 650; color: var(--red); }
+  .bv-lo { font-weight: 650; color: var(--warn); }
+  .bk { display: inline-block; padding: 2px 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 560; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 99px; }
   .bk-ok { color: var(--green); background: var(--green3); }
   .bk-hi { color: var(--red); background: var(--red3); }
   .bk-lo { color: var(--warn); background: var(--yellow2); }
@@ -209,7 +209,7 @@
   /* ── streaks ── */
   .streak-row { display: flex; flex-wrap: wrap; gap: 28px; }
   .streak-box { min-width: 72px; }
-  .sv { font-family: var(--font-mono); font-size: 36px; font-weight: 500; line-height: 1; letter-spacing: -0.02em; }
+  .sv { font-family: var(--font-mono); font-size: 36px; font-weight: 560; line-height: 1; letter-spacing: -0.02em; }
   .sl { margin-top: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 
   /* ── chart ── */
@@ -217,7 +217,7 @@
 
   /* ── day chips (supplement schedule) ── */
   .day-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .day-chip { min-width: 48px; min-height: 36px; padding: 6px 10px; font: inherit; font-size: 13px; font-weight: 500; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 99px; transition: background var(--transition), color var(--transition), border-color var(--transition); }
+  .day-chip { min-width: 48px; min-height: 36px; padding: 6px 10px; font: inherit; font-size: 13px; font-weight: 560; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 99px; transition: background var(--transition), color var(--transition), border-color var(--transition); }
   .day-chip:hover { border-color: var(--ink); }
   .day-chip.on { color: var(--paper); background: var(--ink); border-color: var(--ink); }
 

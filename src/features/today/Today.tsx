@@ -289,7 +289,7 @@ export function Today({ form, lastWeightDate, recentWeights, notify, today }: {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <span className="glass glass-text glass-text-sm font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">{dirty ? 'Unsaved changes' : form.loading ? 'Loading today' : 'All saved'}</span>
+        <span className="font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">{dirty ? 'Unsaved changes' : form.loading ? 'Loading today' : 'All saved'}</span>
         <Button variant="primary" size="lg" disabled={!canSave} onClick={onSave} className="min-w-40">
           {saving ? 'Saving' : 'Save today'}
         </Button>

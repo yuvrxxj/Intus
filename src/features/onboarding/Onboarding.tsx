@@ -167,12 +167,12 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
 
   return (
     <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pt-6 pb-16 sm:px-8">
-      <header className="glass flex items-center justify-between py-1.5 pr-1.5 pl-4">
+      <header className="on-dots flex items-center justify-between">
         <Brand />
         <Button variant="ghost" size="sm" onClick={onSkip}>Skip for now</Button>
       </header>
 
-      <div className="glass mt-8 p-4 sm:mt-10 sm:p-5">
+      <div className="on-dots mt-10 sm:mt-14">
         <div className="mb-4 flex items-baseline justify-between font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase sm:hidden">
           <span>Step {stepIndex + 1} of {STEPS.length}</span>
           <span>{copy.short}</span>
