@@ -62,18 +62,29 @@ is missing.
 To undo the per-user change, put the owner-only policies back by re-running `20261001000200_owner_lockdown.sql`.
 The `user_id` columns can stay, since the owner-only rule ignores them.
 
-## Sign-ups
+## Sign-in
 
-Sign-ups are open for testing: email and password only. In the Supabase dashboard (Authentication, Sign In /
-Providers) **Allow new users to sign up** must be on and **Confirm email** must be off, so a new account gets a
-session straight away and no email is sent. With Confirm email on, new people would see "Check your email", and
-Supabase's built-in sender only delivers to members of your own Supabase organisation. Neither setting can be read
-from the repository, so check them in the dashboard if sign-up misbehaves.
+Three ways in, all free:
 
-Left for later, on purpose: CAPTCHA, email confirmation, leaked-password protection, a custom SMTP sender, and
-password reset by email (it needs the SMTP sender). Until then, a tester who forgets their password has to be
-reset from the Supabase dashboard (Authentication, Users). Social login comes after the mobile apps, and payments
-after the app is on the App Store.
+- **Email and password.** Sign-up, sign-in, and "Forgot password?" with a link that opens a "Choose a new
+  password" screen.
+- **Google.** The "Continue with Google" button appears by itself once Google is switched on under Authentication,
+  Sign In / Providers. The app reads `/auth/v1/settings`, so there is no code change to make. It needs a Google
+  Cloud OAuth client (free) whose redirect URI is `https://zfyeqfnretrrmtevczrc.supabase.co/auth/v1/callback`.
+- Apple is not offered: Sign in with Apple needs a paid Apple Developer account.
+
+Emails (confirm your address, reset your password) need a sender. Supabase's built-in one only delivers to
+members of your own Supabase organisation, a few an hour. A free option is Gmail over SMTP with an app password
+(Authentication, Emails, SMTP Settings: host `smtp.gmail.com`, port 465, the Gmail address as user and sender,
+the 16-character app password). Until a sender is set up, keep **Confirm email** off so new accounts get in
+straight away, and reset forgotten passwords from the dashboard (Authentication, Users).
+
+Under Authentication, URL Configuration, the Site URL must be the production address, and the redirect URLs must
+include it, `http://localhost:5173/**`, and the preview pattern `https://*-yuvrxxjs-projects.vercel.app/**`.
+Otherwise Google and the email links send people to the wrong place.
+
+Left for later, on purpose: CAPTCHA, leaked-password protection (paid) and Sign in with Apple (paid). Payments
+come after the app is on the App Store.
 
 ## How the rules work
 

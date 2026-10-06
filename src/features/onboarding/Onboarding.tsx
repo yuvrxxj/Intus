@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { Brand } from '@/components/brand';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Stepper } from '@/components/ui/stepper';
 import { cn } from '@/lib/utils';
+import { supabase } from '../../db/client.ts';
+import { firstNameFrom } from '../auth/credentials.ts';
 import { createStarterHabits, saveOnboardingProfile } from '../../db/onboarding.ts';
 import { todayKey } from '../../util/dates.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
@@ -95,6 +97,15 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
   const today = todayKey();
   const reduced = useReducedMotion();
   const [form, setForm] = useState<OnboardingForm>(() => formFromProfile(profile));
+  // someone who signed in with Google already told it their name, so offer it rather than ask again
+  useEffect(() => {
+    let live = true;
+    supabase.auth.getUser().then(({ data }) => {
+      const name = firstNameFrom(data.user?.user_metadata);
+      if (live && name) setForm((f) => (f.name.trim() ? f : { ...f, name }));
+    });
+    return () => { live = false; };
+  }, []);
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [errors, setErrors] = useState<OnboardingErrors>({});

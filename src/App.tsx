@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DotGround } from '@/components/dot-ground';
-import { SignIn } from './features/auth/SignIn.tsx';
+import { SetNewPassword, SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Dashboard } from './features/dashboard/Dashboard.tsx';
 import { ComingSoon } from './features/mobile/ComingSoon.tsx';
@@ -36,6 +36,7 @@ function WebApp() {
         </ProfileProvider>
       )}
       {session.status === 'signed_out' && <SignIn />}
+      {session.status === 'recovery' && <SetNewPassword />}
     </>
   );
 }
