@@ -31,7 +31,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` (shapes drawn in characters), buttons, segmented control, number ticker |
 | `src/components/hooks/` | `use-debounced-dimensions` and `use-screen-size`, used by the trail and the overview |
 | `src/styles/` | `index.css` holds Tailwind and the design tokens, `components.css` the shared classes the feature screens use |
-| `supabase/` | Migrations and the notes on the owner-only lock-down |
+| `supabase/` | Migrations, the script and workflow that apply them, and the notes on who can see what |
 | `test/` | Unit tests for `src/lib` and for the view logic |
 
 ## Design
