@@ -1,6 +1,7 @@
 import { useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ImagePlus } from 'lucide-react';
+import { AsciiSpark } from '@/components/ui/ascii-spark';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { cn } from '@/lib/utils';
@@ -36,10 +37,12 @@ function JumpLink({ to, children }: { to: string; children: ReactNode }) {
   return <a href={`#${to}`} className="text-ink underline decoration-primary underline-offset-3">{children}</a>;
 }
 
-export function Today({ form, lastWeightDate, notify, today }: {
+export function Today({ form, lastWeightDate, recentWeights, notify, today }: {
   form: TodayForm;
   today: string;
   lastWeightDate: string | null;
+  /** the latest weigh-ins, oldest first, for the small trend line under the field */
+  recentWeights: readonly number[];
   notify: (message: string, error?: boolean) => void;
 }) {
   const { draft, set, save, saving, dirty } = form;
@@ -108,6 +111,16 @@ export function Today({ form, lastWeightDate, notify, today }: {
             <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-mono text-sm text-ink-3">kg</span>
           </div>
           <div className="mt-3 text-xs text-ink-3">Last weigh-in: <span className="font-mono text-ink-2">{lastWeightDate ?? 'none yet'}</span></div>
+          {recentWeights.length >= 2 && (
+            <div className="mt-6 border-t border-line pt-4">
+              <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.08em] text-ink-3 uppercase">
+                <span>Last {recentWeights.length} weigh-ins</span>
+                <span className="tabular-nums">{Math.min(...recentWeights).toFixed(1)} to {Math.max(...recentWeights).toFixed(1)} kg</span>
+              </div>
+              <AsciiSpark values={recentWeights} className="mt-2 block overflow-hidden text-[20px]"
+                label={`Weight over the last ${recentWeights.length} weigh-ins, from ${recentWeights[0]} to ${recentWeights[recentWeights.length - 1]} kg`} />
+            </div>
+          )}
         </Panel>
 
         <Panel title="Mood">
@@ -286,7 +299,7 @@ export function Today({ form, lastWeightDate, notify, today }: {
       <AnimatePresence>
         {dirty && canSave && (
           <motion.div
-            className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-30 flex justify-center px-4 lg:bottom-6 lg:pl-[260px]"
+            className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-30 flex justify-center px-4 lg:bottom-6 lg:pl-[var(--rail-w)]"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}

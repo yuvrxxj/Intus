@@ -39,8 +39,9 @@ The app talks to the production Supabase project by default. `.env.example` list
 One page, inspired by Apple's large titles and grouped cards, in a Swiss red and paper palette with an ASCII streak. The tokens live in `src/styles/index.css`.
 
 - Colours: red `#A31621` for actions and the current section, paper `#E5ECE9`, green `#12695F` for on track, ink `#1F1300` for text, and `#A3988F` for the background dots. An ochre (`#8A5A14`) marks "close" and "check this".
-- Type: Inter for titles and text, JetBrains Mono for numbers, labels and the ASCII art. Both are bundled, so no font request leaves the browser.
-- Background: a grid of dots (8 px on a 28 px pitch, set in `src/components/dot-ground.tsx`). On a desktop pointer the dots under the cursor light red and fade.
+- Type: Inter for titles and text, JetBrains Mono for numbers, labels and the ASCII art, both set a little heavier than their defaults (body 450, medium 560, semibold 650). Both fonts are bundled, so no font request leaves the browser.
+- Layout: on desktop the section index is pinned to the left edge and the content fills the rest of the width, up to 1,640 px.
+- Background: a grid of small dots (3 px on a 22 px pitch, set in `src/components/dot-ground.tsx`). On a desktop pointer the dots under the cursor light red and fade.
 - Motion: sections fade up once, numbers settle into place, bars fill, the ASCII shapes turn slowly and pause off screen. Everything stops under reduced motion. No confetti, particles, sounds or emojis.
 - The UX journey, onboarding questions, page map and visual language are on the Miro board "Health OS: UI/UX revamp".
 

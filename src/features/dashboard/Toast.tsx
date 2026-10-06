@@ -21,7 +21,7 @@ export function useToast(): { toast: ToastState | null; notify: Notify } {
 /** A quiet confirmation pill at the bottom of the screen. Errors stay a little longer. */
 export function Toast({ toast }: { toast: ToastState | null }) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-50 flex justify-center px-4 lg:bottom-8" role="status" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-50 flex justify-center px-4 lg:bottom-8 lg:pl-[var(--rail-w)]" role="status" aria-live="polite">
       <AnimatePresence>
         {toast && (
           <motion.div

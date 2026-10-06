@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { PixelTrail } from '@/components/ui/pixel-trail';
 
-const PITCH = 28;
-const DOT = 8;
+const PITCH = 22;
+const DOT = 3;
 
 function wantsTrail(): boolean {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches
@@ -26,7 +26,7 @@ export function DotGround() {
 
   return (
     <div className="dot-ground" style={{ '--dot-pitch': `${PITCH}px`, '--dot-size': `${DOT}px` } as React.CSSProperties} aria-hidden="true">
-      {trail && <PixelTrail pixelSize={PITCH} dotSize={DOT} fadeDuration={900} pixelClassName="bg-primary" />}
+      {trail && <PixelTrail pixelSize={PITCH} dotSize={DOT + 1} fadeDuration={900} pixelClassName="bg-primary" />}
     </div>
   );
 }
