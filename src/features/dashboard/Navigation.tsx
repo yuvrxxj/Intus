@@ -13,11 +13,12 @@ export function SectionRail({ active, onJump, onSignOut, clock }: {
   clock: { date: string; time: string };
 }) {
   return (
-    <aside className="on-dots fixed top-0 left-0 z-20 hidden h-dvh w-[calc(var(--rail-w)-40px)] flex-col justify-between py-8 pl-8 lg:flex">
+    <aside className="glass fixed top-3 bottom-3 left-3 z-20 hidden w-[calc(var(--rail-w)-40px)] flex-col justify-between rounded-2xl py-6 pr-2 pl-5 lg:flex">
       <div>
         <Brand />
-        <div className="mt-2 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase tabular-nums">
-          {clock.date} / {clock.time}
+        <div className="mt-2 font-mono text-[11px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase tabular-nums">
+          <div>{clock.date}</div>
+          <div>{clock.time}</div>
         </div>
         <nav aria-label="Sections" className="mt-10">
           <ol className="grid gap-0.5">

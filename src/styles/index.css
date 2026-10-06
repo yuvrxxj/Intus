@@ -154,8 +154,34 @@
   background-position: 0 0;
 }
 
-/* text that sits straight on the dot grid gets a soft paper halo, so no dot ever cuts through a letter */
-.on-dots { text-shadow: 0 0 3px var(--paper), 0 0 3px var(--paper), 0 0 6px var(--paper), 0 0 6px var(--paper), 0 0 10px var(--paper), 0 0 14px var(--paper); }
+/*
+ * Frosted glass for anything that sits straight on the dot grid: a faint paper tint and a soft blur, just enough to
+ * lift text off the dots. .glass-text hugs a block of text and bleeds past it, so the words stay aligned with the
+ * cards around them.
+ */
+@layer components {
+  .glass {
+    background: rgb(229 236 233 / 0.55);
+    -webkit-backdrop-filter: blur(6px) saturate(1.05);
+    backdrop-filter: blur(6px) saturate(1.05);
+    border: 1px solid rgb(255 255 255 / 0.5);
+    box-shadow: 0 1px 2px rgb(31 19 0 / 0.04);
+    border-radius: 12px;
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass { background: rgb(229 236 233 / 0.88); }
+  }
+  .glass-text {
+    --gy: 12px;
+    --gx: 16px;
+    width: fit-content;
+    max-width: calc(100% + 2 * var(--gx));
+    padding: var(--gy) var(--gx);
+    margin: calc(var(--gy) * -1) calc(var(--gx) * -1);
+  }
+  .glass-text-sm { --gy: 7px; border-radius: 9px; }
+  @media (max-width: 640px) { .glass-text { --gx: 12px; } }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }

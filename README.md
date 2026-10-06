@@ -40,7 +40,8 @@ One page, inspired by Apple's large titles and grouped cards, in a Swiss red and
 
 - Colours: red `#A31621` for actions and the current section, paper `#E5ECE9`, green `#12695F` for on track, ink `#1F1300` for text, and `#A3988F` for the background dots. An ochre (`#8A5A14`) marks "close" and "check this".
 - Type: Inter for titles and text, JetBrains Mono for numbers, labels and the ASCII art, both set a little heavier than their defaults (body 450, medium 560, semibold 650). Both fonts are bundled, so no font request leaves the browser.
-- Layout: on desktop the section index is pinned to the left edge and the content fills the rest of the width, up to 1,640 px.
+- Layout: on desktop the section index floats on the left edge and the content fills the rest of the width, up to 1,640 px.
+- Glass: text that sits straight on the dot grid (section headers, the greeting, the index, the sign-in copy) sits on a faint frosted pane, paper at 55% with a 6 px blur (`.glass` in `src/styles/index.css`).
 - Background: a grid of small dots (3 px on a 22 px pitch, set in `src/components/dot-ground.tsx`). On a desktop pointer the dots under the cursor light red and fade.
 - Motion: sections fade up once, numbers settle into place, bars fill, the ASCII shapes turn slowly and pause off screen. Everything stops under reduced motion. No confetti, particles, sounds or emojis.
 - The UX journey, onboarding questions, page map and visual language are on the Miro board "Health OS: UI/UX revamp".
