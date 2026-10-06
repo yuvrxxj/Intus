@@ -27,7 +27,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/today`, `progress`, `history` | The daily log, charts and history table |
 | `src/features/screening/` | Your details and the screening calendar, with a way to record a screening as done |
 | `src/features/supplements/` | The supplements you take (a multivitamin, creatine) with start and end dates, and a before/after comparison against what you log. No dose checks or warnings |
-| `src/features/auth/` | Email and password sign-in through Supabase Auth |
+| `src/features/auth/` | Sign-in through Supabase Auth: email and password, password reset, and Google once it is switched on in Supabase |
 | `src/db/` | Supabase client, generated table types and the queries |
 | `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` (shapes drawn in characters), buttons, segmented control, number ticker |
 | `src/components/hooks/` | `use-debounced-dimensions` and `use-screen-size`, used by the trail and the overview |
