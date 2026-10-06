@@ -8,6 +8,8 @@ interface Props {
   past: readonly CriticalFinding[];
   biomarkers: readonly Biomarker[];
   unwatched: readonly string[];
+  unverified: readonly string[];
+  verifiedCount: number;
 }
 
 function limitCrossed(f: CriticalFinding): string {
@@ -28,13 +30,13 @@ function FindingLine({ f, source }: { f: CriticalFinding; source: string | null 
 }
 
 /**
- * The first thing on the screen. It says what crossed a stored critical limit and, just as plainly, what cannot
- * be checked: a marker with no limit is never reported as fine. The limits themselves are unverified, so the
- * banner says that too, instead of letting a quiet screen read as reassurance.
+ * The first thing on the screen. It says what crossed a clinician-verified critical limit and, just as plainly,
+ * what cannot be checked: a marker with no limit, or with limits no clinician has signed off, is never reported
+ * as fine. Until some limits are verified the banner says alerts are off, instead of letting a quiet screen
+ * read as reassurance.
  */
-export function CriticalBanner({ current, past, biomarkers, unwatched }: Props) {
+export function CriticalBanner({ current, past, biomarkers, unwatched, unverified, verifiedCount }: Props) {
   const sourceById = new Map(biomarkers.map((b) => [b.id, b.threshold_source]));
-  const watched = biomarkers.length - unwatched.length;
 
   return (
     <div className="sec" data-testid="critical-banner">
@@ -62,17 +64,39 @@ export function CriticalBanner({ current, past, biomarkers, unwatched }: Props) 
         </details>
       )}
 
-      {current.length === 0 && past.length === 0 && (
+      {verifiedCount === 0 && (
+        <div className="cbanner cbanner-off" role="note" data-testid="alerts-off">
+          <div className="cbanner-hdr">Critical-value alerts are off</div>
+          <div className="ci">
+            No critical limit in this app has been checked by a clinician yet, so it cannot tell you a result is
+            dangerous, and a result that is not flagged here is not an all clear.
+          </div>
+          <div className="cb-note">
+            Read each result against the range printed on your lab report, and ask your doctor about anything the
+            lab marked abnormal or urgent. This app does not diagnose.
+          </div>
+        </div>
+      )}
+
+      {verifiedCount > 0 && current.length === 0 && past.length === 0 && (
         <div className="cbanner cbanner-none">
-          <div className="ok-hdr">No stored critical limit crossed</div>
+          <div className="ok-hdr">No verified critical limit crossed</div>
           <div className="oi">
-            Checked {watched} of {biomarkers.length} markers that have a critical limit set.
+            Checked {verifiedCount} of {biomarkers.length} markers whose critical limits a clinician has verified.
           </div>
         </div>
       )}
 
       <div className="cb-caveat">
-        Critical limits in this app have not been verified by a clinician, so a quiet banner is not an all clear.
+        {verifiedCount > 0 && <>A quiet banner is not an all clear: only the verified markers are checked.</>}
+        {unverified.length > 0 && (
+          <details className="cb-unwatched">
+            <summary>
+              {unverified.length} marker{unverified.length === 1 ? ' has' : 's have'} critical limits that no clinician has verified, so they raise no alert
+            </summary>
+            <div>{unverified.join(', ')}</div>
+          </details>
+        )}
         {unwatched.length > 0 && (
           <details className="cb-unwatched">
             <summary>

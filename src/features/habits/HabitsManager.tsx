@@ -59,7 +59,7 @@ function HabitFormCard({ editing, others, nextOrder, onDone, onCancel }: {
     try {
       if (editing) await updateHabit(editing.id, result.value);
       else await createHabit(result.value, nextOrder);
-      onDone(editing ? 'Habit saved ✓' : 'Habit added ✓');
+      onDone(editing ? 'Habit saved' : 'Habit added');
     } catch (e) {
       setFailure(e instanceof Error ? e.message : String(e));
     } finally {
@@ -144,14 +144,14 @@ export function HabitsManager({ notify }: { notify: (message: string, error?: bo
     }
   }
 
-  const addPreset = (p: Preset) => run(`preset:${p.label}`, () => createHabit(p.value, nextSortOrder(habits)), `${p.label} added ✓`);
+  const addPreset = (p: Preset) => run(`preset:${p.label}`, () => createHabit(p.value, nextSortOrder(habits)), `${p.label} added`);
 
   function restore(habit: Habit) {
     if (full) return notify(`You can track up to ${MAX_HABITS} habits. Archive one first.`, true);
     if (active.some((h) => h.name.trim().toLowerCase() === habit.name.trim().toLowerCase())) {
       return notify(`You already track a habit called ${habit.name}`, true);
     }
-    void run(habit.id, () => setHabitArchived(habit.id, false), `${habit.name} is back ✓`);
+    void run(habit.id, () => setHabitArchived(habit.id, false), `${habit.name} is back`);
   }
 
   return (

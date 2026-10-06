@@ -1,12 +1,21 @@
 import { useState } from 'react';
+import { deleteReading } from '../../db/biomarkerReadings.ts';
 import { CriticalBanner } from './CriticalBanner.tsx';
+import { LabEntryForm } from './LabEntryForm.tsx';
 import { MarkerTable } from './MarkerTable.tsx';
 import { formatDay } from './format.ts';
+import type { Point } from './model.ts';
 import { useBloodwork } from './useBloodwork.ts';
 
-export function Bloodwork() {
+interface Props {
+  today: string;
+  notify: (message: string, error?: boolean) => void;
+}
+
+export function Bloodwork({ today, notify }: Props) {
   const state = useBloodwork();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [adding, setAdding] = useState(false);
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -29,13 +38,51 @@ export function Bloodwork() {
     );
   }
 
-  const { view, data } = state;
+  const { view, data, reload } = state;
+
+  function saved() {
+    setAdding(false);
+    notify('Result saved');
+    reload();
+  }
+
+  async function removeReading(point: Point, markerName: string) {
+    if (!window.confirm(`Delete the ${markerName} result from ${formatDay(point.measured_at)}? This cannot be undone.`)) return;
+    try {
+      await deleteReading(point.id);
+      notify('Result deleted');
+      reload();
+    } catch (e) {
+      notify(`Error: ${e instanceof Error ? e.message : String(e)}`, true);
+    }
+  }
+
+  const form = (
+    <LabEntryForm
+      biomarkers={data.biomarkers}
+      readings={data.readings}
+      today={today}
+      onDone={saved}
+      onCancel={view.readingCount === 0 ? undefined : () => setAdding(false)}
+    />
+  );
 
   if (view.readingCount === 0) {
     return (
-      <div className="card sec">
-        <div className="ct"><span className="dot dot-red" />Bloodwork</div>
-        <div className="loading" style={{ animation: 'none' }}>No results yet.</div>
+      <div>
+        <CriticalBanner
+          current={view.currentCritical}
+          past={view.pastCritical}
+          biomarkers={data.biomarkers}
+          unwatched={view.unwatched}
+          unverified={view.unverified}
+          verifiedCount={view.verifiedCount}
+        />
+        <div className="card sec">
+          <div className="ct"><span className="dot dot-red" />Bloodwork</div>
+          <div className="empty">No results yet. Add your first one below, straight from your lab report.</div>
+        </div>
+        {form}
       </div>
     );
   }
@@ -52,7 +99,17 @@ export function Bloodwork() {
         past={view.pastCritical}
         biomarkers={data.biomarkers}
         unwatched={view.unwatched}
+        unverified={view.unverified}
+        verifiedCount={view.verifiedCount}
       />
+
+      {adding ? (
+        form
+      ) : (
+        <div className="btn-row" style={{ marginTop: 0, marginBottom: 14 }}>
+          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add a result</button>
+        </div>
+      )}
 
       <div className="card sec">
         <div className="bw-head">
@@ -69,7 +126,7 @@ export function Bloodwork() {
         {view.groups.map((group) => (
           <section key={group.category}>
             <div className="bio-sec">{group.category}</div>
-            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} />
+            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} onDeleteReading={removeReading} />
           </section>
         ))}
 

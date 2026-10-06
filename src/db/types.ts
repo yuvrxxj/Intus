@@ -107,6 +107,9 @@ export type Database = {
           ref_low: number | null;
           sort_order: number | null;
           threshold_source: string | null;
+          /** set by a clinician sign-off; null means the critical limits are unverified and raise no alert */
+          threshold_verified_at: string | null;
+          threshold_verified_by: string | null;
           unit: string;
         };
         Insert: {
@@ -125,6 +128,8 @@ export type Database = {
           ref_low?: number | null;
           sort_order?: number | null;
           threshold_source?: string | null;
+          threshold_verified_at?: string | null;
+          threshold_verified_by?: string | null;
           unit: string;
         };
         Update: {
@@ -143,6 +148,8 @@ export type Database = {
           ref_low?: number | null;
           sort_order?: number | null;
           threshold_source?: string | null;
+          threshold_verified_at?: string | null;
+          threshold_verified_by?: string | null;
           unit?: string;
         };
         Relationships: [];

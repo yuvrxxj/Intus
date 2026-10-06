@@ -5,11 +5,15 @@ import { useHabits } from '../habits/HabitsContext.tsx';
 import { activeHabits, goalOf, habitStreak, habitsWithHistory, parseEntries, toneOf, type Tone } from '../habits/model.ts';
 import { useProgramme } from '../profile/ProfileContext.tsx';
 import { shortDate } from '../../util/dates.ts';
+import { moodWord } from '../today/mood.ts';
 import { ChartCanvas } from './ChartCanvas.tsx';
 
-const GRID = 'rgba(255,255,255,.04)';
-const TICK = { color: '#585878', font: { size: 10 } };
-const MOOD_FACES = ['', '😤', '😞', '😐', '🙂', '🔥'];
+// chart colours come from the theme: ink lines on paper, red for limits, green and ochre for the bands
+const INK = '#1f1300';
+const RED = '#a31621';
+const GRID = 'rgba(31,19,0,.07)';
+const MONO = '"JetBrains Mono Variable", ui-monospace, monospace';
+const TICK = { color: '#5a5446', font: { size: 10, family: MONO, weight: 560 } };
 
 function baseOptions(): ChartOptions {
   return {
@@ -18,21 +22,23 @@ function baseOptions(): ChartOptions {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(14,14,28,.95)', titleColor: '#e8e8f2', bodyColor: '#a0a0bc',
-        borderColor: 'rgba(42,42,72,.8)', borderWidth: 1, padding: 10, cornerRadius: 8,
+        backgroundColor: INK, titleColor: '#e5ece9', bodyColor: '#e5ece9', titleFont: { family: MONO, size: 11 },
+        bodyFont: { family: MONO, size: 12 }, padding: 10, cornerRadius: 8, displayColors: false,
       },
     },
-    scales: { x: { grid: { color: GRID }, ticks: TICK }, y: { grid: { color: GRID }, ticks: TICK } },
+    scales: {
+      x: { grid: { display: false }, border: { color: 'rgba(31,19,0,.22)' }, ticks: { ...TICK, maxRotation: 0, autoSkipPadding: 12 } },
+      y: { grid: { color: GRID }, border: { display: false }, ticks: TICK },
+    },
   };
 }
 
 const TONE_FILL: Record<Tone, string> = {
-  good: 'rgba(61,196,122,.7)', ok: 'rgba(232,184,74,.7)', bad: 'rgba(217,79,92,.7)', none: 'rgba(88,88,120,.5)',
+  good: 'rgba(18,105,95,.8)', ok: 'rgba(138,90,20,.7)', bad: 'rgba(163,22,33,.8)', none: 'rgba(163,152,143,.7)',
 };
-const STREAK_COLORS = ['var(--blue)', 'var(--green)', 'var(--yellow)', 'var(--red)'];
 
 const bandColor = (value: number, over: number, near: number) =>
-  value > over ? 'rgba(217,79,92,.7)' : value >= near ? 'rgba(232,184,74,.7)' : 'rgba(61,196,122,.7)';
+  value > over ? 'rgba(163,22,33,.8)' : value >= near ? 'rgba(138,90,20,.7)' : 'rgba(18,105,95,.8)';
 
 /** logs: newest first. Charts read oldest to newest, over the latest 30 entries. */
 export function Progress({ logs }: { logs: readonly DailyLog[] }) {
@@ -49,9 +55,9 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
       data: {
         labels,
         datasets: [
-          { data: recent.map((d) => d.weight), borderColor: '#4a8fe8', backgroundColor: 'rgba(74,143,232,.08)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#4a8fe8', fill: true, tension: 0.35, spanGaps: true },
+          { data: recent.map((d) => d.weight), borderColor: INK, backgroundColor: 'rgba(31,19,0,.05)', borderWidth: 1.5, pointRadius: 2.5, pointBackgroundColor: INK, pointHoverRadius: 4, fill: true, tension: 0.3, spanGaps: true },
           ...(programme
-            ? [{ data: recent.map(() => programme.goalWeightKg), borderColor: 'rgba(217,79,92,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }]
+            ? [{ data: recent.map(() => programme.goalWeightKg), borderColor: RED, borderWidth: 1, borderDash: [3, 4], pointRadius: 0, fill: false }]
             : []),
         ],
       },
@@ -79,12 +85,13 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
               if (c == null) return 'transparent';
               return programme?.calorieOver != null && programme.calorieNear != null
                 ? bandColor(c, programme.calorieOver, programme.calorieNear)
-                : 'rgba(74,143,232,.7)';
+                : 'rgba(31,19,0,.75)';
             }),
-            borderRadius: 5,
+            borderRadius: 3,
+            maxBarThickness: 18,
           },
           ...(programme?.calorieTarget != null
-            ? [{ type: 'line' as const, data: recent.map(() => programme.calorieTarget as number), borderColor: 'rgba(74,143,232,.4)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }]
+            ? [{ type: 'line' as const, data: recent.map(() => programme.calorieTarget as number), borderColor: RED, borderWidth: 1, borderDash: [3, 4], pointRadius: 0, fill: false }]
             : []),
         ],
       },
@@ -104,9 +111,9 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
           data: {
             labels,
             datasets: [
-              { type: 'bar', data: values, backgroundColor: recentEntries.map((e) => TONE_FILL[toneOf(habit, e[habit.id])]), borderRadius: 5 },
+              { type: 'bar', data: values, backgroundColor: recentEntries.map((e) => TONE_FILL[toneOf(habit, e[habit.id])]), borderRadius: 3, maxBarThickness: 18 },
               ...(goal !== null
-                ? [{ type: 'line' as const, data: recent.map(() => goal), borderColor: 'rgba(160,160,188,.45)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }]
+                ? [{ type: 'line' as const, data: recent.map(() => goal), borderColor: RED, borderWidth: 1, borderDash: [3, 4], pointRadius: 0, fill: false }]
                 : []),
             ],
           },
@@ -119,13 +126,13 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
       type: 'line',
       data: {
         labels,
-        datasets: [{ data: recent.map((d) => d.mood), borderColor: '#6b6ef5', backgroundColor: 'rgba(107,110,245,.08)', borderWidth: 2, pointRadius: 4, fill: true, tension: 0.35, spanGaps: true }],
+        datasets: [{ data: recent.map((d) => d.mood), borderColor: RED, backgroundColor: 'rgba(163,22,33,.06)', borderWidth: 1.5, pointRadius: 2.5, pointBackgroundColor: RED, fill: true, tension: 0.3, spanGaps: true }],
       },
       options: {
         ...base,
         scales: {
           ...scales,
-          y: { ...scales.y, min: 1, max: 5, ticks: { color: '#585878', stepSize: 1, font: { size: 13 }, callback: (v) => MOOD_FACES[Number(v)] ?? String(v) } },
+          y: { ...scales.y, min: 1, max: 5, ticks: { ...TICK, stepSize: 1, callback: (v) => moodWord(Number(v)) || String(v) } },
         },
       },
     };
@@ -138,26 +145,26 @@ export function Progress({ logs }: { logs: readonly DailyLog[] }) {
   return (
     <div>
       <div className="g g2 sec">
-        <div className="card"><div className="ct"><span className="dot dot-blue" />{programme ? `Weight (${programme.startWeightKg}→${programme.goalWeightKg}kg)` : 'Weight'}</div>
+        <div className="card"><div className="ct"><span className="dot dot-blue" />{programme ? `Weight, ${programme.startWeightKg} to ${programme.goalWeightKg} kg` : 'Weight'}</div>
           <ChartCanvas config={configs.weight} label="Weight over the latest entries" /></div>
-        <div className="card"><div className="ct"><span className="dot dot-green" />Calories / Day</div>
+        <div className="card"><div className="ct"><span className="dot dot-green" />Calories per day</div>
           <ChartCanvas config={configs.calories} label="Calories per day" /></div>
       </div>
       <div className="g g2 sec">
-        <div className="card"><div className="ct"><span className="dot" style={{ background: 'linear-gradient(135deg,var(--blue),var(--red))' }} />Mood</div>
+        <div className="card"><div className="ct"><span className="dot dot-red" />Mood</div>
           <ChartCanvas config={configs.mood} label="Mood over the latest entries" /></div>
         {configs.habitCharts.map(({ habit, config }) => (
-          <div className="card" key={habit.id}><div className="ct"><span className="dot dot-red" />{habit.name} / Day{habit.unit ? ` (${habit.unit})` : ''}</div>
+          <div className="card" key={habit.id}><div className="ct"><span className="dot dot-dim" />{habit.name} per day{habit.unit ? ` (${habit.unit})` : ''}</div>
             <ChartCanvas config={config} label={`${habit.name} per day`} /></div>
         ))}
       </div>
       {streaks.length > 0 && (
         <div className="card sec">
-          <div className="ct"><span className="dot dot-green" />Habit Streaks</div>
+          <div className="ct"><span className="dot dot-green" />Habit streaks, in days</div>
           <div className="streak-row">
-            {streaks.map(({ habit, days }, i) => (
+            {streaks.map(({ habit, days }) => (
               <div className="streak-box" key={habit.id}>
-                <div className="sv" style={{ color: STREAK_COLORS[i % STREAK_COLORS.length] }}>{days}</div>
+                <div className="sv" style={{ color: days > 0 ? 'var(--ink)' : 'var(--dot)' }}>{days}</div>
                 <div className="sl">{habit.name}</div>
               </div>
             ))}
