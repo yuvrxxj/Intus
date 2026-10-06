@@ -10,16 +10,7 @@
 .cbanner-past .cbanner-hdr::before{background:var(--yellow);animation:none}
 .cbanner-sum{cursor:pointer;margin-bottom:0}
 .cbanner-past[open] .cbanner-sum{margin-bottom:10px}
-.cbanner-none{background:color-mix(in srgb,var(--green) 7%,var(--surface));border-color:rgb(18 105 95 / .25)}
-.cbanner-off{background:color-mix(in srgb,var(--warn) 9%,var(--surface));border-color:rgb(138 90 20 / .25)}
-.cbanner-off .cbanner-hdr{color:var(--yellow)}
-.cbanner-off .cbanner-hdr::before{background:var(--yellow);animation:none}
-.ci-src{color:var(--muted);margin-left:4px}
 .cb-note{font-size:11px;color:var(--muted);margin-top:8px}
-.cb-caveat{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;padding:0 4px}
-.cb-unwatched{text-shadow:0 0 3px var(--paper),0 0 3px var(--paper),0 0 6px var(--paper),0 0 6px var(--paper),0 0 10px var(--paper),0 0 14px var(--paper);margin-top:6px}
-.cb-unwatched summary{cursor:pointer;color:var(--txt2)}
-.cb-unwatched div{margin-top:4px}
 
 .bt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.bt-main{min-width:640px;table-layout:fixed}
@@ -37,7 +28,6 @@ tr.bt-detail td{background:var(--s2);padding:12px 8px 16px}
 .bt-detail-grid{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:18px;align-items:start}
 @media(max-width:800px){.bt-detail-grid{grid-template-columns:1fr}}
 .bt-limits{font-size:11px;color:var(--txt2);margin-top:8px;line-height:1.55}
-.bt-nolimit{color:var(--yellow)}
 .bt-desc{margin-top:6px;color:var(--muted)}
 table.bt-hist{min-width:0}
 .bt-notes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--txt2)}

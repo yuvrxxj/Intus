@@ -249,7 +249,7 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
                         <input id="ob-weeks" type="number" inputMode="numeric" min="1" max="104" value={form.weeks} onChange={(e) => set('weeks', e.target.value)} />
                       </Field>
                       <Field id="ob-calories" label="Daily calories (optional)" error={errors.calorie_target} className="col-span-full"
-                        hint={suggested === null ? 'Fill in the earlier steps to get a suggestion.' : `A starting point from a standard formula is ${suggested.toLocaleString('en-US')} kcal. It is not medical advice.`}>
+                        hint={suggested === null ? 'Fill in the earlier steps to get a suggestion.' : `A starting point from a standard formula is ${suggested.toLocaleString('en-US')} kcal.`}>
                         <div className="flex flex-wrap gap-2">
                           <input id="ob-calories" className="min-w-0 flex-1 basis-40" type="number" inputMode="numeric" value={form.calorie_target} placeholder="2000" onChange={(e) => set('calorie_target', e.target.value)} />
                           <Button disabled={suggested === null} onClick={() => set('calorie_target', String(suggested))}>Use the suggestion</Button>

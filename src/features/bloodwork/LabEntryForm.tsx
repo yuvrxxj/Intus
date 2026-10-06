@@ -109,7 +109,7 @@ export function LabEntryForm({ biomarkers, readings, today, onDone, onCancel }: 
       {failure && <div className="notice notice-bad" role="alert">Could not save: {failure}</div>}
 
       <div className="bw-legend">
-        Saved results are stored as entered by you. This app checks them against its stored ranges and, once a clinician has verified a marker's limits, its critical limits. It does not diagnose.
+        Saved as entered by you, then checked against the marker's reference range and critical limits.
       </div>
 
       <div className="btn-row">

@@ -3,6 +3,8 @@ import { DotGround } from '@/components/dot-ground';
 import { SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Dashboard } from './features/dashboard/Dashboard.tsx';
+import { ComingSoon } from './features/mobile/ComingSoon.tsx';
+import { isPhone, readDeviceHints } from './features/mobile/device.ts';
 import { Onboarding } from './features/onboarding/Onboarding.tsx';
 import { needsOnboarding } from './features/onboarding/model.ts';
 import { HabitsProvider } from './features/habits/HabitsContext.tsx';
@@ -21,11 +23,10 @@ function Gate() {
   return <Dashboard />;
 }
 
-export function App() {
+function WebApp() {
   const session = useSession();
   return (
     <>
-      <DotGround />
       {session.status === 'loading' && <Loading />}
       {session.status === 'signed_in' && (
         <ProfileProvider>
@@ -35,6 +36,18 @@ export function App() {
         </ProfileProvider>
       )}
       {session.status === 'signed_out' && <SignIn />}
+    </>
+  );
+}
+
+// decided once at load: the phone apps are not out yet, so a phone browser gets a holding screen instead of the app
+const PHONE = isPhone(readDeviceHints());
+
+export function App() {
+  return (
+    <>
+      <DotGround />
+      {PHONE ? <ComingSoon /> : <WebApp />}
     </>
   );
 }

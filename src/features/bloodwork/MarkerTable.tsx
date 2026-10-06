@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
-import { CRITICAL, checkCritical, isVerified } from '../../lib/safety.ts';
+import { CRITICAL, checkCritical } from '../../lib/safety.ts';
 import { TREND } from '../../lib/trends.ts';
 import { rangeStatus, type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
 import {
@@ -73,7 +73,6 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
   const { biomarker, points } = row;
   const newestFirst = [...points].reverse();
   const noLimit = biomarker.critical_low == null && biomarker.critical_high == null;
-  const verified = isVerified(biomarker);
   const limits = [
     biomarker.critical_low != null ? `low ${formatValue(Number(biomarker.critical_low))}` : null,
     biomarker.critical_high != null ? `high ${formatValue(Number(biomarker.critical_high))}` : null,
@@ -85,17 +84,7 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
         <Sparkline points={points} refLow={row.refLow} refHigh={row.refHigh} />
         <div className="bt-limits">
           <div>Reference range: {formatRange(row.refLow, row.refHigh)} {biomarker.unit}</div>
-          {noLimit ? (
-            <div className="bt-nolimit">No critical limit is set for this marker, so it can never be flagged as critical.</div>
-          ) : (
-            <div>
-              Critical limits: {limits.join(', ')} {biomarker.unit}
-              {biomarker.threshold_source ? <span className="ci-src"> Source: {biomarker.threshold_source}</span> : null}
-              {verified
-                ? <span className="ci-src"> Verified by a clinician.</span>
-                : <div className="bt-nolimit">Not verified by a clinician, so these limits are not used to raise an alert.</div>}
-            </div>
-          )}
+          {noLimit ? null : <div>Critical limits: {limits.join(', ')} {biomarker.unit}</div>}
           {biomarker.description ? <div className="bt-desc">{biomarker.description}</div> : null}
         </div>
       </div>
