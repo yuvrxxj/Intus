@@ -24,6 +24,13 @@ dry_run=false
 
 sql() { PGOPTIONS="-c client_min_messages=warning" psql "$DATABASE_URL" -X -q -At -v ON_ERROR_STOP=1 "$@"; }
 
+# connect before anything else, so a dry run also proves the connection string and password work
+if ! sql -c 'select 1' >/dev/null; then
+  echo "could not connect to the database: check the SUPABASE_DB_URL secret (see supabase/README.md)" >&2
+  exit 1
+fi
+echo "connected"
+
 if ! $dry_run; then
   sql <<'SQL'
 create schema if not exists supabase_migrations;
