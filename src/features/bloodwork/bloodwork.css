@@ -17,7 +17,7 @@
 .ci-src{color:var(--muted);margin-left:4px}
 .cb-note{font-size:11px;color:var(--muted);margin-top:8px}
 .cb-caveat{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;padding:0 4px}
-.cb-unwatched{margin-top:8px;width:fit-content;max-width:100%;padding:6px 10px;border-radius:9px;background:rgb(229 236 233 / .2);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgb(255 255 255 / .5)}
+.cb-unwatched{text-shadow:0 0 3px var(--paper),0 0 3px var(--paper),0 0 6px var(--paper),0 0 6px var(--paper),0 0 10px var(--paper),0 0 14px var(--paper);margin-top:6px}
 .cb-unwatched summary{cursor:pointer;color:var(--txt2)}
 .cb-unwatched div{margin-top:4px}
 
@@ -28,7 +28,7 @@ table.bt-main{min-width:640px;table-layout:fixed}
 .bk-none{background:var(--s3);color:var(--muted)}
 .bk-crit{background:var(--red);color:var(--paper)}
 .status-stack{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.bt-name{background:none;border:none;color:var(--txt);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;text-align:left;display:inline-flex;align-items:center;gap:6px}
+.bt-name{background:none;border:none;color:var(--txt);font-family:inherit;font-size:12px;font-weight:650;cursor:pointer;padding:2px 0;text-align:left;display:inline-flex;align-items:center;gap:6px}
 .bt-name:hover{color:var(--blue)}
 .bt-name:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 .bt-caret{color:var(--muted);width:10px;display:inline-block}
@@ -50,7 +50,7 @@ table.bt-hist{min-width:0}
 .chg-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap}
 .chg-trend{font-size:10px;color:var(--txt2);margin-top:2px}
 
-.tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-family:var(--font-mono);font-size:10px;font-weight:560;letter-spacing:.06em;text-transform:uppercase}
 .tag-demo{background:var(--red3);color:var(--red);border:1px solid rgb(163 22 33 / .25)}
 .tag-warn{background:var(--yellow2);color:var(--yellow);border:1px solid rgb(138 90 20 / .25)}
 

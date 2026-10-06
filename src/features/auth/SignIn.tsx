@@ -19,12 +19,12 @@ const PRINCIPLES = [
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10">
-      <section className="flex flex-col gap-8">
-        <div className="glass glass-text glass-text-sm"><Brand /></div>
-        <div className="glass -ml-4 w-fit p-4 max-sm:-ml-3">
+      <section className="on-dots flex flex-col gap-8">
+        <Brand />
+        <div className="flex items-end gap-6">
           <AsciiArt shape="heart" cols={44} rows={22} className="text-[9px] text-primary sm:text-[11px]" />
         </div>
-        <div className="glass glass-text">
+        <div>
           <h1 className="max-w-xl text-[40px] leading-[1.05] font-semibold tracking-[-0.03em] text-ink sm:text-[52px]">
             Your health, in plain numbers.
           </h1>

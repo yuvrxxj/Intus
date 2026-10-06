@@ -4,7 +4,7 @@
 .med-item:last-child{border-bottom:none}
 .med-item.med-ended{opacity:.7}
 .med-main{flex:1;min-width:220px}
-.med-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.med-name{font-size:14px;font-weight:650;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .med-name .tag{margin-left:0}
 .med-meta{font-size:12px;color:var(--txt2);margin-top:3px}
 .med-notes{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic}
@@ -24,7 +24,7 @@
 .fx-item>summary::before{content:'\25B8';color:var(--muted);margin-right:6px;display:inline-block;width:10px}
 .fx-item[open]>summary::before{content:'\25BE'}
 .fx-item>summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
-.fx-name{font-size:14px;font-weight:600}
+.fx-name{font-size:14px;font-weight:650}
 .fx-sub{display:block;font-size:12px;color:var(--txt2);margin-top:2px;padding-left:16px}
 .fx-body{padding:0 2px 16px}
 .fx-n{color:var(--muted);font-size:11px;margin-left:4px;white-space:nowrap}

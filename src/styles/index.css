@@ -106,10 +106,10 @@
   --color-line-strong: var(--line-strong);
   --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   /* a touch heavier than the defaults, so text holds up on the dot grid */
-  --font-weight-normal: 450;
-  --font-weight-medium: 560;
-  --font-weight-semibold: 650;
-  --font-weight-bold: 720;
+  --font-weight-normal: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 780;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --radius-sm: 8px;
   --radius-md: 10px;
@@ -126,7 +126,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-size: 15px;
-    font-weight: 450;
+    font-weight: 500;
     line-height: 1.5;
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
@@ -138,8 +138,8 @@
   button, [role="button"], summary { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
   .tabular, input[type="number"] { font-variant-numeric: tabular-nums; }
-  .font-mono { font-weight: 500; }
-  strong, b { font-weight: 650; }
+  .font-mono { font-weight: 560; }
+  strong, b { font-weight: 700; }
 }
 
 /* the page ground: grey dots on paper, fixed to the viewport so the cursor trail lines up with it */
@@ -154,34 +154,8 @@
   background-position: 0 0;
 }
 
-/*
- * Frosted glass for anything that sits straight on the dot grid: a faint paper tint and a soft blur, just enough to
- * lift text off the dots. .glass-text hugs a block of text and bleeds past it, so the words stay aligned with the
- * cards around them.
- */
-@layer components {
-  .glass {
-    background: rgb(229 236 233 / 0.2);
-    -webkit-backdrop-filter: blur(6px) saturate(1.05);
-    backdrop-filter: blur(6px) saturate(1.05);
-    border: 1px solid rgb(255 255 255 / 0.5);
-    box-shadow: 0 1px 2px rgb(31 19 0 / 0.04);
-    border-radius: 12px;
-  }
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass { background: rgb(229 236 233 / 0.4); }
-  }
-  .glass-text {
-    --gy: 12px;
-    --gx: 16px;
-    width: fit-content;
-    max-width: calc(100% + 2 * var(--gx));
-    padding: var(--gy) var(--gx);
-    margin: calc(var(--gy) * -1) calc(var(--gx) * -1);
-  }
-  .glass-text-sm { --gy: 7px; border-radius: 9px; }
-  @media (max-width: 640px) { .glass-text { --gx: 12px; } }
-}
+/* text that sits straight on the dot grid gets a soft paper halo, so no dot ever cuts through a letter */
+.on-dots { text-shadow: 0 0 3px var(--paper), 0 0 3px var(--paper), 0 0 6px var(--paper), 0 0 6px var(--paper), 0 0 10px var(--paper), 0 0 14px var(--paper); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
