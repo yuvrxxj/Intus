@@ -13,7 +13,7 @@ export function SectionRail({ active, onJump, onSignOut, clock }: {
   clock: { date: string; time: string };
 }) {
   return (
-    <aside className="on-dots sticky top-0 hidden h-dvh flex-col justify-between py-8 lg:flex">
+    <aside className="on-dots fixed top-0 left-0 z-20 hidden h-dvh w-[calc(var(--rail-w)-40px)] flex-col justify-between py-8 pl-8 lg:flex">
       <div>
         <Brand />
         <div className="mt-2 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase tabular-nums">

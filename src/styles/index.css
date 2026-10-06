@@ -10,8 +10,8 @@
   --surface-2: #fbfcfb;
   --surface-3: #e9eeeb;
   --ink: #1f1300;
-  --ink-2: #5e584b;
-  --ink-3: #6b665a;
+  --ink-2: #48422f;
+  --ink-3: #5a5446;
   --dot: #a3988f;
   --red: #a31621;
   --red-ink: #8c121c;
@@ -21,8 +21,11 @@
   --line-strong: rgb(31 19 0 / 0.22);
 
   /* the dot grid: one dot per cell, centred, shared with the cursor trail so lit dots land on grey ones */
-  --dot-pitch: 28px;
-  --dot-size: 8px;
+  /* width the fixed section index takes on desktop, content starts right after it */
+  --rail-w: 232px;
+
+  --dot-pitch: 22px;
+  --dot-size: 3px;
 
   /* shadcn names, so components copied from the registry pick up the theme */
   --background: var(--paper);
@@ -102,6 +105,11 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  /* a touch heavier than the defaults, so text holds up on the dot grid */
+  --font-weight-normal: 450;
+  --font-weight-medium: 560;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 720;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --radius-sm: 8px;
   --radius-md: 10px;
@@ -118,6 +126,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-size: 15px;
+    font-weight: 450;
     line-height: 1.5;
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
@@ -129,6 +138,8 @@
   button, [role="button"], summary { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
   .tabular, input[type="number"] { font-variant-numeric: tabular-nums; }
+  .font-mono { font-weight: 500; }
+  strong, b { font-weight: 650; }
 }
 
 /* the page ground: grey dots on paper, fixed to the viewport so the cursor trail lines up with it */

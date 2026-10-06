@@ -56,14 +56,15 @@ export function Dashboard() {
   const { profile, programme, reload: reloadProfile } = useProfile();
   const stats = weightStats(recent.logs, programme);
   const week = programme ? programmeWeek(programme, today) : null;
+  const recentWeights = recent.logs.flatMap((l) => (typeof l.weight === 'number' && l.weight > 0 ? [l.weight] : [])).slice(0, 14).reverse();
   const name = profile?.name?.trim();
   const signOut = () => void supabase.auth.signOut();
 
   return (
-    <div className="relative z-10 mx-auto w-full max-w-[1320px] px-5 sm:px-8 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-14 lg:px-10">
+    <div className="relative z-10 w-full px-5 sm:px-8 lg:pr-10 lg:pl-[var(--rail-w)] 2xl:pr-16">
       <SectionRail active={active} onJump={jump} onSignOut={signOut} clock={clock} />
 
-      <main className="min-w-0 pb-32 lg:pb-24">
+      <main className="mx-auto min-w-0 max-w-[1640px] pb-32 lg:pb-24">
         <MobileNav active={active} onJump={jump} onSignOut={signOut} />
 
         <header className="on-dots flex items-end justify-between gap-6 pt-8 pb-10 lg:pt-14">
@@ -90,7 +91,7 @@ export function Dashboard() {
         </div>
 
         <Section meta={meta('today')}>
-          <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} />
+          <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} recentWeights={recentWeights} />
         </Section>
 
         <Section meta={meta('progress')}>
