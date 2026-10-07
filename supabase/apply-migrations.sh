@@ -16,6 +16,17 @@ export LC_ALL=C
 
 : "${DATABASE_URL:?DATABASE_URL is not set. Add the repository secret SUPABASE_DB_URL (see supabase/README.md).}"
 
+# A pasted secret often carries a trailing newline, spaces or quotes. psql would then read the whole value as a
+# database name and try a local socket, which says nothing about the real problem, so tidy it and check the start.
+DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n' | sed -e 's/^[[:space:]"'"'"'`]*//' -e 's/[[:space:]"'"'"'`]*$//')"
+case "$DATABASE_URL" in
+  postgres://*|postgresql://*) ;;
+  *)
+    echo "SUPABASE_DB_URL does not start with postgresql://. Paste only the connection string, with no quotes, backticks or spaces around it (see supabase/README.md)." >&2
+    exit 1
+    ;;
+esac
+
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 migrations_dir="${MIGRATIONS_DIR:-$here/migrations}"
 baseline_file="${BASELINE_FILE:-$here/baseline.txt}"
