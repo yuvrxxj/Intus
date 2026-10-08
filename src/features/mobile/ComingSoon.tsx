@@ -24,7 +24,7 @@ export function ComingSoon() {
           Coming soon to iOS and Android.
         </h1>
         <p className="on-dots mt-4 text-[15px] leading-relaxed text-ink-2">
-          Health OS is built for a bigger screen for now. Open it on a laptop or desktop, and the phone apps will follow.
+          Intus is built for a bigger screen for now. Open it on a laptop or desktop, and the phone apps will follow.
         </p>
 
         <ul className="mt-8 grid gap-2">
