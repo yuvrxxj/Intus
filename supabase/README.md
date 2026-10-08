@@ -79,8 +79,9 @@ members of your own Supabase organisation, a few an hour. A free option is Gmail
 the 16-character app password). Until a sender is set up, keep **Confirm email** off so new accounts get in
 straight away, and reset forgotten passwords from the dashboard (Authentication, Users).
 
-Under Authentication, URL Configuration, the Site URL must be the production address, and the redirect URLs must
-include it, `http://localhost:5173/**`, and the preview pattern `https://*-yuvrxxjs-projects.vercel.app/**`.
+Under Authentication, URL Configuration, the Site URL must be the production address, `https://intus.fit`, and the
+redirect URLs must include it (`https://intus.fit/**`), `http://localhost:5173/**`, and the preview pattern
+`https://*-yuvrxxjs-projects.vercel.app/**`.
 Otherwise Google and the email links send people to the wrong place.
 
 Left for later, on purpose: CAPTCHA, leaked-password protection (paid) and Sign in with Apple (paid). Payments

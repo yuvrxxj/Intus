@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Health OS design tokens. Five brand colours: red #A31621, paper #E5ECE9, green #12695F, ink #1F1300 and the
+ * Intus design tokens. Five brand colours: red #A31621, paper #E5ECE9, green #12695F, ink #1F1300 and the
  * background dot #A3988F. Everything else is a tint of those, plus one ochre for "close" and "check this" states.
  */
 :root {

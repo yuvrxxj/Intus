@@ -1,5 +1,5 @@
 {
-  "name": "health-dashboard-db-tests",
+  "name": "intus-db-tests",
   "private": true,
   "type": "module",
   "scripts": {

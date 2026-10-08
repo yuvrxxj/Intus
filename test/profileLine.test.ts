@@ -19,10 +19,10 @@ test('whatever is not known is left out, and a person with nothing gets a prompt
 });
 
 test('the title uses the person\'s own name, never someone else\'s', () => {
-  assert.equal(titleFor({ name: 'Yuvraaj' }), "Yuvraaj's Health OS");
-  assert.equal(titleFor({ name: 'James' }), "James' Health OS");
-  assert.equal(titleFor({ name: '  Ana ' }), "Ana's Health OS");
-  assert.equal(titleFor({ name: null }), 'Health OS');
-  assert.equal(titleFor({ name: '   ' }), 'Health OS');
-  assert.equal(titleFor(null), 'Health OS');
+  assert.equal(titleFor({ name: 'Yuvraaj' }), "Yuvraaj's Intus");
+  assert.equal(titleFor({ name: 'James' }), "James' Intus");
+  assert.equal(titleFor({ name: '  Ana ' }), "Ana's Intus");
+  assert.equal(titleFor({ name: null }), 'Intus');
+  assert.equal(titleFor({ name: '   ' }), 'Intus');
+  assert.equal(titleFor(null), 'Intus');
 });

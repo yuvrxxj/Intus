@@ -123,7 +123,7 @@ export function Dashboard() {
         </Section>
 
         <footer className="on-dots flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-6 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">
-          <span>Health OS</span>
+          <span>Intus</span>
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
         </footer>
       </main>

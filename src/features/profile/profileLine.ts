@@ -5,8 +5,8 @@ import { normalizeSex } from '../screening/model.ts';
 /** The page title: the person's own name when they have given one. */
 export function titleFor(profile: Pick<Profile, 'name'> | null): string {
   const name = profile?.name?.trim();
-  if (!name) return 'Health OS';
-  return `${name}'${name.toLowerCase().endsWith('s') ? '' : 's'} Health OS`;
+  if (!name) return 'Intus';
+  return `${name}'${name.toLowerCase().endsWith('s') ? '' : 's'} Intus`;
 }
 
 /** The short line under the title, for example "26M · 179cm · B+ · Cut: 82→75kg". Leaves out whatever is not known. */
