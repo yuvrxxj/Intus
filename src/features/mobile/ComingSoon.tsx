@@ -1,9 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import { Brand } from '@/components/brand';
 import { AsciiArt } from '@/components/ui/ascii-art';
-
-/** Where "back to the homepage" goes. The public homepage is not built yet, so for now it is the site root. */
-export const HOME_URL = '/';
+import { Link } from '../home/Link.tsx';
+import { HOME_PATH } from '../home/route.ts';
 
 const PLATFORMS = [
   ['iOS', 'iPhone app'],
@@ -40,10 +39,10 @@ export function ComingSoon() {
         </ul>
       </div>
 
-      <a href={HOME_URL} className="on-dots inline-flex items-center gap-2 self-start text-sm font-medium text-primary underline-offset-4 hover:underline">
+      <Link to={HOME_PATH} className="on-dots inline-flex items-center gap-2 self-start text-sm font-medium text-primary underline-offset-4 hover:underline">
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to the homepage
-      </a>
+      </Link>
     </main>
   );
 }
