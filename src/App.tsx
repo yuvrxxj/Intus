@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DotGround } from '@/components/dot-ground';
 import { SetNewPassword, SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Dashboard } from './features/dashboard/Dashboard.tsx';
+import { Home } from './features/home/Home.tsx';
+import { HOME_PATH, initialModeFor } from './features/home/route.ts';
+import { navigate, routeAuthErrorToSignIn, useRoute } from './features/home/useRoute.ts';
 import { ComingSoon } from './features/mobile/ComingSoon.tsx';
 import { isPhone, readDeviceHints } from './features/mobile/device.ts';
 import { Onboarding } from './features/onboarding/Onboarding.tsx';
@@ -25,6 +28,11 @@ function Gate() {
 
 function WebApp() {
   const session = useSession();
+  const route = useRoute();
+  // once signed in, the sign-in address has done its job: the app lives at the site root
+  useEffect(() => {
+    if (session.status === 'signed_in' && route === 'signin') navigate(HOME_PATH, true);
+  }, [session.status, route]);
   return (
     <>
       {session.status === 'loading' && <Loading />}
@@ -35,20 +43,28 @@ function WebApp() {
           </HabitsProvider>
         </ProfileProvider>
       )}
-      {session.status === 'signed_out' && <SignIn />}
+      {session.status === 'signed_out' && (route === 'signin' ? <SignIn initialMode={initialModeFor(window.location.search)} /> : <Home />)}
       {session.status === 'recovery' && <SetNewPassword />}
     </>
   );
 }
 
-// decided once at load: the phone apps are not out yet, so a phone browser gets a holding screen instead of the app
+/** The homepage is public on every device. On a phone everything past it is the holding screen, because the app is not there yet. */
+function PhoneSite() {
+  return useRoute() === 'home' ? <Home /> : <ComingSoon />;
+}
+
+// decided once at load: the phone apps are not out yet, so a phone browser gets the homepage and a holding screen instead of the app
 const PHONE = isPhone(readDeviceHints());
+
+// an error from Google or an email link goes to the sign-in screen, which shows it
+routeAuthErrorToSignIn();
 
 export function App() {
   return (
     <>
       <DotGround />
-      {PHONE ? <ComingSoon /> : <WebApp />}
+      {PHONE ? <PhoneSite /> : <WebApp />}
     </>
   );
 }

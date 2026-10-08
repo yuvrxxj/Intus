@@ -6,6 +6,8 @@ import statueBust from '@/assets/art/statue-bust.webp';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Segmented } from '@/components/ui/segmented';
+import { Link } from '../home/Link.tsx';
+import { HOME_PATH } from '../home/route.ts';
 import { cn } from '@/lib/utils';
 import { supabase } from '../../db/client.ts';
 import {
@@ -23,7 +25,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10">
       <section className="on-dots flex flex-col gap-8">
-        <Brand />
+        <Link to={HOME_PATH} className="self-start" aria-label="Intus, back to the homepage"><Brand /></Link>
         <img
           src={statueBust}
           alt=""
@@ -68,10 +70,10 @@ function GoogleMark() {
 
 type View = { kind: 'form' } | { kind: 'forgot' } | { kind: 'sent'; reason: 'confirm' | 'reset'; email: string };
 
-export function SignIn() {
+export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) {
   const settings = useAuthSettings();
   const [view, setView] = useState<View>({ kind: 'form' });
-  const [mode, setMode] = useState<AuthMode>('sign-in');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
