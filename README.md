@@ -31,7 +31,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/account/` | The Account section (the last on the page): who is signed in, Sign out, and Delete account, which asks for the email to be typed back, calls `delete_my_account()` in the database (see `supabase/README.md`), clears what the app keeps on the device and signs out |
 | `src/features/auth/` | Sign-in through Supabase Auth: email and password, password reset, and Google once it is switched on in Supabase |
 | `src/db/` | Supabase client, generated table types and the queries |
-| `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` (shapes drawn in characters), buttons, segmented control, number ticker |
+| `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` and its pure engine `ascii-engine.ts` (ten shapes drawn in characters: heart, drop, capsule, ring, sphere, bars, cross, stack, coin, cube). Each page section has one beside its title, chosen in `src/features/dashboard/sectionArt.ts`; `test/ascii.test.ts` fails if a shape is clipped by its frame, buttons, segmented control, number ticker |
 | `src/components/hooks/` | `use-debounced-dimensions` and `use-screen-size`, used by the trail and the overview |
 | `src/styles/` | `index.css` holds Tailwind and the design tokens, `components.css` the shared classes the feature screens use |
 | `supabase/` | Migrations, the script and workflow that apply them, and the notes on who can see what |
