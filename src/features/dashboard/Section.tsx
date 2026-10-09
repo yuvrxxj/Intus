@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AsciiArt } from '@/components/ui/ascii-art';
 import { Reveal } from '@/components/ui/reveal';
+import { SECTION_ART, SECTION_ART_COLS, SECTION_ART_ROWS } from './sectionArt.ts';
 import { SECTIONS, type SectionMeta } from './sections.ts';
 
 /** One numbered block of the page: a mono index, a title, one line on what it is for, then its content. */
@@ -16,6 +18,7 @@ export function Section({ meta, children, aside }: { meta: SectionMeta; children
             <p className="mt-1.5 max-w-xl text-sm text-ink-2">{meta.blurb}</p>
           </div>
           {aside}
+          <AsciiArt shape={SECTION_ART[meta.id]} cols={SECTION_ART_COLS} rows={SECTION_ART_ROWS} className="hidden shrink-0 text-[9px] text-primary md:-mt-12 md:block xl:text-[10px]" />
         </div>
       </Reveal>
       {children}
