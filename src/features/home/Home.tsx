@@ -7,7 +7,7 @@ import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { takeDeletionNotice } from '../account/localData.ts';
-import { KnowledgeBase } from './KnowledgeBase.tsx';
+import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { HOME_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
 
