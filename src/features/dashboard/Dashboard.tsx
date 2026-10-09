@@ -5,6 +5,7 @@ import { supabase } from '../../db/client.ts';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { DIRECTION_LABEL } from '../../lib/programme.ts';
 import { clockParts, shortDate, todayKey } from '../../util/dates.ts';
+import { Account } from '../account/Account.tsx';
 import { Bloodwork } from '../bloodwork/Bloodwork.tsx';
 import { Goals } from '../goals/Goals.tsx';
 import { useHabits } from '../habits/HabitsContext.tsx';
@@ -121,6 +122,10 @@ export function Dashboard() {
 
         <Section meta={meta('history')}>
           <History logs={recent.logs} loading={recent.loading} error={recent.error} />
+        </Section>
+
+        <Section meta={meta('account')}>
+          <Account onSignOut={signOut} />
         </Section>
 
         <footer className="on-dots flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-6 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">

@@ -47,7 +47,7 @@ export function SectionRail({ active, onJump, onSignOut, clock }: {
           </ol>
         </nav>
         <div className="mt-6 grid gap-3 pl-3">
-          <p className="font-mono text-[10px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase">Press 1 to 7 to jump</p>
+          <p className="font-mono text-[10px] leading-relaxed tracking-[0.06em] text-ink-3 uppercase">Press 1 to {SECTIONS.length} to jump</p>
           <button type="button" onClick={onSignOut} className="flex items-center gap-2 text-[13px] text-ink-3 hover:text-ink">
             <LogOut className="size-3.5" aria-hidden="true" /> Sign out
           </button>

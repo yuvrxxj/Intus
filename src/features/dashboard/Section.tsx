@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Reveal } from '@/components/ui/reveal';
-import type { SectionMeta } from './sections.ts';
+import { SECTIONS, type SectionMeta } from './sections.ts';
 
 /** One numbered block of the page: a mono index, a title, one line on what it is for, then its content. */
 export function Section({ meta, children, aside }: { meta: SectionMeta; children: ReactNode; aside?: ReactNode }) {
@@ -10,7 +10,7 @@ export function Section({ meta, children, aside }: { meta: SectionMeta; children
         <div className="on-dots mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">
-              <span className="text-primary">{meta.n}</span> / 07
+              <span className="text-primary">{meta.n}</span> / {String(SECTIONS.length).padStart(2, '0')}
             </div>
             <h2 id={`${meta.id}-title`} className="mt-2 text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[32px]">{meta.title}</h2>
             <p className="mt-1.5 max-w-xl text-sm text-ink-2">{meta.blurb}</p>

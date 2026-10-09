@@ -40,6 +40,24 @@ again. Do not add new files to it.
 
 One log per person per day (`unique (user_id, log_date)`), and one profile per person.
 
+## Deleting an account
+
+The Account section of the app has a Delete account button. It calls `public.delete_my_account()` through the API.
+The browser cannot delete an `auth.users` row with the public key, and the service key must never ship in the app,
+so the function does it with its owner's rights. It takes no arguments and only ever removes the caller's own row,
+read from their login token; it refuses a caller with no token, and the signed-out role cannot run it.
+
+Deleting that row removes everything that hangs off it, because every table with a `user_id` references `auth.users`
+with `on delete cascade`, as do `app_owner` and Supabase's own identities, sessions and refresh tokens. The database
+tests fail if a new table with a `user_id` column does not cascade, since that would make deletion fail for everyone.
+
+**Files in Supabase Storage are not covered.** Nothing uses Storage yet. When the photo check-in does, the objects a
+person uploaded do not go with their `auth.users` row, so the function has to remove them too (and the test for it
+has to prove it).
+
+Google keeps its own record that a person signed in to the app. Deleting the account does not remove that; they can
+at myaccount.google.com, under connections to third-party apps.
+
 ## Migrations
 
 | File | What it does |
@@ -52,9 +70,10 @@ One log per person per day (`unique (user_id, log_date)`), and one profile per p
 | `20261005000300_supplement_schedule.sql` | Adds the days of the week a supplement is taken, and checks on doses a day |
 | `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` |
 | `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` |
+| `20261009000100_delete_my_account.sql` | Adds `public.delete_my_account()`, which the Account section's Delete button calls |
 
-All eight are applied to the live project and listed in `baseline.txt`, so the workflow's first run has nothing to
-apply. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
+The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
+workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
 the original owner's old hardcoded habits (cigarettes, lift, core, cardio, steps) into the new table and copies
 their old `daily_logs` columns into the new `habits` column. It is safe to run more than once, and only adds what
 is missing.

@@ -12,3 +12,5 @@ create function auth.uid() returns uuid language sql stable
 grant usage on schema public, auth to anon, authenticated, service_role;
 -- Supabase hands every API role full table privileges and relies on row level security.
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+-- and the same for functions: a new function can be called by the signed-out role unless the migration revokes that.
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
