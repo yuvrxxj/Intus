@@ -19,6 +19,8 @@ const SCHEDULE = migration('20261005000300_supplement_schedule');
 const HABITS = migration('20261005000400_habits');
 // And the first-run answers on the profile.
 const ONBOARDING = migration('20261005000500_onboarding_answers');
+// Lets a person delete their own account, and everything of theirs with it.
+const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
 const SEED_HABITS = read(`${process.env.ONE_OFF_DIR ?? '../one-off'}/20261005_seed_owner_habits.sql`);
 
@@ -735,4 +737,128 @@ test('a person\'s answers are private', async () => {
     await db.exec(`update public.profile set typical_day = 'overwritten'`);
   });
   assert.equal((await db.query(`select typical_day from public.profile where user_id = '${OWNER}'`)).rows[0].typical_day, 'secret');
+});
+
+
+// ── deleting your own account ─────────────────────────────────────────────────────────────────────────
+
+/** Every public table that stores a person's data, found from the schema rather than from a list that could go stale. */
+const personalTables = async (db) => (await db.query(
+  `select distinct table_name from information_schema.columns where table_schema = 'public' and column_name = 'user_id' order by 1`)).rows.map((r) => r.table_name);
+
+/** A world where everything is installed, both people have data in every table, and the deletion function exists. */
+async function worldWithAccounts() {
+  const db = await world({ stage: 'contracted', schedule: 'after', habits: 'after', onboarding: 'after' });
+  await runScript(db, DELETE_ACCOUNT);
+  // the owner's rows came from the backfill; give them a habit too
+  await db.exec(`insert into public.habits (user_id, name, kind) values ('${OWNER}', 'Walk', 'yesno')`);
+  await asUser(db, OTHER, async () => {
+    for (const table of PERSONAL) await insertRow(db, table, 2);
+    await db.exec(`insert into public.habits (name, kind) values ('Read', 'yesno')`);
+  });
+  return db;
+}
+
+const rowsFor = async (db, id) => {
+  let total = 0;
+  for (const table of await personalTables(db)) total += await count(db, `select count(*) as n from public.${table} where user_id = '${id}'`);
+  return total;
+};
+const userExists = async (db, id) => (await count(db, `select count(*) as n from auth.users where id = '${id}'`)) === 1;
+
+test('deleting your account removes you and every row of yours, in every table', async () => {
+  const db = await worldWithAccounts();
+  assert.ok((await personalTables(db)).includes('habits'), 'the schema scan sees the habits table too');
+  assert.ok(await rowsFor(db, OTHER) > PERSONAL.length, 'there is data to delete');
+
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+
+  assert.equal(await userExists(db, OTHER), false, 'the account is gone');
+  assert.equal(await rowsFor(db, OTHER), 0, 'none of their rows are left, in any table');
+});
+
+test('deleting your account touches nobody else', async () => {
+  const db = await worldWithAccounts();
+  const ownerRows = await rowsFor(db, OWNER);
+  assert.ok(ownerRows > 0);
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await userExists(db, OWNER), true);
+  assert.equal(await userExists(db, THIRD), true);
+  assert.equal(await rowsFor(db, OWNER), ownerRows, 'the owner keeps every row');
+  await asUser(db, OWNER, async () => assert.equal(await rowsOf(db, 'daily_logs'), 1, 'and can still read them through the policies'));
+  for (const table of REFERENCE) assert.equal(await count(db, `select count(*) as n from public.${table}`), 1, `${table} is shared and untouched`);
+});
+
+test('an account that is the registered owner can be deleted too', async () => {
+  const db = await worldWithAccounts();
+  assert.equal(await count(db, 'select count(*) as n from public.app_owner'), 1);
+  await asUser(db, OWNER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await userExists(db, OWNER), false);
+  assert.equal(await count(db, 'select count(*) as n from public.app_owner'), 0, 'the owner record goes with it');
+  assert.equal(await rowsFor(db, OWNER), 0);
+});
+
+test('calling it twice is harmless, and the second call deletes nothing more', async () => {
+  const db = await worldWithAccounts();
+  const before = await count(db, 'select count(*) as n from auth.users');
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, 'select count(*) as n from auth.users'), before - 1, 'only the one account went');
+});
+
+test('only a signed-in person can call it', async () => {
+  const db = await worldWithAccounts();
+  const users = await count(db, 'select count(*) as n from auth.users');
+  await asAnon(db, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /permission denied for function/);
+  });
+  // an API caller with the right role but no login token has no id to delete
+  await asUser(db, null, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /not signed in/);
+  });
+  assert.equal(await count(db, 'select count(*) as n from auth.users'), users, 'nothing was deleted');
+});
+
+test('it cannot be pointed at someone else: it takes no arguments, and a spoofed id does nothing', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec(`select public.delete_my_account('${OWNER}')`), /function public\.delete_my_account\(unknown\) does not exist/);
+    // a row-level trick: asking the table directly is refused, the person has no rights on auth.users
+    await assert.rejects(() => db.exec(`delete from auth.users where id = '${OWNER}'`), /permission denied/);
+  });
+  assert.equal(await userExists(db, OWNER), true);
+  assert.equal(await rowsFor(db, OWNER) > 0, true);
+});
+
+test('the function is locked down: definer rights, an empty search path, and no access for the signed-out role', async () => {
+  const db = await worldWithAccounts();
+  const fn = (await db.query(
+    `select prosecdef, proconfig, pg_get_function_arguments(oid) as args
+       from pg_proc where oid = 'public.delete_my_account()'::regprocedure`)).rows[0];
+  assert.equal(fn.prosecdef, true, 'security definer');
+  assert.equal(fn.args, '', 'no arguments');
+  assert.ok(fn.proconfig.some((c) => /^search_path=("")?$/.test(c)), `an empty search_path, got ${JSON.stringify(fn.proconfig)}`);
+  const can = async (role) => (await db.query(`select has_function_privilege('${role}', 'public.delete_my_account()', 'execute') as ok`)).rows[0].ok;
+  assert.equal(await can('anon'), false);
+  assert.equal(await can('authenticated'), true);
+});
+
+test('every table that stores a person\'s data is removed with their account, so the next table added cannot block deletion', async () => {
+  const db = await worldWithAccounts();
+  const tables = await personalTables(db);
+  assert.ok(tables.length >= 14, `found ${tables.join(', ')}`);
+  for (const table of tables) {
+    const fks = (await db.query(
+      `select confdeltype from pg_constraint
+        where contype = 'f' and conrelid = 'public.${table}'::regclass and confrelid = 'auth.users'::regclass`)).rows;
+    assert.ok(fks.length > 0, `${table} has a user_id but no foreign key to auth.users`);
+    assert.ok(fks.every((f) => f.confdeltype === 'c'), `${table} must reference auth.users with on delete cascade, or deleting an account fails`);
+  }
+});
+
+test('the deletion migration can be applied twice', async () => {
+  const db = await worldWithAccounts();
+  await runScript(db, DELETE_ACCOUNT);
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await userExists(db, OTHER), false);
 });

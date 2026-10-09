@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Brand } from '@/components/brand';
 import statueBust from '@/assets/art/statue-bust.webp';
@@ -6,6 +6,7 @@ import { AsciiArt } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
+import { takeDeletionNotice } from '../account/localData.ts';
 import { KnowledgeBase } from './KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { HOME_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
@@ -77,9 +78,17 @@ function Header() {
 
 /** The public homepage, shown before login on every device. The app itself is for bigger screens until the phone apps ship. */
 export function Home() {
+  // set once, in this tab, by a deleted account; the effect runs twice in development but only ever sets it to true
+  const [deleted, setDeleted] = useState(false);
+  useEffect(() => { if (takeDeletionNotice()) setDeleted(true); }, []);
   return (
     <div className="relative z-10 min-h-dvh">
       <Header />
+      {deleted && (
+        <div role="status" className="border-b border-line-strong bg-surface">
+          <p className="mx-auto w-full max-w-6xl px-5 py-3 text-sm text-ink lg:px-10">Your account and everything saved in it have been deleted.</p>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-10">
         <section aria-labelledby="home-title" className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-20">
           <div className="on-dots order-2 lg:order-1">

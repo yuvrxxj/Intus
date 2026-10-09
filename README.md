@@ -28,6 +28,7 @@ The app talks to the production Supabase project by default. `.env.example` list
 | `src/features/today`, `progress`, `history` | The daily log, charts and history table |
 | `src/features/screening/` | Your details and the screening calendar, with a way to record a screening as done |
 | `src/features/supplements/` | The supplements you take (a multivitamin, creatine) with start and end dates, and a before/after comparison against what you log. No dose checks or warnings |
+| `src/features/account/` | The Account section (the last on the page): who is signed in, Sign out, and Delete account, which asks for the email to be typed back, calls `delete_my_account()` in the database (see `supabase/README.md`), clears what the app keeps on the device and signs out |
 | `src/features/auth/` | Sign-in through Supabase Auth: email and password, password reset, and Google once it is switched on in Supabase |
 | `src/db/` | Supabase client, generated table types and the queries |
 | `src/components/ui/` | shadcn-style building blocks: `stepper` (onboarding), `pixel-trail` (the dots that light up under the cursor), `ascii-art` (shapes drawn in characters), buttons, segmented control, number ticker |
