@@ -5,6 +5,7 @@ import statueBust from '@/assets/art/statue-bust.webp';
 import { AsciiArt } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
+import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { KnowledgeBase } from './KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { HOME_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
@@ -179,7 +180,8 @@ export function Home() {
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-7 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase lg:px-10">
           <span>Intus</span>
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
-          <span className="flex gap-4">
+          <span className="flex flex-wrap gap-x-4 gap-y-2">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
             <a href="https://x.com/getintus" rel="noopener noreferrer" className="hover:text-ink">@getintus on X</a>
             <a href="https://www.instagram.com/getintus" rel="noopener noreferrer" className="hover:text-ink">Instagram</a>
           </span>

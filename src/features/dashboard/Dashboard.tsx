@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { AsciiArt } from '@/components/ui/ascii-art';
 import { supabase } from '../../db/client.ts';
+import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { DIRECTION_LABEL } from '../../lib/programme.ts';
 import { clockParts, shortDate, todayKey } from '../../util/dates.ts';
 import { Bloodwork } from '../bloodwork/Bloodwork.tsx';
@@ -125,6 +126,7 @@ export function Dashboard() {
         <footer className="on-dots flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-6 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">
           <span>Intus</span>
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
         </footer>
       </main>
 
