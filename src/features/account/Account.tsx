@@ -92,8 +92,9 @@ export function Account({ onSignOut }: { onSignOut: () => void }) {
         <div className="ct" id="delete-title"><span className="dot" style={{ background: 'var(--red)' }} />Delete account</div>
         <p className="mt-1 text-sm leading-relaxed text-ink-2">
           Deleting your account removes your sign-in and everything you have saved in Intus: your daily logs, habits, goals,
-          bloodwork, supplements, screening history and profile. It happens straight away and cannot be undone.
-          Screenshots you added on this device are removed too.
+          bloodwork, supplements, screening history, profile and photo check-ins. Your photos are deleted first; if any
+          cannot be, nothing else is touched. It happens straight away and cannot be undone. Screenshots you added on
+          this device are removed too.
         </p>
 
         {!confirming ? (
