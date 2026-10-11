@@ -21,11 +21,12 @@ Intus is a place to keep your daily numbers (weight, food, habits), your bloodwo
 3. Under Goals and habits, change a target and add a habit of your own. Add one photo check-in, then delete it again.
 4. Under Bloodwork, type in one or two results from a lab report. You will see them flagged against the reference range.
 5. Under Supplements, add something you take with a start date.
-6. Sign out and sign back in. Try "Forgot password" once if you are happy to.
+6. Under Sleep, add last night (bed time, up time, and if you like how long you took to fall asleep and how long you were awake). Add a few more nights back. Averages appear after five.
+7. Sign out and sign back in. Try "Forgot password" once if you are happy to.
 
 **What is not there yet**
 
-- No phone apps, no Apple sign-in, no wearable sync.
+- No phone apps, no Apple sign-in, no wearable sync. Sleep is typed in for now; importing from Apple and Google health is next.
 - Lab results are typed in by hand for now. There is no lab photo or PDF upload. (Progress photos do exist: see Photo check-ins under Goals and habits.)
 - The supplement comparison stays quiet until you have 10 logged days on each side of the start date.
 - Intus shows ranges and changes. It does not give medical advice.
@@ -38,9 +39,9 @@ Anything that confused you, anything that broke, and what you expected instead. 
 
 This proves that a brand-new account sees none of another account's data. It takes about five minutes and needs two browsers (or one normal window and one private window).
 
-1. Window A: open https://intus.fit and create an account with one email address. Finish or skip the first-run questions. Log today, add a habit, add a photo check-in, type in one lab result and add one supplement.
+1. Window A: open https://intus.fit and create an account with one email address. Finish or skip the first-run questions. Log today, add a habit, add a photo check-in, add a night of sleep, type in one lab result and add one supplement.
 2. Window B: open https://intus.fit and create a second account with a different email address.
-3. In window B, go through every section (Today, Progress, Goals and habits, Bloodwork, Supplements, Screening, History). Each should be empty, apart from any habits that account's own first-run answers created. Nothing from window A should appear anywhere, including A's habit, photo, lab result and supplement.
+3. In window B, go through every section (Today, Progress, Sleep, Goals and habits, Bloodwork, Supplements, Screening, History). Each should be empty, apart from any habits that account's own first-run answers created. Nothing from window A should appear anywhere, including A's habit, photo, night of sleep, lab result and supplement.
 4. In window B, add one entry of your own (for example log today). Go back to window A and refresh. Window A should show only its own entry.
 5. Sign both out. Delete the two test accounts under Authentication, Users in the Supabase dashboard.
 

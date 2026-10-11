@@ -3,7 +3,7 @@
  * surface picks a character from a density ramp. The shape turns slowly, renders at a low frame rate, pauses when
  * off screen or in a background tab, and holds one still frame when the person prefers reduced motion.
  */
-export type AsciiShape = 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube';
+export type AsciiShape = 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube' | 'moon';
 
 type Vec = [number, number, number];
 
@@ -53,7 +53,7 @@ function disc(x: number, y: number, z: number, rad: number, h: number, r = 0): n
 }
 
 /** Shapes seen a little from above, so a flat ring or coin does not turn edge-on to a line. */
-const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25 };
+const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2 };
 
 const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   heart: (x, y, z) => {
@@ -91,6 +91,12 @@ const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   // a single thick coin, turning
   coin: (x, y, z) => disc(x, y, z, 0.84, 0.11, 0.05),
   cube: (x, y, z) => box(x, y, z, 0.56, 0.56, 0.56, 0.1),
+  // a crescent moon: a flat crescent (one circle minus another set to the upper right) with some thickness, turning like a coin
+  moon: (x, y, z) => {
+    const crescent = Math.max(Math.hypot(x - 0.25, y) - 0.82, -(Math.hypot(x - 0.75, y - 0.12) - 0.74));
+    const wz = Math.abs(z) - 0.16;
+    return Math.min(Math.max(crescent, wz), 0) + Math.hypot(Math.max(crescent, 0), Math.max(wz, 0)) - 0.04;
+  },
 };
 
 /** One frame as text. t is seconds; the shape turns about the vertical axis with a slight nod. */

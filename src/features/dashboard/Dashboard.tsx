@@ -13,6 +13,7 @@ import { History } from '../history/History.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
 import { profileLine } from '../profile/profileLine.ts';
 import { Screening } from '../screening/Screening.tsx';
+import { Sleep } from '../sleep/Sleep.tsx';
 import { Supplements } from '../supplements/Supplements.tsx';
 import { Overview } from '../today/Overview.tsx';
 import { programmeWeek, weightStats } from '../today/stats.ts';
@@ -102,6 +103,10 @@ export function Dashboard() {
               <Progress logs={recent.logs} />
             </Suspense>
           </WhenNear>
+        </Section>
+
+        <Section meta={meta('sleep')}>
+          <Sleep today={today} notify={notify} />
         </Section>
 
         <Section meta={meta('goals')}>

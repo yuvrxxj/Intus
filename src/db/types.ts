@@ -627,6 +627,66 @@ export type Database = {
         };
         Relationships: [];
       };
+      sleep_sessions: {
+        Row: {
+          awake_min: number | null;
+          created_at: string;
+          end_at: string;
+          end_offset_min: number;
+          external_id: string | null;
+          id: string;
+          latency_min: number | null;
+          notes: string | null;
+          recorded_at: string;
+          source_kind: string;
+          source_name: string;
+          stages: Json;
+          start_at: string;
+          start_is_in_bed: boolean;
+          start_offset_min: number;
+          tz_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          awake_min?: number | null;
+          created_at?: string;
+          end_at: string;
+          end_offset_min: number;
+          external_id?: string | null;
+          id?: string;
+          latency_min?: number | null;
+          notes?: string | null;
+          recorded_at?: string;
+          source_kind?: string;
+          source_name?: string;
+          stages?: Json;
+          start_at: string;
+          start_is_in_bed?: boolean;
+          start_offset_min: number;
+          tz_id?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          awake_min?: number | null;
+          created_at?: string;
+          end_at?: string;
+          end_offset_min?: number;
+          external_id?: string | null;
+          id?: string;
+          latency_min?: number | null;
+          notes?: string | null;
+          recorded_at?: string;
+          source_kind?: string;
+          source_name?: string;
+          stages?: Json;
+          start_at?: string;
+          start_is_in_bed?: boolean;
+          start_offset_min?: number;
+          tz_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       supplement_catalog: {
         Row: {
           daily: boolean | null;

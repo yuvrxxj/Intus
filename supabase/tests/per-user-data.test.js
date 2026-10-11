@@ -21,6 +21,8 @@ const HABITS = migration('20261005000400_habits');
 const ONBOARDING = migration('20261005000500_onboarding_answers');
 // Lets a person delete their own account, and everything of theirs with it.
 const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
+// Sleep: one row per stretch of sleep a source reported, per person from the start.
+const SLEEP = migration('20261011000100_sleep_sessions');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -753,6 +755,7 @@ async function worldWithAccounts() {
   const db = await world({ stage: 'contracted', schedule: 'after', habits: 'after', onboarding: 'after' });
   await runScript(db, DELETE_ACCOUNT);
   await runScript(db, PHOTOS);
+  await runScript(db, SLEEP);
   // the owner's rows came from the backfill; give them a habit too
   await db.exec(`insert into public.habits (user_id, name, kind) values ('${OWNER}', 'Walk', 'yesno')`);
   await asUser(db, OTHER, async () => {
@@ -1078,4 +1081,163 @@ test('exactly three policies guard the pictures, all for signed-in people only, 
     assert.ok(expression.includes('auth.uid()'), `${r.policyname} limits the caller to their own folder`);
     assert.ok(expression.includes(BUCKET), `${r.policyname} names the check-in bucket`);
   }
+});
+
+
+// ── sleep ─────────────────────────────────────────────────────────────────────────────────────────────
+
+const night = (over = {}) => ({
+  start_at: '2026-10-08T23:00:00Z', end_at: '2026-10-09T07:00:00Z', start_offset_min: 60, end_offset_min: 60, ...over,
+});
+const insertNight = (db, over = {}) => {
+  const row = night(over);
+  const cols = Object.keys(row);
+  return db.query(`insert into public.sleep_sessions (${cols.join(', ')}) values (${cols.map((_, i) => `$${i + 1}`).join(', ')})`, Object.values(row));
+};
+const sleepRows = (db) => rowsOf(db, 'sleep_sessions');
+
+test('a person can add a night, it is filled in with their id, and nobody else can add one for them', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await insertNight(db);
+    const row = (await db.query('select user_id, source_kind, source_name, stages, start_is_in_bed from public.sleep_sessions')).rows[0];
+    assert.equal(row.user_id, OTHER);
+    assert.equal(row.source_kind, 'manual');
+    assert.equal(row.source_name, '');
+    assert.deepEqual(row.stages, []);
+    assert.equal(row.start_is_in_bed, true);
+    await assert.rejects(() => insertNight(db, { user_id: OWNER }), RLS);
+  });
+  assert.equal(await sleepRows(db), 1);
+});
+
+test('sleep is private: another person sees none of it and cannot change or delete it', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, () => insertNight(db));
+  await asUser(db, THIRD, async () => {
+    assert.equal(await sleepRows(db), 0);
+    assert.equal((await db.query(`update public.sleep_sessions set notes = 'x' returning id`)).rows.length, 0);
+    assert.equal((await db.query(`delete from public.sleep_sessions returning id`)).rows.length, 0);
+  });
+  assert.equal(await sleepRows(db), 1);
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec(`update public.sleep_sessions set user_id = '${THIRD}'`), RLS);
+  });
+});
+
+test('the signed-out role cannot read or write sleep, and a token with no id cannot either', async () => {
+  const db = await worldWithAccounts();
+  await asAnon(db, async () => {
+    await assert.rejects(() => db.exec('select * from public.sleep_sessions'), /permission denied/);
+    await assert.rejects(() => insertNight(db), /permission denied/);
+  });
+  await asUser(db, null, async () => {
+    assert.equal(await sleepRows(db), 0);
+    await assert.rejects(() => insertNight(db), /not-null|null value|violates/);
+  });
+});
+
+test('a night has to end after it starts, last 15 minutes to 20 hours, and not be dated before 2000', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => insertNight(db, { end_at: '2026-10-08T23:00:00Z' }), /sleep_sessions_ends_after_start/);
+    await assert.rejects(() => insertNight(db, { end_at: '2026-10-08T22:00:00Z' }), /sleep_sessions_ends_after_start/);
+    await assert.rejects(() => insertNight(db, { end_at: '2026-10-08T23:14:00Z' }), /sleep_sessions_plausible_length/);
+    await insertNight(db, { end_at: '2026-10-08T23:15:00Z' });
+    await assert.rejects(() => insertNight(db, { start_at: '2026-10-08T10:00:00Z', end_at: '2026-10-09T06:01:00Z' }), /sleep_sessions_plausible_length/);
+    await insertNight(db, { start_at: '2026-10-07T10:00:00Z', end_at: '2026-10-08T06:00:00Z' });
+    await assert.rejects(() => insertNight(db, { start_at: '1999-12-31T23:00:00Z', end_at: '2000-01-01T07:00:00Z' }), /sleep_sessions_not_before_2000/);
+  });
+});
+
+test('offsets stay inside the real range of time zones, and the estimates have to fit inside the night', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await insertNight(db, { start_offset_min: -720, end_offset_min: 840 });
+    await assert.rejects(() => insertNight(db, { start_offset_min: -721 }), /start_offset_min/);
+    await assert.rejects(() => insertNight(db, { end_offset_min: 841 }), /end_offset_min/);
+    await insertNight(db, { latency_min: 239, awake_min: 240 });
+    await assert.rejects(() => insertNight(db, { latency_min: 240, awake_min: 240 }), /sleep_sessions_estimates_fit/);
+    await assert.rejects(() => insertNight(db, { latency_min: -1 }), /latency_min/);
+    // an 8 hour night: 601 minutes also does not fit inside it, and Postgres names whichever check it tries first
+    await assert.rejects(() => insertNight(db, { latency_min: 601 }), /latency_min|sleep_sessions_estimates_fit/);
+    await assert.rejects(() => insertNight(db, { awake_min: 721 }), /awake_min|sleep_sessions_estimates_fit/);
+    await assert.rejects(() => insertNight(db, { start_at: '2026-10-08T10:00:00Z', end_at: '2026-10-09T05:00:00Z', latency_min: 601 }), /latency_min/);
+    await assert.rejects(() => insertNight(db, { start_at: '2026-10-08T10:00:00Z', end_at: '2026-10-09T05:00:00Z', awake_min: 721 }), /awake_min/);
+    await insertNight(db, { latency_min: 0, awake_min: 0 });
+  });
+});
+
+test('the source is one of the known kinds, names and notes are bounded, and stages must be a bounded list', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    for (const kind of ['manual', 'apple_health_export', 'healthkit', 'health_connect', 'other']) await insertNight(db, { source_kind: kind, source_name: `dev-${kind}` });
+    await assert.rejects(() => insertNight(db, { source_kind: 'fitbit' }), /source_kind/);
+    await assert.rejects(() => insertNight(db, { source_name: 'x'.repeat(81) }), /source_name/);
+    await assert.rejects(() => insertNight(db, { external_id: '' }), /external_id/);
+    await assert.rejects(() => insertNight(db, { external_id: 'x'.repeat(201) }), /external_id/);
+    await assert.rejects(() => insertNight(db, { notes: 'x'.repeat(201) }), /notes/);
+    await assert.rejects(() => insertNight(db, { tz_id: 'x'.repeat(65) }), /tz_id/);
+    await insertNight(db, { stages: JSON.stringify([{ s: 1, e: 2, t: 'deep' }]), start_offset_min: 0 });
+    await assert.rejects(() => insertNight(db, { stages: JSON.stringify({ s: 1 }) }), /stages/);
+    await assert.rejects(() => insertNight(db, { stages: JSON.stringify(Array.from({ length: 3001 }, (_, i) => ({ s: i, e: i + 1, t: 'light' }))) }), /stages/);
+  });
+});
+
+test('the same record from the same source is stored once, so importing again cannot duplicate it, and diary entries can repeat', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await insertNight(db, { source_kind: 'healthkit', source_name: 'Apple Watch', external_id: 'abc' });
+    await assert.rejects(() => insertNight(db, { source_kind: 'healthkit', source_name: 'Apple Watch', external_id: 'abc' }), /sleep_sessions_source_record_key/);
+    await insertNight(db, { source_kind: 'healthkit', source_name: 'Other Watch', external_id: 'abc' });
+    await insertNight(db, { source_kind: 'health_connect', source_name: 'Apple Watch', external_id: 'abc' });
+    await insertNight(db);
+    await insertNight(db);
+    await insertNight(db, { source_kind: 'healthkit', source_name: 'Apple Watch', external_id: null });
+    await insertNight(db, { source_kind: 'healthkit', source_name: 'Apple Watch', external_id: null });
+  });
+  // another person's import of the same id is not a clash
+  await asUser(db, THIRD, () => insertNight(db, { source_kind: 'healthkit', source_name: 'Apple Watch', external_id: 'abc' }));
+});
+
+test('the app\'s upsert on the source record works, and does not touch anyone else\'s', async () => {
+  const db = await worldWithAccounts();
+  const upsert = (note) => db.query(
+    `insert into public.sleep_sessions (source_kind, source_name, external_id, start_at, end_at, start_offset_min, end_offset_min, notes)
+     values ('healthkit', 'Apple Watch', 'abc', '2026-10-08T23:00:00Z', '2026-10-09T07:00:00Z', 0, 0, $1)
+     on conflict (user_id, source_kind, source_name, external_id) do update set notes = excluded.notes`, [note]);
+  await asUser(db, OTHER, async () => { await upsert('first'); await upsert('second'); });
+  await asUser(db, THIRD, async () => { await upsert('theirs'); });
+  await asUser(db, OTHER, async () => {
+    const rows = (await db.query('select notes from public.sleep_sessions')).rows;
+    assert.deepEqual(rows.map((r) => r.notes), ['second']);
+  });
+});
+
+test('deleting an account removes that person\'s sleep and leaves everyone else\'s', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => { await insertNight(db); await insertNight(db, { start_at: '2026-10-09T23:00:00Z', end_at: '2026-10-10T07:00:00Z' }); });
+  await asUser(db, THIRD, () => insertNight(db));
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, `select count(*) as n from public.sleep_sessions where user_id = '${OTHER}'`), 0);
+  assert.equal(await count(db, `select count(*) as n from public.sleep_sessions where user_id = '${THIRD}'`), 1);
+});
+
+test('the sleep migration can be applied twice, and sleep is among the tables the schema scan sees', async () => {
+  const db = await worldWithAccounts();
+  await runScript(db, SLEEP);
+  assert.equal(await count(db, `select count(*) as n from pg_policies where schemaname = 'public' and tablename = 'sleep_sessions'`), 1);
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.sleep_sessions'::regclass and conname = 'sleep_sessions_source_record_key'`), 1);
+  assert.ok((await personalTables(db)).includes('sleep_sessions'));
+  await asUser(db, OTHER, () => insertNight(db));
+  assert.equal(await count(db, `select count(*) as n from public.sleep_sessions`), 1);
+});
+
+test('sleep has row level security with exactly one policy, for signed-in people only', async () => {
+  const db = await worldWithAccounts();
+  const t = (await db.query(`select relrowsecurity from pg_class where oid = 'public.sleep_sessions'::regclass`)).rows[0];
+  assert.equal(t.relrowsecurity, true);
+  const policies = (await db.query(`select policyname, roles, cmd from pg_policies where schemaname = 'public' and tablename = 'sleep_sessions'`)).rows;
+  assert.deepEqual(policies.map((p) => [p.policyname, p.cmd, [...p.roles]]), [['own_rows', 'ALL', ['authenticated']]]);
+  assert.equal((await db.query(`select has_table_privilege('anon', 'public.sleep_sessions', 'select') as ok`)).rows[0].ok, false);
 });

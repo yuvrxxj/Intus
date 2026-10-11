@@ -5,6 +5,7 @@ import type { SectionId } from './sections.ts';
 export const SECTION_ART: Record<SectionId, AsciiShape> = {
   today: 'sphere',
   progress: 'bars',
+  sleep: 'moon',
   goals: 'ring',
   bloodwork: 'drop',
   supplements: 'capsule',
