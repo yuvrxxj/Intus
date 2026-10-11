@@ -36,6 +36,7 @@ again. Do not add new files to it.
 | --- | --- | --- |
 | Personal | `biomarker_readings`, `daily_logs`, `habits`, `medications`, `profile`, `screening_history`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
 | Reference | `biomarkers`, `screening_rules` | Everyone signed in can read them. Nobody can change them through the API; they are edited by migration |
+| Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
 
 One log per person per day (`unique (user_id, log_date)`), and one profile per person.
@@ -51,9 +52,13 @@ Deleting that row removes everything that hangs off it, because every table with
 with `on delete cascade`, as do `app_owner` and Supabase's own identities, sessions and refresh tokens. The database
 tests fail if a new table with a `user_id` column does not cascade, since that would make deletion fail for everyone.
 
-**Files in Supabase Storage are not covered.** Nothing uses Storage yet. When the photo check-in does, the objects a
-person uploaded do not go with their `auth.users` row, so the function has to remove them too (and the test for it
-has to prove it).
+**Files in Supabase Storage are not covered by the cascade, and SQL cannot remove them.** Deleting a row from
+`storage.objects` leaves the file itself in the bucket, so only the Storage API can delete a photo. The Account
+section therefore removes every photo first (list the folder, remove, list again to prove it is empty; a delete that
+Storage silently refuses stops the whole deletion) and only then calls the function. As a backstop the function
+itself refuses with "remove your photos first" while the caller still has any, so calling it directly can never leave
+photos behind with no account to own them. `test/photos.model.test.ts` pins the order and the database tests pin the
+refusal.
 
 Google keeps its own record that a person signed in to the app. Deleting the account does not remove that; they can
 at myaccount.google.com, under connections to third-party apps.
@@ -71,6 +76,7 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261005000400_habits.sql` | Adds the `habits` table (per person from the start) and the `habits` column on `daily_logs` |
 | `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` |
 | `20261009000100_delete_my_account.sql` | Adds `public.delete_my_account()`, which the Account section's Delete button calls |
+| `20261009000200_photo_check_ins.sql` | Adds the private `check-in-photos` bucket and its policies, the `storage_path` and `pose` columns on `photo_log`, and makes `delete_my_account()` refuse while photos remain |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
@@ -130,3 +136,8 @@ such breaks of the per-user migration, eight of the supplement schedule one, and
 and seed were tried when this was written (a policy opened to everyone, writes allowed on shared tables, existing
 rows not assigned, values overwritten by the seed, and so on). Each one fails at least one test, except one that
 changes nothing: leaving `WITH CHECK` off a `FOR ALL` policy makes Postgres reuse the `USING` rule for writes.
+Twenty-four breaks of the photo migration were tried as well (the cap removed or loosened, any file name or type
+allowed, a policy opened to every signed-in person or to the signed-out role, an update policy added, a public
+bucket, a larger size limit, the deletion guard removed or aimed at the wrong person, a path pointing into someone
+else's folder, and so on). Each one fails at least one test, except one that changes nothing: deleting the `revoke`
+on `delete_my_account()` in that migration, because `create or replace` keeps the revoke the earlier migration made.

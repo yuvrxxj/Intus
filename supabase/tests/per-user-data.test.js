@@ -21,6 +21,8 @@ const HABITS = migration('20261005000400_habits');
 const ONBOARDING = migration('20261005000500_onboarding_answers');
 // Lets a person delete their own account, and everything of theirs with it.
 const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
+// Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
+const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
 const SEED_HABITS = read(`${process.env.ONE_OFF_DIR ?? '../one-off'}/20261005_seed_owner_habits.sql`);
 
@@ -750,6 +752,7 @@ const personalTables = async (db) => (await db.query(
 async function worldWithAccounts() {
   const db = await world({ stage: 'contracted', schedule: 'after', habits: 'after', onboarding: 'after' });
   await runScript(db, DELETE_ACCOUNT);
+  await runScript(db, PHOTOS);
   // the owner's rows came from the backfill; give them a habit too
   await db.exec(`insert into public.habits (user_id, name, kind) values ('${OWNER}', 'Walk', 'yesno')`);
   await asUser(db, OTHER, async () => {
@@ -861,4 +864,218 @@ test('the deletion migration can be applied twice', async () => {
   await runScript(db, DELETE_ACCOUNT);
   await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
   assert.equal(await userExists(db, OTHER), false);
+});
+
+
+// ── photo check-ins ───────────────────────────────────────────────────────────────────────────────────────
+
+const BUCKET = 'check-in-photos';
+const uuidN = (n) => `${String(n).padStart(8, '0')}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`;
+const photoName = (owner, n = 1, ext = 'jpg') => `${owner}/${uuidN(n)}.${ext}`;
+const addObject = (db, name, bucket = BUCKET) => db.query('insert into storage.objects (bucket_id, name) values ($1, $2)', [bucket, name]);
+const objectCount = (db, where = 'true') => count(db, `select count(*) as n from storage.objects where ${where}`);
+const RLS = /row-level security|violates row-level/;
+
+test('the bucket is private, holds only JPEG and WebP, and takes files up to 2 MiB', async () => {
+  const db = await worldWithAccounts();
+  const bucket = (await db.query(`select public, file_size_limit, allowed_mime_types from storage.buckets where id = '${BUCKET}'`)).rows[0];
+  assert.equal(bucket.public, false);
+  assert.equal(Number(bucket.file_size_limit), 2 * 1024 * 1024);
+  assert.deepEqual([...bucket.allowed_mime_types].sort(), ['image/jpeg', 'image/webp']);
+});
+
+test('a person can add pictures to their own folder, as JPEG or WebP', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await addObject(db, photoName(OTHER, 1, 'jpg'));
+    await addObject(db, photoName(OTHER, 2, 'webp'));
+  });
+  assert.equal(await objectCount(db, `name like '${OTHER}/%'`), 2);
+});
+
+test('a person cannot add anything to someone else\'s folder', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => addObject(db, photoName(OWNER)), RLS);
+    await assert.rejects(() => addObject(db, photoName(THIRD)), RLS);
+  });
+  assert.equal(await objectCount(db), 0);
+});
+
+test('only names of the form <own id>/<uuid>.jpg or .webp are accepted, in the check-in bucket only', async () => {
+  const db = await worldWithAccounts();
+  await db.exec(`insert into storage.buckets (id, name, public) values ('elsewhere', 'elsewhere', false)`);
+  const bad = [
+    `${OTHER}/${uuidN(1)}.png`, `${OTHER}/${uuidN(1)}.JPG`, `${OTHER}/${uuidN(1)}.jpg.html`, `${OTHER}/notes.jpg`,
+    `${OTHER}/sub/${uuidN(1)}.jpg`, `${OTHER}/../${OWNER}/${uuidN(1)}.jpg`, `${uuidN(1)}.jpg`, `/${OTHER}/${uuidN(1)}.jpg`,
+    `${OTHER}${uuidN(1)}.jpg`, `x${OTHER}/${uuidN(1)}.jpg`,
+  ];
+  await asUser(db, OTHER, async () => {
+    for (const name of bad) await assert.rejects(() => addObject(db, name), RLS, `refused: ${name}`);
+    // the policies cover this bucket only: another bucket has none, so Storage would refuse that too
+    await assert.rejects(() => addObject(db, photoName(OTHER), 'elsewhere'), RLS);
+  });
+  assert.equal(await objectCount(db), 0);
+});
+
+test('pictures are private: a person sees and lists only their own, and the signed-out role sees nothing', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, () => addObject(db, photoName(OTHER)));
+  await asUser(db, OWNER, () => addObject(db, photoName(OWNER)));
+  await asUser(db, OTHER, async () => {
+    assert.equal(await objectCount(db), 1);
+    assert.equal(await objectCount(db, `name like '${OWNER}/%'`), 0, 'the owner\'s picture is invisible');
+  });
+  await asUser(db, THIRD, async () => assert.equal(await objectCount(db), 0));
+  await asAnon(db, async () => {
+    assert.equal(await objectCount(db), 0, 'signed out sees nothing');
+    await assert.rejects(() => addObject(db, photoName(OTHER, 9)), RLS);
+  });
+  await asUser(db, null, async () => {
+    assert.equal(await objectCount(db), 0, 'a token with no id sees nothing');
+    await assert.rejects(() => addObject(db, photoName(OTHER, 9)), RLS);
+  });
+});
+
+test('a person can delete their own pictures and nobody else\'s, and nothing can be overwritten or renamed', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, () => addObject(db, photoName(OTHER)));
+  await asUser(db, OWNER, () => addObject(db, photoName(OWNER)));
+  await asUser(db, OTHER, async () => {
+    const theirs = await db.query(`delete from storage.objects where name like '${OWNER}/%' returning id`);
+    assert.equal(theirs.rows.length, 0, 'the owner\'s picture is not theirs to delete');
+    const moved = await db.query(`update storage.objects set name = '${photoName(OTHER, 7)}' where name = '${photoName(OTHER)}' returning id`);
+    assert.equal(moved.rows.length, 0, 'there is no update policy, so a picture is added or deleted, never changed');
+    const mine = await db.query(`delete from storage.objects where name like '${OTHER}/%' returning id`);
+    assert.equal(mine.rows.length, 1);
+  });
+  assert.equal(await objectCount(db, `name like '${OWNER}/%'`), 1, 'the owner keeps theirs');
+});
+
+test('a person can hold at most 200 pictures, others are unaffected, and deleting one makes room', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into storage.objects (bucket_id, name)
+                     select '${BUCKET}', '${OTHER}/' || gen_random_uuid() || '.jpg' from generate_series(1, 200)`);
+    assert.equal(await objectCount(db), 200);
+    await assert.rejects(() => addObject(db, photoName(OTHER, 201)), RLS, 'the 201st is refused');
+  });
+  await asUser(db, THIRD, () => addObject(db, photoName(THIRD)));
+  assert.equal(await objectCount(db, `name like '${THIRD}/%'`), 1, 'someone else is not held back by it');
+  await asUser(db, OTHER, async () => {
+    await db.exec(`delete from storage.objects where id = (select id from storage.objects where name like '${OTHER}/%' limit 1)`);
+    await addObject(db, photoName(OTHER, 201));
+  });
+  assert.equal(await objectCount(db, `name like '${OTHER}/%'`), 200);
+});
+
+test('the picture counter only counts the caller\'s own folder, and the signed-out role cannot call it', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, async () => { await addObject(db, photoName(OTHER, 1)); await addObject(db, photoName(OTHER, 2)); });
+  await asUser(db, OWNER, () => addObject(db, photoName(OWNER)));
+  const mine = async (id) => asUser(db, id, async () => Number((await db.query('select private.my_check_in_photo_count() as n')).rows[0].n));
+  assert.equal(await mine(OTHER), 2);
+  assert.equal(await mine(OWNER), 1);
+  assert.equal(await mine(THIRD), 0);
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select private.my_check_in_photo_count()'), /permission denied/); });
+  // belt and braces: the function itself is closed to the signed-out role (and to PUBLIC, which the signed-out role inherits)
+  const config = (await db.query(`select proconfig, prosecdef from pg_proc where oid = 'private.my_check_in_photo_count()'::regprocedure`)).rows[0];
+  assert.equal(config.prosecdef, true);
+  assert.ok(config.proconfig.some((c) => /^search_path=("")?$/.test(c)) && config.proconfig.includes('row_security=off'));
+  const can = async (role) => (await db.query(`select has_function_privilege('${role}', 'private.my_check_in_photo_count()', 'execute') as ok`)).rows[0].ok;
+  assert.equal(await can('anon'), false);
+  assert.equal(await can('authenticated'), true);
+});
+
+test('a check-in row points into the person\'s own folder, once, with a known pose and a sensible label and weight', async () => {
+  const db = await worldWithAccounts();
+  const row = (extra) => `insert into public.photo_log (log_date, ${extra.cols}) values ('2026-02-01', ${extra.vals})`;
+  await asUser(db, OTHER, async () => {
+    await db.exec(row({ cols: 'storage_path, pose, label, weight', vals: `'${photoName(OTHER)}', 'front', 'Week 4', 80.5` }));
+    await db.exec(row({ cols: 'pose', vals: `'other'` }));
+    for (const pose of ['front', 'side', 'back', 'other']) await db.exec(row({ cols: 'pose', vals: `'${pose}'` }));
+    await assert.rejects(() => db.exec(row({ cols: 'storage_path', vals: `'${photoName(OWNER)}'` })), /photo_log_storage_path_own_folder/, 'a path into someone else\'s folder');
+    await assert.rejects(() => db.exec(row({ cols: 'storage_path', vals: `'${photoName(OTHER, 5, 'png')}'` })), /photo_log_storage_path_own_folder/, 'not an image name');
+    await assert.rejects(() => db.exec(row({ cols: 'storage_path', vals: `'${photoName(OTHER)}'` })), /photo_log_storage_path_key/, 'the same picture twice');
+    await assert.rejects(() => db.exec(row({ cols: 'pose', vals: `'selfie'` })), /photo_log_pose_known/);
+    await assert.rejects(() => db.exec(row({ cols: 'label', vals: `'${'x'.repeat(41)}'` })), /photo_log_label_short/);
+    await assert.rejects(() => db.exec(row({ cols: 'weight', vals: '2' })), /photo_log_weight_plausible/);
+    await assert.rejects(() => db.exec(row({ cols: 'weight', vals: '900' })), /photo_log_weight_plausible/);
+  });
+});
+
+test('check-in rows are private and the old rows without a picture are still valid', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, () => db.exec(`insert into public.photo_log (log_date, storage_path, pose) values ('2026-02-01', '${photoName(OTHER)}', 'side')`));
+  await asUser(db, THIRD, async () => assert.equal(await rowsOf(db, 'photo_log'), 0, 'a second person sees none of them'));
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.photo_log'), /permission denied/); });
+  const legacy = await count(db, `select count(*) as n from public.photo_log where storage_path is null and user_id = '${OWNER}'`);
+  assert.equal(legacy, 1, 'the owner\'s earlier row has no picture and no pose, and that is allowed');
+});
+
+test('an account with pictures cannot be deleted until they are removed, and nothing is lost when it refuses', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OTHER, () => addObject(db, photoName(OTHER)));
+  const rows = await rowsFor(db, OTHER);
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /remove your photos first/);
+  });
+  assert.equal(await userExists(db, OTHER), true, 'the account is still there');
+  assert.equal(await rowsFor(db, OTHER), rows, 'and so is every row');
+  assert.equal(await objectCount(db, `name like '${OTHER}/%'`), 1, 'and the picture');
+
+  // the app removes the files through the Storage API, which is a delete under the person's own login
+  await asUser(db, OTHER, async () => {
+    await db.exec(`delete from storage.objects where name like '${OTHER}/%'`);
+    await db.exec('select public.delete_my_account()');
+  });
+  assert.equal(await userExists(db, OTHER), false);
+  assert.equal(await rowsFor(db, OTHER), 0);
+});
+
+test('someone else\'s pictures do not block your deletion, and your deletion does not touch theirs', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, OWNER, () => addObject(db, photoName(OWNER)));
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await userExists(db, OTHER), false);
+  assert.equal(await objectCount(db, `name like '${OWNER}/%'`), 1);
+  assert.equal(await userExists(db, OWNER), true);
+});
+
+test('the guarded deletion function keeps its lock-down: definer rights, empty search path, no access when signed out', async () => {
+  const db = await worldWithAccounts();
+  const fn = (await db.query(
+    `select prosecdef, proconfig from pg_proc where oid = 'public.delete_my_account()'::regprocedure`)).rows[0];
+  assert.equal(fn.prosecdef, true);
+  assert.ok(fn.proconfig.some((c) => /^search_path=("")?$/.test(c)));
+  assert.ok(fn.proconfig.includes('row_security=off'), 'it fails loudly, rather than seeing no pictures, if its owner ever stops bypassing row level security');
+  const can = async (role) => (await db.query(`select has_function_privilege('${role}', 'public.delete_my_account()', 'execute') as ok`)).rows[0].ok;
+  assert.equal(await can('anon'), false);
+  assert.equal(await can('authenticated'), true);
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select public.delete_my_account()'), /permission denied for function/); });
+});
+
+test('the photo migration can be applied twice without changing the result', async () => {
+  const db = await worldWithAccounts();
+  await runScript(db, PHOTOS);
+  assert.equal(await count(db, `select count(*) as n from storage.buckets where id = '${BUCKET}'`), 1);
+  assert.equal(await count(db, `select count(*) as n from pg_policies where schemaname = 'storage' and tablename = 'objects'`), 3);
+  await asUser(db, OTHER, () => addObject(db, photoName(OTHER)));
+  assert.equal(await objectCount(db), 1);
+});
+
+test('exactly three policies guard the pictures, all for signed-in people only, and none for update', async () => {
+  const db = await worldWithAccounts();
+  const policies = (await db.query(`select policyname, cmd, roles from pg_policies where schemaname = 'storage' and tablename = 'objects' order by 1`)).rows;
+  assert.deepEqual(policies.map((p) => [p.policyname, p.cmd]), [
+    ['check_in_photos_delete', 'DELETE'], ['check_in_photos_insert', 'INSERT'], ['check_in_photos_select', 'SELECT'],
+  ]);
+  for (const p of policies) assert.deepEqual([...p.roles], ['authenticated'], `${p.policyname} is for signed-in people only`);
+  // each rule names the caller's own folder: delete does not lean on the select rule to stay safe
+  const rules = (await db.query(`select policyname, qual, with_check from pg_policies where schemaname = 'storage' and tablename = 'objects'`)).rows;
+  for (const r of rules) {
+    const expression = `${r.qual ?? ''} ${r.with_check ?? ''}`;
+    assert.ok(expression.includes('auth.uid()'), `${r.policyname} limits the caller to their own folder`);
+    assert.ok(expression.includes(BUCKET), `${r.policyname} names the check-in bucket`);
+  }
 });

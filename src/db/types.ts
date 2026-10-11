@@ -467,9 +467,9 @@ export type Database = {
         Relationships: [];
       };
       photo_log: {
-        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; user_id: string; weight: number | null };
-        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; user_id?: string; weight?: number | null };
-        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; user_id?: string; weight?: number | null };
+        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; pose: string | null; storage_path: string | null; user_id: string; weight: number | null };
+        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
+        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
         Relationships: [];
       };
       profile: {
