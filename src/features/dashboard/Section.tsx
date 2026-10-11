@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AsciiArt } from '@/components/ui/ascii-art';
 import { Reveal } from '@/components/ui/reveal';
+import { ScrollHeading } from '@/components/ui/scroll-heading';
 import { SECTION_ART, SECTION_ART_COLS, SECTION_ART_ROWS } from './sectionArt.ts';
 import { SECTIONS, type SectionMeta } from './sections.ts';
 
@@ -14,7 +15,7 @@ export function Section({ meta, children, aside }: { meta: SectionMeta; children
             <div className="font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">
               <span className="text-primary">{meta.n}</span> / {String(SECTIONS.length).padStart(2, '0')}
             </div>
-            <h2 id={`${meta.id}-title`} className="mt-2 text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[32px]">{meta.title}</h2>
+            <ScrollHeading id={`${meta.id}-title`} className="mt-2 text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[32px]">{meta.title}</ScrollHeading>
             <p className="mt-1.5 max-w-xl text-sm text-ink-2">{meta.blurb}</p>
           </div>
           {aside}
