@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Brand } from '@/components/brand';
-import statueBust from '@/assets/art/statue-bust.webp';
+import { StatueBust } from '@/components/statue-bust';
 import { AsciiArt, type AsciiShape } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
@@ -117,14 +117,7 @@ export function Home() {
             </p>
           </div>
           <div className="order-1 flex justify-start lg:order-2 lg:justify-center">
-            <img
-              src={statueBust}
-              alt=""
-              width={1031}
-              height={1349}
-              decoding="async"
-              className="h-[clamp(200px,40vh,520px)] w-auto animate-[rail-art-in_1.2s_var(--ease-out-quint)_both]"
-            />
+            <StatueBust className="h-[clamp(200px,40vh,520px)]" />
           </div>
         </section>
 

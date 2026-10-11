@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, MailCheck } from 'lucide-react';
 import { Brand } from '@/components/brand';
-import statueBust from '@/assets/art/statue-bust.webp';
+import { StatueBust } from '@/components/statue-bust';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Segmented } from '@/components/ui/segmented';
@@ -26,14 +26,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10">
       <section className="on-dots flex flex-col gap-8">
         <Link to={HOME_PATH} className="self-start" aria-label="Intus, back to the homepage"><Brand /></Link>
-        <img
-          src={statueBust}
-          alt=""
-          width={1031}
-          height={1349}
-          decoding="async"
-          className="h-[clamp(220px,34vh,380px)] w-auto self-start animate-[rail-art-in_1.2s_var(--ease-out-quint)_both]"
-        />
+        <StatueBust className="h-[clamp(220px,34vh,380px)] self-start" />
         <div>
           <h1 className="max-w-xl text-[40px] leading-[1.05] font-semibold tracking-[-0.03em] text-ink sm:text-[52px]">
             Your health, in plain numbers.

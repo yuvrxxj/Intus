@@ -1,6 +1,6 @@
 # Name and logo: where it stands
 
-Status: **Intus** is chosen (6 Oct 2026). The domain `intus.fit` is bought and connected to Vercel, and the handle `@getintus` is secured on Twitter and Instagram. Still open: app store search and a trademark clearance search for Intus (filters 2 and 3 below), and the logo. The shortlist below is the earlier work and is kept for the record.
+Status: **Intus** is chosen (6 Oct 2026). The domain `intus.fit` is bought and connected to Vercel, and the handle `@getintus` is secured on Twitter and Instagram. Still open: app store search and a trademark clearance search for Intus (filters 2 and 3 below). The logo is chosen: option B, the section cut (11 Oct 2026), live in the app, the favicon and the link preview image; see `docs/brand/logos/`. The shortlist below is the earlier work and is kept for the record.
 
 Where the name is applied: the in-app wordmark, page title, footer, coming-soon screen and README. The GitHub repo and the Vercel project are both called `intus`. Notion, Miro and Figma still carry "Health OS".
 
