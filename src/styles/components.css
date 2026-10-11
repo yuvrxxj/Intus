@@ -225,4 +225,34 @@
   /* ── small motion helpers ── */
   .shake { animation: shake 0.32s ease; }
   @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+
+  /*
+   * ── scroll headings (components/ui/scroll-heading.tsx) ──
+   * A section title is painted with a gradient pinned to the window (background-attachment: fixed) and clipped to its
+   * letters: red between --band-top and --band-bottom (measured down from the top of the window), quiet ink outside.
+   * As the page scrolls, the edge of the band cuts across the text.
+   * - The paper halo that .on-dots gives text is a filter here, because a text-shadow would paint over the clipped
+   *   gradient and wash the title out.
+   * - Everything sits behind the checks that make it safe: lh units and clipped text (otherwise the transparent text
+   *   would have nothing to show), a mouse or trackpad (phone and tablet browsers ignore fixed backgrounds), and no
+   *   request for reduced motion. Outside them, or in print and forced colours, the title is plain ink.
+   */
+  @media screen and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    @supports (height: 1lh) and ((-webkit-background-clip: text) or (background-clip: text)) {
+      .scroll-heading {
+        --band-top: 6vh;
+        --band-bottom: 52vh;
+        color: transparent;
+        background-image: linear-gradient(180deg, var(--ink-3) 0 var(--band-top), var(--red) 0 var(--band-bottom), var(--ink-3) 0);
+        background-attachment: fixed;
+        -webkit-background-clip: text;
+        background-clip: text;
+        text-shadow: none;
+        filter: drop-shadow(0 0 3px var(--paper)) drop-shadow(0 0 6px var(--paper)) drop-shadow(0 0 10px var(--paper));
+      }
+      @media (forced-colors: active) {
+        .scroll-heading { color: CanvasText; background-image: none; filter: none; text-shadow: inherit; }
+      }
+    }
+  }
 }
