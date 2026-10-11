@@ -34,7 +34,7 @@ again. Do not add new files to it.
 
 | Kind of table | Tables | Rule |
 | --- | --- | --- |
-| Personal | `biomarker_readings`, `daily_logs`, `habits`, `medications`, `profile`, `screening_history`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
+| Personal | `biomarker_readings`, `daily_logs`, `habits`, `medications`, `profile`, `screening_history`, `sleep_sessions`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
 | Reference | `biomarkers`, `screening_rules` | Everyone signed in can read them. Nobody can change them through the API; they are edited by migration |
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
@@ -77,6 +77,7 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261005000500_onboarding_answers.sql` | Adds the first-run answers to `profile` |
 | `20261009000100_delete_my_account.sql` | Adds `public.delete_my_account()`, which the Account section's Delete button calls |
 | `20261009000200_photo_check_ins.sql` | Adds the private `check-in-photos` bucket and its policies, the `storage_path` and `pose` columns on `photo_log`, and makes `delete_my_account()` refuse while photos remain |
+| `20261011000100_sleep_sessions.sql` | Adds `sleep_sessions`: one row per sleep per source (what you entered, or later what Apple or Google health reported), as instants with the UTC offset at each end, optional stage segments and your own estimates. Checks on length, plausibility and one record per source id; per-person policies; no derived value is stored |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
