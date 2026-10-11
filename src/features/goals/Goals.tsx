@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { saveGoals } from '../../db/profile.ts';
 import { HabitsManager } from '../habits/HabitsManager.tsx';
+import { PhotoCheckIns } from '../photos/PhotoCheckIns.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
 import {
   formFromProfile, newGoalFrom, summarizeGoal, validateGoalsForm, LIMITS, type GoalsErrors, type GoalsForm,
@@ -143,6 +144,7 @@ export function Goals({ today, latestWeightKg, notify }: {
         reload={reload}
         notify={notify}
       />
+      <PhotoCheckIns today={today} latestWeightKg={latestWeightKg} notify={notify} />
       <HabitsManager notify={notify} />
     </div>
   );

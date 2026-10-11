@@ -467,9 +467,9 @@ export type Database = {
         Relationships: [];
       };
       photo_log: {
-        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; user_id: string; weight: number | null };
-        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; user_id?: string; weight?: number | null };
-        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; user_id?: string; weight?: number | null };
+        Row: { id: string; label: string | null; log_date: string; photo_url: string | null; pose: string | null; storage_path: string | null; user_id: string; weight: number | null };
+        Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
+        Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
         Relationships: [];
       };
       profile: {
@@ -665,7 +665,10 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      /** Deletes the signed-in person's own account and, through the cascading foreign keys, all of their data. */
+      delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

@@ -1,11 +1,13 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Brand } from '@/components/brand';
 import statueBust from '@/assets/art/statue-bust.webp';
-import { AsciiArt } from '@/components/ui/ascii-art';
+import { AsciiArt, type AsciiShape } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
-import { KnowledgeBase } from './KnowledgeBase.tsx';
+import { CONTACT_EMAIL } from '../../lib/contact.ts';
+import { takeDeletionNotice } from '../account/localData.ts';
+import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { HOME_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
 
@@ -40,15 +42,20 @@ const PRICING = {
   ],
 } as const;
 
-function Section({ id, n, title, intro, children }: { id: string; n: string; title: string; intro?: ReactNode; children: ReactNode }) {
+function Section({ id, n, title, intro, art, children }: { id: string; n: string; title: string; intro?: ReactNode; art?: AsciiShape; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-20 border-t border-line-strong py-14 sm:py-16">
       <Reveal>
-        <div className="on-dots flex items-baseline gap-3">
-          <span className="font-mono text-xs text-primary">{n}</span>
-          <h2 id={`${id}-title`} className="text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink sm:text-[34px]">{title}</h2>
+        <div className="flex items-end justify-between gap-6">
+          <div className="min-w-0">
+            <div className="on-dots flex items-baseline gap-3">
+              <span className="font-mono text-xs text-primary">{n}</span>
+              <h2 id={`${id}-title`} className="text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink sm:text-[34px]">{title}</h2>
+            </div>
+            {intro && <p className="on-dots mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-2">{intro}</p>}
+          </div>
+          {art && <AsciiArt shape={art} cols={40} rows={20} className="on-dots hidden shrink-0 text-[8px] text-primary sm:-mt-10 sm:block lg:text-[9px]" />}
         </div>
-        {intro && <p className="on-dots mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-2">{intro}</p>}
       </Reveal>
       <Reveal delay={0.05} className="mt-8">{children}</Reveal>
     </section>
@@ -76,9 +83,17 @@ function Header() {
 
 /** The public homepage, shown before login on every device. The app itself is for bigger screens until the phone apps ship. */
 export function Home() {
+  // set once, in this tab, by a deleted account; the effect runs twice in development but only ever sets it to true
+  const [deleted, setDeleted] = useState(false);
+  useEffect(() => { if (takeDeletionNotice()) setDeleted(true); }, []);
   return (
     <div className="relative z-10 min-h-dvh">
       <Header />
+      {deleted && (
+        <div role="status" className="border-b border-line-strong bg-surface">
+          <p className="mx-auto w-full max-w-6xl px-5 py-3 text-sm text-ink lg:px-10">Your account and everything saved in it have been deleted.</p>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl px-5 lg:px-10">
         <section aria-labelledby="home-title" className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-20">
           <div className="on-dots order-2 lg:order-1">
@@ -127,7 +142,7 @@ export function Home() {
           </ul>
         </Section>
 
-        <Section id="why" n="02" title="Why this" intro="Health apps tend to hand you a score and ask you to trust it. Intus does the opposite: it shows the number, the range and the rule.">
+        <Section id="why" n="02" title="Why this" art="sphere" intro="Health apps tend to hand you a score and ask you to trust it. Intus does the opposite: it shows the number, the range and the rule.">
           <ul className="grid gap-x-12 gap-y-7 sm:grid-cols-2">
             {WHY.map(([n, title, body]) => (
               <li key={n} className="on-dots grid grid-cols-[36px_1fr] gap-2">
@@ -141,7 +156,7 @@ export function Home() {
           </ul>
         </Section>
 
-        <Section id="pricing" n="03" title="Pricing">
+        <Section id="pricing" n="03" title="Pricing" art="coin">
           <div className="grid gap-6 rounded-[14px] border border-line-strong bg-surface p-6 sm:p-8 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
             <div>
               <h3 className="text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink">{PRICING.headline}</h3>
@@ -179,7 +194,8 @@ export function Home() {
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-7 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase lg:px-10">
           <span>Intus</span>
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
-          <span className="flex gap-4">
+          <span className="flex flex-wrap gap-x-4 gap-y-2">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
             <a href="https://x.com/getintus" rel="noopener noreferrer" className="hover:text-ink">@getintus on X</a>
             <a href="https://www.instagram.com/getintus" rel="noopener noreferrer" className="hover:text-ink">Instagram</a>
           </span>

@@ -1,4 +1,4 @@
-export type SectionId = 'today' | 'progress' | 'goals' | 'bloodwork' | 'supplements' | 'screening' | 'history';
+export type SectionId = 'today' | 'progress' | 'goals' | 'bloodwork' | 'supplements' | 'screening' | 'history' | 'account';
 
 export interface SectionMeta {
   id: SectionId;
@@ -19,6 +19,7 @@ export const SECTIONS: readonly SectionMeta[] = [
   { id: 'supplements', n: '05', title: 'Supplements', short: 'Supps', blurb: 'What you take, when, and what changed since you started.' },
   { id: 'screening', n: '06', title: 'Screening', short: 'Screening', blurb: 'Checks that are due for your age and sex, and when you last had them.' },
   { id: 'history', n: '07', title: 'History', short: 'History', blurb: 'Every day you logged, newest first.' },
+  { id: 'account', n: '08', title: 'Account', short: 'Account', blurb: 'Who is signed in, and how to delete your account.' },
 ];
 
 /** Older links used #weight style tab names; anything unknown opens at the top. */

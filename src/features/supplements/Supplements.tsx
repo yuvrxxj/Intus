@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
+import { Segmented } from '@/components/ui/segmented';
 import { deleteMedication, saveMedication, type Medication as Supplement, type MedicationInput as SupplementInput } from '../../db/medications.ts';
 import { formatDay } from '../bloodwork/format.ts';
+import { KnowledgeBase, MarkerChip } from '../knowledge/KnowledgeBase.tsx';
+import { KNOWLEDGE, matchKnowledge } from '../knowledge/knowledge.ts';
 import { SupplementEffects } from './SupplementEffects.tsx';
 import { SupplementFormCard } from './SupplementFormCard.tsx';
 import { courseStatus, sortSupplements, type CourseStatus } from './model.ts';
 import { describeSchedule, dosesOf, normalizeDays } from './schedule.ts';
-import { useSupplements } from './useSupplements.ts';
+import { useSupplements, type SupplementsState } from './useSupplements.ts';
 
 const STATUS_LABEL: Record<CourseStatus, string> = { current: 'Taking now', ended: 'Ended', upcoming: 'Starts later' };
 
@@ -23,13 +26,16 @@ function dates(item: Supplement): string {
   return 'No dates recorded, counted as ongoing';
 }
 
-export function Supplements({ today, notify }: {
+function MySupplements({ today, notify, state, onLearn }: {
   today: string;
   notify: (message: string, error?: boolean) => void;
+  state: SupplementsState;
+  /** open the knowledge base at this entry */
+  onLearn: (entryId: string) => void;
 }) {
   const [editing, setEditing] = useState<Supplement | 'new' | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const { items, loading, error, reload } = useSupplements();
+  const { items, loading, error, reload } = state;
 
   const sorted = useMemo(() => sortSupplements(items, today), [items, today]);
 
@@ -97,6 +103,7 @@ export function Supplements({ today, notify }: {
                     <div className="med-meta">{[item.dosage, describeSchedule(dosesOf(item), normalizeDays(item.days_of_week))].filter(Boolean).join(' · ')}</div>
                     <div className="med-meta">{dates(item)}</div>
                     {item.notes && <div className="med-notes">{item.notes}</div>}
+                    <KnownEffects name={item.name} onLearn={onLearn} />
                   </div>
                   <div className="med-actions">
                     <button type="button" className="btn" disabled={busy} onClick={() => setEditing(item)}>Edit</button>
@@ -121,6 +128,65 @@ export function Supplements({ today, notify }: {
       </div>
 
       <SupplementEffects items={items} today={today} />
+    </div>
+  );
+}
+
+/** What the supplement can do to a blood test, when the knowledge base has an entry for it. Nothing shows otherwise. */
+function KnownEffects({ name, onLearn }: { name: string; onLearn: (entryId: string) => void }) {
+  const entry = matchKnowledge(KNOWLEDGE, name);
+  if (!entry) return null;
+  return (
+    <div className="mt-2.5">
+      <div className="font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">Can change in a blood test</div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <ul className="flex flex-wrap gap-1.5" aria-label="Results it can change">
+          {entry.changes.slice(0, 3).map((c) => <MarkerChip key={c.marker} {...c} />)}
+        </ul>
+        <button type="button" className="text-[13px] font-medium text-primary underline-offset-4 hover:underline" onClick={() => onLearn(entry.id)}>
+          Read more
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type View = 'mine' | 'knowledge';
+
+/** The Supplements section: what you take, and a knowledge base on how supplements can move blood results. */
+export function Supplements({ today, notify }: {
+  today: string;
+  notify: (message: string, error?: boolean) => void;
+}) {
+  const [view, setView] = useState<View>('mine');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const state = useSupplements();
+
+  // the entries for what the person records, so the knowledge base can tag and lead with them
+  const taking = useMemo(
+    () => new Set(state.items.flatMap((item) => matchKnowledge(KNOWLEDGE, item.name)?.id ?? [])),
+    [state.items],
+  );
+
+  return (
+    <div>
+      <Segmented<View>
+        label="Supplements"
+        className="mb-5 max-w-sm"
+        value={view}
+        onChange={(next) => { setOpenId(null); setView(next); }}
+        options={[{ value: 'mine', label: 'My supplements' }, { value: 'knowledge', label: 'Knowledge base' }]}
+      />
+      {view === 'mine' ? (
+        <MySupplements today={today} notify={notify} state={state} onLearn={(id) => { setOpenId(id); setView('knowledge'); }} />
+      ) : (
+        <div>
+          <p className="mb-5 max-w-2xl text-sm leading-relaxed text-ink-2">
+            Supplements can move a blood test without changing your health. Each entry says which results can shift, in which direction and why.
+          </p>
+          <KnowledgeBase taking={taking} openId={openId} />
+        </div>
+      )}
     </div>
   );
 }

@@ -37,7 +37,7 @@ export const KNOWLEDGE: readonly KnowledgeEntry[] = [
   {
     id: 'biotin',
     name: 'Biotin (vitamin B7)',
-    also: ['b7', 'hair skin and nails', 'hair skin nails'],
+    also: ['b7', 'vitamin b7', 'hair skin and nails', 'hair skin nails'],
     changes: [
       { marker: 'TSH', direction: 'down' },
       { marker: 'Free T4', direction: 'up' },
@@ -51,7 +51,7 @@ export const KNOWLEDGE: readonly KnowledgeEntry[] = [
   {
     id: 'vitamin-d',
     name: 'Vitamin D',
-    also: ['d3', 'cholecalciferol'],
+    also: ['d3', 'd2', 'cholecalciferol'],
     changes: [
       { marker: '25-hydroxy vitamin D', direction: 'up' },
       { marker: 'Calcium', direction: 'up' },
@@ -85,7 +85,7 @@ export const KNOWLEDGE: readonly KnowledgeEntry[] = [
   {
     id: 'vitamin-b12',
     name: 'Vitamin B12',
-    also: ['cobalamin', 'methylcobalamin', 'cyanocobalamin'],
+    also: ['b12', 'cobalamin', 'methylcobalamin', 'cyanocobalamin'],
     changes: [{ marker: 'Vitamin B12', direction: 'up' }],
     why: 'The B12 test measures the vitamin in your blood, which includes what a supplement just added.',
     worthKnowing: 'A high result while taking B12 is expected. A test soon after a dose mostly shows the dose, so say that you take it when the result is read.',
@@ -105,7 +105,7 @@ export const KNOWLEDGE: readonly KnowledgeEntry[] = [
   {
     id: 'niacin',
     name: 'Niacin (vitamin B3, nicotinic acid)',
-    also: ['b3', 'nicotinic acid'],
+    also: ['b3', 'vitamin b3', 'nicotinic acid'],
     changes: [
       { marker: 'LDL cholesterol', direction: 'down' },
       { marker: 'Triglycerides', direction: 'down' },
@@ -120,7 +120,7 @@ export const KNOWLEDGE: readonly KnowledgeEntry[] = [
   {
     id: 'protein-powder',
     name: 'Protein powder',
-    also: ['whey', 'casein', 'plant protein', 'high protein'],
+    also: ['whey', 'casein', 'plant protein', 'protein shake', 'high protein'],
     changes: [{ marker: 'Urea (BUN)', direction: 'up' }],
     why: 'The body clears the nitrogen in protein as urea, so a high protein intake raises urea in the blood.',
     worthKnowing: 'A high urea on its own, in someone eating a lot of protein, is common. Kidney markers are read together, so say how much protein you eat when the result is read.',
@@ -145,4 +145,27 @@ export function searchKnowledge(entries: readonly KnowledgeEntry[], query: strin
     const text = haystack(entry);
     return tokens.every((token) => text.some((word) => word.startsWith(token)));
   });
+}
+
+/** The word lists a supplement can be recognised by: the entry's name without its bracketed part, and every other name. */
+function nameRuns(entry: KnowledgeEntry): string[][] {
+  return [entry.name.replace(/\(.*?\)/g, ' '), ...entry.also].map(words).filter((run) => run.length > 0);
+}
+
+function containsRun(haystack: readonly string[], run: readonly string[]): boolean {
+  for (let i = 0; i + run.length <= haystack.length; i++) {
+    if (run.every((word, j) => haystack[i + j] === word)) return true;
+  }
+  return false;
+}
+
+/**
+ * The entry for a supplement a person records, found from the name they typed ("Creatine monohydrate 5 g",
+ * "Vitamin D3 2000 IU", "Fish oil"). Whole words only, so "iron" never matches "environment". Null when there
+ * is no entry, which is the usual case: the knowledge base covers a handful of supplements.
+ */
+export function matchKnowledge(entries: readonly KnowledgeEntry[], supplementName: string): KnowledgeEntry | null {
+  const tokens = words(supplementName);
+  if (tokens.length === 0) return null;
+  return entries.find((entry) => nameRuns(entry).some((run) => containsRun(tokens, run))) ?? null;
 }

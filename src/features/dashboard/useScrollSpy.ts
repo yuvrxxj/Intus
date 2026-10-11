@@ -7,7 +7,7 @@ function reducedMotion(): boolean {
 
 /**
  * Tracks which section is in view, keeps the address bar's #hash in step without adding history entries, and
- * offers a jump that scrolls smoothly. Number keys 1 to 7 jump too, unless the person is typing.
+ * offers a jump that scrolls smoothly. Number keys 1 to 8 jump too, unless the person is typing.
  */
 export function useScrollSpy(): [SectionId, (id: SectionId) => void] {
   const [active, setActive] = useState<SectionId>(() => sectionFromHash(window.location.hash) ?? 'today');

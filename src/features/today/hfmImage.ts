@@ -2,7 +2,9 @@
 import { useCallback, useState } from 'react';
 import { todayKey } from '../../util/dates.ts';
 
-const KEY = 'yuvraaj_hfm_v2';
+/** Also cleared when an account is deleted, so nothing of theirs stays on the device. */
+export const HFM_STORAGE_KEY = 'yuvraaj_hfm_v2';
+const KEY = HFM_STORAGE_KEY;
 
 function readAll(): Record<string, string> {
   try {
