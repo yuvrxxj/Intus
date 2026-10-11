@@ -5,6 +5,7 @@ import statueBust from '@/assets/art/statue-bust.webp';
 import { AsciiArt, type AsciiShape } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
+import { ScrollHeading } from '@/components/ui/scroll-heading';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { takeDeletionNotice } from '../account/localData.ts';
 import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
@@ -51,7 +52,7 @@ function Section({ id, n, title, intro, art, children }: { id: string; n: string
           <div className="min-w-0">
             <div className="on-dots flex items-baseline gap-3">
               <span className="font-mono text-xs text-primary">{n}</span>
-              <h2 id={`${id}-title`} className="text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink sm:text-[34px]">{title}</h2>
+              <ScrollHeading id={`${id}-title`} className="text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[34px]">{title}</ScrollHeading>
             </div>
             {intro && <p className="on-dots mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-2">{intro}</p>}
           </div>
