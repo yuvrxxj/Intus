@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchCycleDays, type CycleDay } from '../../db/cycle.ts';
+import { cycleDayOn, isFemale, periodsOf } from '../cycle/model.ts';
 import { deleteReading } from '../../db/biomarkerReadings.ts';
 import { CriticalBanner } from './CriticalBanner.tsx';
 import { LabEntryForm } from './LabEntryForm.tsx';
@@ -24,6 +26,20 @@ export function Bloodwork({ today, notify }: Props) {
   const [uploading, setUploading] = useState(false);
   const [printing, setPrinting] = useState<Report | null>(null);
   const { profile } = useProfile();
+  const female = isFemale(profile?.sex);
+  const [cycleDays, setCycleDays] = useState<CycleDay[]>([]);
+  useEffect(() => {
+    if (!female) return;
+    let live = true;
+    // only a nicety beside the dates, so a failure to load leaves it out rather than stopping the screen
+    fetchCycleDays().then((d) => live && setCycleDays(d), () => {});
+    return () => { live = false; };
+  }, [female]);
+  const cycleDayFor = useMemo(() => {
+    if (!female || cycleDays.length === 0) return undefined;
+    const periods = periodsOf(cycleDays);
+    return (date: string) => cycleDayOn(periods, date);
+  }, [female, cycleDays]);
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -145,7 +161,7 @@ export function Bloodwork({ today, notify }: Props) {
         {view.groups.map((group) => (
           <section key={group.category}>
             <div className="bio-sec">{group.category}</div>
-            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} onDeleteReading={removeReading} />
+            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} onDeleteReading={removeReading} cycleDayFor={cycleDayFor} />
           </section>
         ))}
 

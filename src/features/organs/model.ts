@@ -89,7 +89,7 @@ const fmt = (v: number) => String(Number(v.toPrecision(4)));
 export function markerLevel(biomarker: Biomarker, value: number, ctx: RangeContext): { level: Level; detail: string } | null {
   let range;
   try {
-    range = chooseRange(biomarker, ctx.printed, ctx.sex);
+    range = chooseRange(biomarker, ctx.printed, ctx.sex, { pregnant: ctx.pregnant });
   } catch {
     return null;
   }
@@ -178,14 +178,15 @@ export interface OrganInputs {
   sleep: SleepInput | null;
   /** the person's sex, so a default range for the other sex is never used */
   sex?: string | null;
+  pregnant?: boolean;
 }
 
-export function organStates({ biomarkers, readings, habits, entries, sleep, sex = null }: OrganInputs): OrganState[] {
+export function organStates({ biomarkers, readings, habits, entries, sleep, sex = null, pregnant = false }: OrganInputs): OrganState[] {
   const active = activeHabits(habits);
   return ORGANS.map((def) => {
     const signals: Signal[] = [];
     for (const { biomarker, value, reading } of latestByCode(biomarkers, readings, def.markers)) {
-      const read = markerLevel(biomarker, value, { sex, printed: reading });
+      const read = markerLevel(biomarker, value, { sex, printed: reading, pregnant });
       if (read) signals.push({ label: biomarker.name, ...read });
     }
     for (const habit of active) {

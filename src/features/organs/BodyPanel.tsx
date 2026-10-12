@@ -4,6 +4,7 @@ import { useBloodwork } from '../bloodwork/useBloodwork.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
 import { withUntouchedCounts, type Entries } from '../habits/model.ts';
 import { useProfile } from '../profile/ProfileContext.tsx';
+import { useConditions } from '../cycle/useConditions.ts';
 import { ageBand, classifyHours } from '../sleep/ageBand.ts';
 import { summarize } from '../sleep/summary.ts';
 import { roundTo5 } from '../sleep/time.ts';
@@ -43,6 +44,7 @@ export function BodyPanel({ entries, today }: { entries: Entries; today: string 
   const { profile } = useProfile();
   const blood = useBloodwork();
   const sleep = useSleep();
+  const { pregnant } = useConditions();
 
   const sleepInput = useMemo<SleepInput | null>(() => {
     if (sleep.status !== 'ready') return null;
@@ -60,7 +62,8 @@ export function BodyPanel({ entries, today }: { entries: Entries; today: string 
     entries: withUntouchedCounts(habits, entries),
     sleep: sleepInput,
     sex: profile?.sex ?? null,
-  }), [blood, habits, entries, sleepInput, profile?.sex]);
+    pregnant,
+  }), [blood, habits, entries, sleepInput, profile?.sex, pregnant]);
 
   return <BodyPanelView organs={organs} bloodFailed={blood.status === 'error'} />;
 }

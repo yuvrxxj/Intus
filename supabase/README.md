@@ -34,7 +34,7 @@ again. Do not add new files to it.
 
 | Kind of table | Tables | Rule |
 | --- | --- | --- |
-| Personal | `biomarker_readings`, `daily_logs`, `habits`, `medications`, `profile`, `screening_history`, `sleep_sessions`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
+| Personal | `biomarker_readings`, `cycle_days`, `daily_logs`, `habits`, `medications`, `profile`, `profile_conditions`, `screening_history`, `sleep_sessions`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
 | Reference | `biomarkers`, `screening_rules` | Everyone signed in can read them. Nobody can change them through the API; they are edited by migration |
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Files | the `lab-reports` Storage bucket | The same rules for uploaded lab report PDFs: own folder only, `<uuid>.pdf`, at most 10 MiB each and 200 per person, no update policy. `delete_my_account()` refuses while any remain, and the app removes them first |

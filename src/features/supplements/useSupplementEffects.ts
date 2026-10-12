@@ -34,7 +34,7 @@ export function earliestNeeded(items: readonly Pick<Supplement, 'start_date'>[])
  * reads only what the supplements' own start dates call for, and nothing at all while none has a start date. Habits
  * come from the caller, which already has them loaded.
  */
-export function useSupplementEffects(items: readonly Supplement[], today: string, habits: readonly Habit[] = [], sex: string | null = null): EffectsState & { reload: () => void } {
+export function useSupplementEffects(items: readonly Supplement[], today: string, habits: readonly Habit[] = [], sex: string | null = null, pregnant = false): EffectsState & { reload: () => void } {
   const from = useMemo(() => earliestNeeded(items), [items]);
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<{ logs: EffectLog[]; cardio: CardioLog[]; blood: BloodworkData } | { error: string } | null>(null);
@@ -62,12 +62,12 @@ export function useSupplementEffects(items: readonly Supplement[], today: string
     try {
       const effects = items
         .filter((item) => item.start_date != null)
-        .map((item) => ({ item, report: effectReport(item, items, loaded.logs, loaded.blood.biomarkers, loaded.blood.readings, today, { habits, cardio: loaded.cardio, sex }) }));
+        .map((item) => ({ item, report: effectReport(item, items, loaded.logs, loaded.blood.biomarkers, loaded.blood.readings, today, { habits, cardio: loaded.cardio, sex, pregnant }) }));
       return { status: 'ready', effects };
     } catch (e) {
       return { status: 'error', message: e instanceof Error ? e.message : String(e) };
     }
-  }, [from, loaded, items, today, habits, sex]);
+  }, [from, loaded, items, today, habits, sex, pregnant]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { ...state, reload };

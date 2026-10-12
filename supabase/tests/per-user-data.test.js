@@ -29,6 +29,8 @@ const CARDIO_SOURCE = migration('20261012000100_cardio_source');
 const PRINTED_RANGES = migration('20261012000200_printed_ranges');
 // Uploaded lab reports: a private bucket, and account deletion that waits until they are removed.
 const LAB_REPORTS = migration('20261012000300_lab_reports');
+// Cycle days, profile conditions and the reproductive hormone markers.
+const CYCLE = migration('20261012000400_cycle_and_conditions');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1366,4 +1368,53 @@ test('an account with reports cannot be deleted until they are removed; photos a
   const config = (await db.query(`select prosecdef, proconfig from pg_proc where oid = 'public.delete_my_account()'::regprocedure`)).rows[0];
   assert.equal(config.prosecdef, true);
   assert.ok(config.proconfig.includes('row_security=off'));
+});
+
+// ── cycle days and conditions ───────────────────────────────────────────────────────────────────
+
+async function worldWithCycle() {
+  const db = await worldWithAccounts();
+  await runScript(db, CYCLE);
+  return db;
+}
+
+test('cycle days are private, one per person, day and source, with known flows and symptoms', async () => {
+  const db = await worldWithCycle();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.cycle_days (day, flow, symptoms) values ('2026-10-01', 'medium', '{cramps,tiredness}')`);
+    await db.exec(`insert into public.cycle_days (day, flow, source) values ('2026-10-01', 'light', 'healthkit')`);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-01', 'heavy')`), /duplicate key/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-02', 'lots')`), /check/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow, symptoms) values ('2026-10-03', 'light', '{fever}')`), /check/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (user_id, day, flow) values ('${THIRD}', '2026-10-04', 'light')`), RLS);
+  });
+  await asUser(db, THIRD, async () => assert.equal(await rowsOf(db, 'cycle_days'), 0));
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.cycle_days'), /permission denied/); });
+});
+
+test('conditions are private, one row per condition, and keep the person\'s own label', async () => {
+  const db = await worldWithCycle();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.profile_conditions (condition, label) values ('pcos', 'PCOD')`);
+    await db.exec(`insert into public.profile_conditions (condition, since) values ('pregnant', '2026-08-01')`);
+    await assert.rejects(() => db.exec(`insert into public.profile_conditions (condition) values ('pcos')`), /duplicate key/);
+    await assert.rejects(() => db.exec(`insert into public.profile_conditions (condition) values ('flu')`), /check/);
+  });
+  await asUser(db, THIRD, async () => assert.equal(await rowsOf(db, 'profile_conditions'), 0));
+});
+
+test('deleting an account removes its cycle days and conditions; hormones are added once, with no usual range', async () => {
+  const db = await worldWithCycle();
+  await runScript(db, CYCLE);
+  const hormones = (await db.query(`select code, ref_low, ref_high from public.biomarkers where category = 'hormonal' and 'reproductive' = any(organ_systems) order by sort_order`)).rows;
+  assert.deepEqual(hormones.map((h) => h.code), ['oestradiol', 'progesterone', 'lh', 'fsh', 'prolactin', 'shbg']);
+  assert.ok(hormones.every((h) => h.ref_low === null && h.ref_high === null));
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-01', 'medium')`);
+    await db.exec(`insert into public.profile_conditions (condition) values ('pcos')`);
+    await db.exec('select public.delete_my_account()');
+  });
+  assert.equal(await count(db, `select count(*) as n from public.cycle_days where user_id = '${OTHER}'`), 0);
+  assert.equal(await count(db, `select count(*) as n from public.profile_conditions where user_id = '${OTHER}'`), 0);
+  assert.ok((await personalTables(db)).includes('cycle_days'));
 });

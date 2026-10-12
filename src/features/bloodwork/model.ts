@@ -76,12 +76,14 @@ export interface BloodworkView {
 export interface RangeContext {
   sex: string | null | undefined;
   printed?: PrintedRange | null;
+  /** in pregnancy only printed ranges are used */
+  pregnant?: boolean;
 }
 
-function toPoint(reading: BiomarkerReading, biomarker: Biomarker | undefined, sex: string | null | undefined): Point {
+function toPoint(reading: BiomarkerReading, biomarker: Biomarker | undefined, sex: string | null | undefined, pregnant: boolean): Point {
   const label = biomarker?.code ?? 'biomarker';
   const value = toNumber(reading.value, `${label} value`);
-  const rangeUsed: ChosenRange = biomarker ? chooseRange(biomarker, reading, sex) : { low: null, high: null, source: 'none', reason: 'none_set' };
+  const rangeUsed: ChosenRange = biomarker ? chooseRange(biomarker, reading, sex, { pregnant }) : { low: null, high: null, source: 'none', reason: 'none_set' };
   return {
     id: reading.id,
     measured_at: reading.measured_at,
@@ -96,7 +98,7 @@ function toPoint(reading: BiomarkerReading, biomarker: Biomarker | undefined, se
 
 /** Where a value sits, against the range printed with it, else the marker's default when it applies to the person. */
 export function rangeStatus(biomarker: Biomarker, value: number, ctx: RangeContext): RangeStatus {
-  return statusIn(chooseRange(biomarker, ctx.printed, ctx.sex), value);
+  return statusIn(chooseRange(biomarker, ctx.printed, ctx.sex, { pregnant: ctx.pregnant }), value);
 }
 
 export function changeBetween(previous: Point, latest: Point): Change {
@@ -124,8 +126,10 @@ export function buildBloodworkView(input: {
   readings: readonly BiomarkerReading[];
   /** the person's sex from their profile, so a default range for the other sex is never used */
   sex: string | null | undefined;
+  /** in pregnancy only the ranges printed on reports are used */
+  pregnant?: boolean;
 }): BloodworkView {
-  const { biomarkers, readings, sex } = input;
+  const { biomarkers, readings, sex, pregnant = false } = input;
 
   // Throws for any reading whose biomarker is missing, so orphans surface here and never get dropped below.
   const allFindings = criticalFindings(biomarkers, readings);
@@ -134,7 +138,7 @@ export function buildBloodworkView(input: {
 
   const pointsByMarker = new Map<string, Point[]>();
   for (const reading of readings) {
-    const point = toPoint(reading, markerById.get(reading.biomarker_id), sex);
+    const point = toPoint(reading, markerById.get(reading.biomarker_id), sex, pregnant);
     const list = pointsByMarker.get(reading.biomarker_id) ?? [];
     list.push(point);
     pointsByMarker.set(reading.biomarker_id, list);

@@ -242,6 +242,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      cycle_days: {
+        Row: { created_at: string; day: string; flow: string; source: string; symptoms: string[]; user_id: string };
+        Insert: { created_at?: string; day: string; flow: string; source?: string; symptoms?: string[]; user_id?: string };
+        Update: { created_at?: string; day?: string; flow?: string; source?: string; symptoms?: string[]; user_id?: string };
+        Relationships: [];
+      };
       daily_logs: {
         Row: {
           active_kcal: number | null;
@@ -483,6 +489,12 @@ export type Database = {
         Row: { id: string; label: string | null; log_date: string; photo_url: string | null; pose: string | null; storage_path: string | null; user_id: string; weight: number | null };
         Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
         Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
+        Relationships: [];
+      };
+      profile_conditions: {
+        Row: { condition: string; created_at: string; label: string | null; since: string | null; user_id: string };
+        Insert: { condition: string; created_at?: string; label?: string | null; since?: string | null; user_id?: string };
+        Update: { condition?: string; created_at?: string; label?: string | null; since?: string | null; user_id?: string };
         Relationships: [];
       };
       profile: {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchBloodwork, type BloodworkData } from '../../db/queries.ts';
 import { useProfile } from '../profile/ProfileContext.tsx';
+import { useConditions } from '../cycle/useConditions.ts';
 import { buildBloodworkView, type BloodworkView } from './model.ts';
 
 export type BloodworkState =
@@ -19,6 +20,7 @@ function messageOf(error: unknown): string {
  */
 export function useBloodwork(): BloodworkState & { reload: () => void } {
   const sex = useProfile().profile?.sex ?? null;
+  const { pregnant } = useConditions();
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<{ data: BloodworkData } | { error: string } | null>(null);
 
@@ -38,11 +40,11 @@ export function useBloodwork(): BloodworkState & { reload: () => void } {
     if (loaded === null) return { status: 'loading' };
     if ('error' in loaded) return { status: 'error', message: loaded.error };
     try {
-      return { status: 'ready', view: buildBloodworkView({ ...loaded.data, sex }), data: loaded.data };
+      return { status: 'ready', view: buildBloodworkView({ ...loaded.data, sex, pregnant }), data: loaded.data };
     } catch (error) {
       return { status: 'error', message: `Could not check these results safely: ${messageOf(error)}` };
     }
-  }, [loaded, sex]);
+  }, [loaded, sex, pregnant]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { ...state, reload };

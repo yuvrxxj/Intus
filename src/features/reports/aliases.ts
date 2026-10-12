@@ -37,6 +37,12 @@ export const ALIASES: Readonly<Record<string, readonly string[]>> = {
   platelets: ['platelet count', 'platelets', 'plt'],
   potassium: ['serum potassium', 'potassium, serum', 'k+'],
   sodium: ['serum sodium', 'sodium, serum', 'na+'],
+  oestradiol: ['estradiol', 'oestradiol (e2)', 'estradiol (e2)', 'e2', 'estradiol, serum'],
+  progesterone: ['serum progesterone', 'progesterone, serum'],
+  lh: ['luteinizing hormone', 'luteinising hormone', 'lh, serum'],
+  fsh: ['follicle stimulating hormone', 'follicle-stimulating hormone', 'fsh, serum'],
+  prolactin: ['serum prolactin', 'prolactin, serum', 'prl'],
+  shbg: ['sex hormone binding globulin', 'sex hormone-binding globulin'],
 };
 
 /**

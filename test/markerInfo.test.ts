@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { MARKER_INFO, medlinePlusUrl } from '../src/features/bloodwork/markerInfo.ts';
 import { ALIASES } from '../src/features/reports/aliases.ts';
 
-// The codes in the live biomarkers table on 12 Oct 2026. A new marker needs an entry here and in MARKER_INFO.
+// The codes in the live biomarkers table on 12 Oct 2026, plus those added by migrations in this repository. A new marker needs an entry here and in MARKER_INFO.
 const LIVE = [
   'alt', 'ast', 'creatinine', 'egfr', 'hemoglobin', 'ferritin', 'tsh', 't3_free', 't4_free', 'testosterone', 'cortisol', 'glucose', 'hba1c',
   'ldl', 'hdl', 'crp', 'vitamin_d', 'nt_probnp', 'vitamin_b12', 'serum_iron', 'calcium', 'transferrin_sat', 'total_cholesterol',
   'triglycerides', 'blood_urea', 'uric_acid', 'ggt', 'albumin', 'wbc_tlc', 'platelets', 't4_total', 'potassium', 'sodium',
+  // added by 20261012000400_cycle_and_conditions.sql
+  'oestradiol', 'progesterone', 'lh', 'fsh', 'prolactin', 'shbg',
 ];
 
 test('every live marker has a popover entry and report aliases', () => {
@@ -19,7 +21,7 @@ test('every live marker has a popover entry and report aliases', () => {
 
 test('entries follow the wording rules: no doses, no drug names, a LOINC code for the link', () => {
   const DOSE = /\b\d+(\.\d+)?\s*(mg|mcg|µg|iu|g)\b/i;
-  const DRUGS = /\b(statin|metformin|levothyroxine|aspirin|ibuprofen|paracetamol|insulin|warfarin|steroid|prednisone)s?\b/i;
+  const DRUGS = /\b(statin|metformin|levothyroxine|aspirin|ibuprofen|paracetamol|insulin(?! resistance)|warfarin|steroid|prednisone)s?\b/i;
   for (const [code, info] of Object.entries(MARKER_INFO)) {
     const text = [info.what, info.high, info.low ?? '', info.habits].join(' ');
     assert.ok(!DOSE.test(text), `${code} mentions a dose`);

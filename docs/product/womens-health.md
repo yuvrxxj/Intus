@@ -92,6 +92,13 @@ Some labs print a single range for oestradiol, progesterone, LH or FSH, or sever
 - Pregnancy pauses Intus flags on the markers it moves; the lab's own range is still shown.
 - Cycle data is health data in every market, and sensitive in several jurisdictions (reproductive health data in some US states in particular). It stays in the person's own rows, is deleted with the account (`delete_my_account()` must be extended to the new tables, with a test), is included in data export, and is never used for anything but the person's own screens.
 
+## Built (12 Oct 2026)
+
+- Phase 0: printed range on each result, sex-specific defaults never used for the other sex (`src/lib/ranges.ts`).
+- Phase 1: cycle days, typed in, with the summary and no predictions (`src/features/cycle/`). Import from Apple Health and Health Connect is still to come, through the phone app.
+- Phase 2: the reproductive hormones (oestradiol, progesterone, LH, FSH, prolactin, SHBG) as markers with no usual range, so they are flagged only against printed ranges; each blood result shows its cycle day. A recorded phase per draw was left out: the cycle day is worked out from the logged days instead.
+- Phase 3: conditions on the profile; pregnancy switches to printed ranges only.
+
 ## Decisions (12 Oct 2026)
 
 1. Phase 0 is done together with INT-63.

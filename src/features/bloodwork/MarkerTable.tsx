@@ -72,7 +72,7 @@ function StatusCell({ row }: { row: MarkerRow }) {
   );
 }
 
-function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (point: Point, markerName: string) => void }) {
+function Detail({ row, onDeleteReading, cycleDayFor }: { row: MarkerRow; onDeleteReading?: (point: Point, markerName: string) => void; cycleDayFor?: (date: string) => number | null }) {
   const { biomarker, points } = row;
   const newestFirst = [...points].reverse();
   const noLimit = biomarker.critical_low == null && biomarker.critical_high == null;
@@ -102,7 +102,10 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
             const crit = checkCritical(biomarker, p.value).status;
             return (
               <tr key={p.id}>
-                <td>{formatDay(p.measured_at)}</td>
+                <td>
+                  {formatDay(p.measured_at)}
+                  {cycleDayFor && cycleDayFor(p.measured_at) !== null ? <div className="bt-range-src">cycle day {cycleDayFor(p.measured_at)}</div> : null}
+                </td>
                 <td className={VALUE_CLASS[range]}>{formatValue(p.value)}</td>
                 <td>
                   {crit === CRITICAL.LOW || crit === CRITICAL.HIGH ? <span className="bk bk-crit">{crit === CRITICAL.LOW ? 'Critical low' : 'Critical high'}</span> : null}{' '}
@@ -135,9 +138,11 @@ interface Props {
   onToggle: (biomarkerId: string) => void;
   /** offered only for results the person added themselves, typed in or from an uploaded report */
   onDeleteReading?: (point: Point, markerName: string) => void;
+  /** for people who log their cycle: the cycle day a sample was taken on */
+  cycleDayFor?: (date: string) => number | null;
 }
 
-export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props) {
+export function MarkerTable({ rows, expanded, onToggle, onDeleteReading, cycleDayFor }: Props) {
   return (
     <div className="bt-wrap">
       <table className="bt bt-main">
@@ -184,7 +189,7 @@ export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props
                 </tr>
                 {open && (
                   <tr className="bt-detail" id={`detail-${row.biomarker.id}`}>
-                    <td colSpan={5}><Detail row={row} onDeleteReading={onDeleteReading} /></td>
+                    <td colSpan={5}><Detail row={row} onDeleteReading={onDeleteReading} cycleDayFor={cycleDayFor} /></td>
                   </tr>
                 )}
               </Fragment>

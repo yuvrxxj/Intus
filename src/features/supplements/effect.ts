@@ -167,6 +167,7 @@ export interface EffectExtras {
   cardio?: readonly CardioLog[];
   /** the person's sex, for the blood results' ranges */
   sex?: string | null;
+  pregnant?: boolean;
 }
 
 /** One value per calendar day. A day whose value is missing or not a finite number is left out rather than read as zero. */
@@ -256,6 +257,7 @@ export function bloodPairs(
   readings: readonly BiomarkerReading[],
   /** the person's sex, so a default range for the other sex is never used; each result's printed range comes first */
   sex: string | null = null,
+  pregnant = false,
 ): BloodPair[] {
   if (item.start_date == null) return [];
   const start = dayNumber(item.start_date);
@@ -285,8 +287,8 @@ export function bloodPairs(
     const delta = after.value - before.value;
     out.push({
       biomarker,
-      before: { measured_at: before.at, value: before.value, range: rangeOrNone(biomarker, before.value, { sex, printed: before.reading }) },
-      after: { measured_at: after.at, value: after.value, range: rangeOrNone(biomarker, after.value, { sex, printed: after.reading }) },
+      before: { measured_at: before.at, value: before.value, range: rangeOrNone(biomarker, before.value, { sex, printed: before.reading, pregnant }) },
+      after: { measured_at: after.at, value: after.value, range: rangeOrNone(biomarker, after.value, { sex, printed: after.reading, pregnant }) },
       delta,
       percent: before.value === 0 ? null : (delta / Math.abs(before.value)) * 100,
       daysOn: after.day - start,
@@ -347,7 +349,7 @@ export function effectReport(
     status: 'ready',
     windows,
     metrics: metricEffects(item, logs, today, extras),
-    blood: bloodPairs(item, biomarkers, readings, extras.sex ?? null),
+    blood: bloodPairs(item, biomarkers, readings, extras.sex ?? null, extras.pregnant ?? false),
     overlaps: concurrentChanges(item, all, today),
     earliestVerdict,
   };
