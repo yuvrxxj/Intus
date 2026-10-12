@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import { Field } from '@/components/ui/field';
 import { deleteMyAccount } from '../../db/account.ts';
+import { fetchEverything } from '../../db/exportData.ts';
+import { buildExport, exportFileName } from '../export/model.ts';
 import { supabase } from '../../db/client.ts';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { clearLocalData, rememberDeletion } from './localData.ts';
@@ -24,6 +26,54 @@ function useWho(): Who | null {
     return () => { live = false; };
   }, []);
   return who;
+}
+
+/** Hands the browser a file to save. Nothing leaves the device except the person's own rows, fetched under their login. */
+function saveFile(name: string, content: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function DownloadData({ email }: { email: string | null }) {
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  async function download() {
+    setBusy(true);
+    setFailure(null);
+    try {
+      const data = await fetchEverything();
+      const at = new Date();
+      saveFile(exportFileName(at), JSON.stringify(buildExport({ email, exportedAt: at, ...data }), null, 2), 'application/json');
+    } catch (e) {
+      setFailure(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card" aria-labelledby="export-title">
+      <div className="ct" id="export-title"><span className="dot dot-dim" />Your data</div>
+      <p className="mt-1 text-sm leading-relaxed text-ink-2">
+        Download everything you have stored in Intus as one file: daily logs, habits, goals and profile, bloodwork with the
+        ranges from your reports, supplements, sleep, heart readings and screening history. It is yours to keep or take
+        elsewhere.
+      </p>
+      {failure && <div className="notice notice-bad" role="alert">The download could not be made: {failure}</div>}
+      <div className="btn-row">
+        <button type="button" className="btn" onClick={download} disabled={busy}>
+          <Download className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden="true" />{busy ? 'Gathering your data…' : 'Download my data'}
+        </button>
+      </div>
+    </section>
+  );
 }
 
 /** Everything is gone from the database. Clear this device, then end the session; the homepage says what happened. */
@@ -87,6 +137,8 @@ export function Account({ onSignOut }: { onSignOut: () => void }) {
           </button>
         </div>
       </div>
+
+      <DownloadData email={who?.email ?? null} />
 
       <section className="card" aria-labelledby="delete-title">
         <div className="ct" id="delete-title"><span className="dot" style={{ background: 'var(--red)' }} />Delete account</div>

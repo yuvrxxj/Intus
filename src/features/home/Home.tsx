@@ -191,6 +191,8 @@ export function Home() {
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
           <span className="flex flex-wrap gap-x-4 gap-y-2">
             <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
+            <a href="/privacy" className="hover:text-ink">Privacy</a>
+            <a href="/terms" className="hover:text-ink">Terms</a>
             <a href="https://x.com/getintus" rel="noopener noreferrer" className="hover:text-ink">@getintus on X</a>
             <a href="https://www.instagram.com/getintus" rel="noopener noreferrer" className="hover:text-ink">Instagram</a>
           </span>

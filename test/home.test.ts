@@ -17,3 +17,9 @@ test('the create-account link opens the create-account tab and nothing else does
   assert.equal(initialModeFor('?mode=signin'), 'sign-in');
   assert.equal(initialModeFor('?mode=other'), 'sign-in');
 });
+
+test('the privacy policy and terms have their own addresses', () => {
+  assert.equal(routeFor('/privacy'), 'privacy');
+  assert.equal(routeFor('/terms/'), 'terms');
+  assert.equal(routeFor('/privacy-policy'), 'home');
+});

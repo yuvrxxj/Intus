@@ -3,6 +3,10 @@ import { deleteReading } from '../../db/biomarkerReadings.ts';
 import { CriticalBanner } from './CriticalBanner.tsx';
 import { LabEntryForm } from './LabEntryForm.tsx';
 import { ReportUpload } from '../reports/ReportUpload.tsx';
+import { DoctorReport } from '../export/DoctorReport.tsx';
+import { doctorReport, type DoctorReport as Report } from '../export/doctor.ts';
+import { fetchMedications } from '../../db/medications.ts';
+import { useProfile } from '../profile/ProfileContext.tsx';
 import { MarkerTable } from './MarkerTable.tsx';
 import { formatDay } from './format.ts';
 import type { Point } from './model.ts';
@@ -18,6 +22,8 @@ export function Bloodwork({ today, notify }: Props) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [printing, setPrinting] = useState<Report | null>(null);
+  const { profile } = useProfile();
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -52,6 +58,15 @@ export function Bloodwork({ today, notify }: Props) {
     setUploading(false);
     notify(note ?? `${count} result${count === 1 ? '' : 's'} saved from the report`, note !== null);
     reload();
+  }
+
+  async function printForDoctor() {
+    try {
+      const supplements = await fetchMedications();
+      setPrinting(doctorReport({ groups: view.groups, supplements, name: profile?.name ?? null, age: profile?.age ?? null, sex: profile?.sex ?? null, today }));
+    } catch (e) {
+      notify(`Error: ${e instanceof Error ? e.message : String(e)}`, true);
+    }
   }
 
   const upload = (
@@ -101,6 +116,7 @@ export function Bloodwork({ today, notify }: Props) {
   return (
     <div>
       <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
+      {printing && <DoctorReport report={printing} onDone={() => setPrinting(null)} />}
 
       {uploading ? (
         upload
@@ -110,6 +126,7 @@ export function Bloodwork({ today, notify }: Props) {
         <div className="btn-row" style={{ marginTop: 0, marginBottom: 14 }}>
           <button type="button" className="btn btn-primary" onClick={() => setUploading(true)}>Upload a report</button>
           <button type="button" className="btn" onClick={() => setAdding(true)}>+ Add a result</button>
+          <button type="button" className="btn" onClick={printForDoctor}>Print for your doctor</button>
         </div>
       )}
 

@@ -11,6 +11,7 @@ import { isPhone, readDeviceHints } from './features/mobile/device.ts';
 import { Onboarding } from './features/onboarding/Onboarding.tsx';
 import { needsOnboarding } from './features/onboarding/model.ts';
 import { HabitsProvider } from './features/habits/HabitsContext.tsx';
+import { Legal } from './features/legal/Legal.tsx';
 import { ProfileProvider, useProfile } from './features/profile/ProfileContext.tsx';
 
 function Loading() {
@@ -33,6 +34,8 @@ function WebApp() {
   useEffect(() => {
     if (session.status === 'signed_in' && route === 'signin') navigate(HOME_PATH, true);
   }, [session.status, route]);
+  // the privacy policy and terms are readable by anyone, signed in or not
+  if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
   return (
     <>
       {session.status === 'loading' && <Loading />}
@@ -51,7 +54,9 @@ function WebApp() {
 
 /** The homepage is public on every device. On a phone everything past it is the holding screen, because the app is not there yet. */
 function PhoneSite() {
-  return useRoute() === 'home' ? <Home /> : <ComingSoon />;
+  const route = useRoute();
+  if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
+  return route === 'home' ? <Home /> : <ComingSoon />;
 }
 
 // decided once at load: the phone apps are not out yet, so a phone browser gets the homepage and a holding screen instead of the app
