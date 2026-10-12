@@ -3,7 +3,7 @@
 /** Every table that holds a person's own rows (supabase/README.md, "Personal"). A new one must be added here. */
 export const PERSONAL_TABLES = [
   'profile', 'daily_logs', 'habits', 'biomarker_readings', 'medications', 'sleep_sessions', 'cardio_metrics',
-  'screening_history', 'cycle_days', 'profile_conditions', 'photo_log', 'body_composition', 'meals', 'diagnoses', 'devices', 'action_items', 'supplement_catalog',
+  'screening_history', 'cycle_days', 'profile_conditions', 'workouts', 'workout_sets', 'photo_log', 'body_composition', 'meals', 'diagnoses', 'devices', 'action_items', 'supplement_catalog',
 ] as const;
 
 export type PersonalTable = (typeof PERSONAL_TABLES)[number];

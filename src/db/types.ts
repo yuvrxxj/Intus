@@ -748,6 +748,35 @@ export type Database = {
         };
         Relationships: [];
       };
+      workouts: {
+        Row: { created_at: string; ended_at: string | null; id: string; notes: string | null; started_at: string; user_id: string };
+        Insert: { created_at?: string; ended_at?: string | null; id?: string; notes?: string | null; started_at?: string; user_id?: string };
+        Update: { created_at?: string; ended_at?: string | null; id?: string; notes?: string | null; started_at?: string; user_id?: string };
+        Relationships: [];
+      };
+      workout_sets: {
+        Row: {
+          created_at: string; exercise: string; id: string; notes: string | null; position: number; reps: number;
+          rpe: number | null; user_id: string; weight_kg: number | null; workout_id: string;
+        };
+        Insert: {
+          created_at?: string; exercise: string; id: string; notes?: string | null; position?: number; reps: number;
+          rpe?: number | null; user_id?: string; weight_kg?: number | null; workout_id: string;
+        };
+        Update: {
+          created_at?: string; exercise?: string; id?: string; notes?: string | null; position?: number; reps?: number;
+          rpe?: number | null; user_id?: string; weight_kg?: number | null; workout_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'workout_sets_own_workout';
+            columns: ['workout_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'workouts';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {

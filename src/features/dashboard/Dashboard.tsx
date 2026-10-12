@@ -19,6 +19,7 @@ import { BodyPanel } from '../organs/BodyPanel.tsx';
 import { Overview } from '../today/Overview.tsx';
 import { programmeWeek, weightStats } from '../today/stats.ts';
 import { Today } from '../today/Today.tsx';
+import { Strength } from '../strength/Strength.tsx';
 import { useRecentLogs } from '../today/useRecentLogs.ts';
 import { useToday } from '../today/useToday.ts';
 import { MobileNav, SectionRail } from './Navigation.tsx';
@@ -98,6 +99,7 @@ export function Dashboard() {
 
         <Section meta={meta('today')}>
           <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} recentWeights={recentWeights} />
+          <Strength notify={notify} />
         </Section>
 
         <Section meta={meta('progress')}>

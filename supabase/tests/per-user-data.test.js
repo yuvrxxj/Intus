@@ -31,6 +31,8 @@ const PRINTED_RANGES = migration('20261012000200_printed_ranges');
 const LAB_REPORTS = migration('20261012000300_lab_reports');
 // Cycle days, profile conditions and the reproductive hormone markers.
 const CYCLE = migration('20261012000400_cycle_and_conditions');
+// Workouts and sets.
+const STRENGTH = migration('20261012000500_strength');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1417,4 +1419,45 @@ test('deleting an account removes its cycle days and conditions; hormones are ad
   assert.equal(await count(db, `select count(*) as n from public.cycle_days where user_id = '${OTHER}'`), 0);
   assert.equal(await count(db, `select count(*) as n from public.profile_conditions where user_id = '${OTHER}'`), 0);
   assert.ok((await personalTables(db)).includes('cycle_days'));
+});
+
+// ── strength ─────────────────────────────────────────────────────────────────────────────────────
+
+async function worldWithStrength() {
+  const db = await worldWithAccounts();
+  await runScript(db, STRENGTH);
+  await runScript(db, STRENGTH);
+  return db;
+}
+const SET_A = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+test('a set is saved by its device-made id, and resending it changes nothing', async () => {
+  const db = await worldWithStrength();
+  await asUser(db, OTHER, async () => {
+    const w = (await db.query(`insert into public.workouts default values returning id`)).rows[0].id;
+    const send = () => db.query(
+      `insert into public.workout_sets (id, workout_id, exercise, weight_kg, reps, rpe) values ($1, $2, 'Squat', 100, 5, 8.5)
+       on conflict (id) do update set exercise = excluded.exercise, weight_kg = excluded.weight_kg, reps = excluded.reps, rpe = excluded.rpe`, [SET_A, w]);
+    await send();
+    await send();
+    assert.equal(await rowsOf(db, 'workout_sets'), 1);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps, rpe) values (gen_random_uuid(), $1, 'Squat', 5, 8.3)`, [w]), /check/);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, '', 5)`, [w]), /check/);
+  });
+});
+
+test('workouts and sets are private, a set cannot join someone else\'s workout, and deleting cascades', async () => {
+  const db = await worldWithStrength();
+  const theirs = await asUser(db, THIRD, async () => (await db.query(`insert into public.workouts default values returning id`)).rows[0].id);
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'workouts'), 0);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, 'Squat', 5)`, [theirs]), /foreign key|violates/);
+    const w = (await db.query(`insert into public.workouts default values returning id`)).rows[0].id;
+    await db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, 'Bench', 8)`, [w]);
+    await db.query(`delete from public.workouts where id = $1`, [w]);
+    assert.equal(await rowsOf(db, 'workout_sets'), 0);
+  });
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.workouts'), /permission denied/); });
+  await asUser(db, THIRD, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, `select count(*) as n from public.workouts where user_id = '${THIRD}'`), 0);
 });
