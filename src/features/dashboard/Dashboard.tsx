@@ -15,6 +15,7 @@ import { profileLine } from '../profile/profileLine.ts';
 import { Screening } from '../screening/Screening.tsx';
 import { Sleep } from '../sleep/Sleep.tsx';
 import { Supplements } from '../supplements/Supplements.tsx';
+import { BodyPanel } from '../organs/BodyPanel.tsx';
 import { Overview } from '../today/Overview.tsx';
 import { programmeWeek, weightStats } from '../today/stats.ts';
 import { Today } from '../today/Today.tsx';
@@ -92,6 +93,8 @@ export function Dashboard() {
         <div className="pb-16">
           <Overview stats={stats} draft={form.draft} today={today} onJump={jump} />
         </div>
+
+        <BodyPanel entries={form.draft.habits} today={today} />
 
         <Section meta={meta('today')}>
           <Today form={form} today={today} notify={notify} lastWeightDate={stats.latest ? shortDate(stats.latest.date) : null} recentWeights={recentWeights} />

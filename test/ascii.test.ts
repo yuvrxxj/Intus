@@ -4,7 +4,10 @@ import { renderAscii, type AsciiShape } from '../src/components/ui/ascii-engine.
 import { SECTION_ART, SECTION_ART_COLS, SECTION_ART_ROWS } from '../src/features/dashboard/sectionArt.ts';
 import { SECTIONS } from '../src/features/dashboard/sections.ts';
 
-const ALL: AsciiShape[] = ['heart', 'drop', 'capsule', 'ring', 'sphere', 'bars', 'cross', 'stack', 'coin', 'cube', 'moon'];
+const ALL: AsciiShape[] = [
+  'heart', 'drop', 'capsule', 'ring', 'sphere', 'bars', 'cross', 'stack', 'coin', 'cube', 'moon',
+  'lungs', 'liver', 'kidneys', 'brain', 'bone', 'thyroid', 'pancreas',
+];
 
 test('every section has a drawing, and no two neighbouring sections share one', () => {
   assert.deepEqual(Object.keys(SECTION_ART).sort(), SECTIONS.map((s) => s.id).sort());

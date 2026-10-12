@@ -3,12 +3,15 @@
  * surface picks a character from a density ramp. The shape turns slowly, renders at a low frame rate, pauses when
  * off screen or in a background tab, and holds one still frame when the person prefers reduced motion.
  */
-export type AsciiShape = 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube' | 'moon';
+export type AsciiShape =
+  | 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube' | 'moon'
+  // organs, for the body panel
+  | 'lungs' | 'liver' | 'kidneys' | 'brain' | 'bone' | 'thyroid' | 'pancreas';
 
 type Vec = [number, number, number];
 
 const RAMP = ' .:-=+*#%@';
-export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop']);
+export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop', 'lungs', 'liver', 'kidneys', 'thyroid', 'pancreas']);
 export const FPS = 18;
 
 const len = (x: number, y: number, z: number) => Math.sqrt(x * x + y * y + z * z);
@@ -40,6 +43,21 @@ function smin(a: number, b: number, k: number): number {
 }
 
 
+/** Approximate signed distance to an ellipsoid with radii a, b, c (Inigo Quilez's bound, good enough to march). */
+function ellipsoid(x: number, y: number, z: number, a: number, b: number, c: number): number {
+  const k0 = len(x / a, y / b, z / c);
+  const k1 = len(x / (a * a), y / (b * b), z / (c * c));
+  return k1 === 0 ? -Math.min(a, b, c) : (k0 * (k0 - 1)) / k1;
+}
+
+/** Distance to the segment from a to b, less radius r: a capsule between two points. */
+function segment(x: number, y: number, z: number, a: Vec, b: Vec, r: number): number {
+  const bax = b[0] - a[0], bay = b[1] - a[1], baz = b[2] - a[2];
+  const pax = x - a[0], pay = y - a[1], paz = z - a[2];
+  const h = clamp((pax * bax + pay * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1);
+  return len(pax - bax * h, pay - bay * h, paz - baz * h) - r;
+}
+
 /** Signed distance to a box with half sizes bx, by, bz, corners rounded by r. */
 function box(x: number, y: number, z: number, bx: number, by: number, bz: number, r = 0): number {
   const dx = Math.abs(x) - bx + r, dy = Math.abs(y) - by + r, dz = Math.abs(z) - bz + r;
@@ -53,7 +71,7 @@ function disc(x: number, y: number, z: number, rad: number, h: number, r = 0): n
 }
 
 /** Shapes seen a little from above, so a flat ring or coin does not turn edge-on to a line. */
-const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2 };
+const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2, bone: 0.35, brain: 0.15 };
 
 const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   heart: (x, y, z) => {
@@ -97,6 +115,42 @@ const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
     const wz = Math.abs(z) - 0.16;
     return Math.min(Math.max(crescent, wz), 0) + Math.hypot(Math.max(crescent, 0), Math.max(wz, 0)) - 0.04;
   },
+  // two lobes and the windpipe that branches into them
+  lungs: (x, y, z) => {
+    const lobes = Math.min(ellipsoid(x + 0.4, y + 0.12, z, 0.34, 0.62, 0.28), ellipsoid(x - 0.4, y + 0.12, z, 0.34, 0.62, 0.28));
+    const pipe = Math.min(
+      segment(x, y, z, [0, 0.88, 0], [0, 0.42, 0], 0.08),
+      segment(x, y, z, [0, 0.42, 0], [-0.3, 0.3, 0], 0.07),
+      segment(x, y, z, [0, 0.42, 0], [0.3, 0.3, 0], 0.07),
+    );
+    return smin(lobes, pipe, 0.06);
+  },
+  // a wedge: the large right lobe (on the left as you look) tapering into the small left lobe
+  liver: (x, y, z) => smin(ellipsoid(x + 0.22, y - 0.05, z, 0.62, 0.42, 0.32), ellipsoid(x - 0.5, y - 0.14, z, 0.42, 0.22, 0.22), 0.18),
+  // two beans, each with its notch facing the middle
+  kidneys: (x, y, z) => {
+    const bean = (bx: number, side: number) => Math.max(ellipsoid(x - bx, y, z, 0.27, 0.5, 0.24), -(len(x - bx - side * 0.3, y, z) - 0.16));
+    return Math.min(bean(-0.46, 1), bean(0.46, -1));
+  },
+  // two hemispheres pressed together, so the fissure between them shows as it turns
+  brain: (x, y, z) => smin(ellipsoid(x + 0.33, y, z, 0.42, 0.55, 0.7), ellipsoid(x - 0.33, y, z, 0.42, 0.55, 0.7), 0.06),
+  // a long bone: a shaft with two knuckles at each end
+  bone: (x, y, z) => {
+    const shaft = segment(x, y, z, [-0.55, 0, 0], [0.55, 0, 0], 0.12);
+    const ends = Math.min(len(x + 0.66, y - 0.15, z) - 0.19, len(x + 0.66, y + 0.15, z) - 0.19, len(x - 0.66, y - 0.15, z) - 0.19, len(x - 0.66, y + 0.15, z) - 0.19);
+    return smin(shaft, ends, 0.1);
+  },
+  // a butterfly: two lobes joined low by a narrow bridge
+  thyroid: (x, y, z) => {
+    const c = Math.cos(0.32), s = Math.sin(0.32);
+    const lobe = (side: number) => {
+      const lx = x - side * 0.4, ly = y - 0.05;
+      return ellipsoid(c * lx + side * s * ly, -side * s * lx + c * ly, z, 0.24, 0.55, 0.2);
+    };
+    return smin(Math.min(lobe(-1), lobe(1)), segment(x, y, z, [-0.3, -0.25, 0], [0.3, -0.25, 0], 0.11), 0.08);
+  },
+  // long and tapering, head to tail
+  pancreas: (x, y, z) => roundCone(x, y, z, [-0.62, -0.12, 0], [0.7, 0.18, 0], 0.3, 0.1),
 };
 
 /** One frame as text. t is seconds; the shape turns about the vertical axis with a slight nod. */
