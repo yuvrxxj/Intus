@@ -6,3 +6,6 @@ dist
 !.env.example
 *.local
 .DS_Store
+# the real lab-panel exercise files hold health data; only the templates belong here
+docs/product/lab-panels/*.csv
+!docs/product/lab-panels/*.template.csv

@@ -1,0 +1,4 @@
+panel_id,marker,value,unit,lab_ref_low,lab_ref_high,sex,age_band,test_date,context
+EXAMPLE-01,LDL cholesterol,3.9,mmol/L,,3.0,F,30-39,2026-05-14,"invented example row, delete before use"
+EXAMPLE-01,Ferritin,18,ug/L,30,400,F,30-39,2026-05-14,"invented example row, delete before use"
+EXAMPLE-02,HbA1c,5.9,%,4.0,5.6,M,50-59,2026-02-03,"invented example row; on metformin"

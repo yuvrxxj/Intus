@@ -1,0 +1,3 @@
+panel_id,clinician_mark,clinician_notes,adds_beyond_lab_flags,narrator_facts_match,narrator_invented_numbers,narrator_unsafe,units_ok,narration_cost_cents,scored_by,scored_on
+EXAMPLE-01,would_say,"invented example row, delete before use",yes,yes,0,no,yes,0.6,Initials,2026-05-20
+EXAMPLE-02,true_but_useless,"invented example row, delete before use",no,yes,0,no,yes,0.5,Initials,2026-05-20
