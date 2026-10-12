@@ -20,7 +20,7 @@ interface Props {
 type Stage =
   | { kind: 'pick' }
   | { kind: 'reading'; message: string }
-  | { kind: 'review'; fileName: string; ocrPages: number; dateUnsure: boolean }
+  | { kind: 'review'; fileName: string; ocrPages: number; skippedPages: number; dateUnsure: boolean }
   | { kind: 'failed'; message: string };
 
 /**
@@ -67,7 +67,7 @@ export function ReportUpload({ biomarkers, readings, today, onSaved, onCancel }:
       setRowErrors({});
       setMessage(null);
       setFile(file);
-      setStage({ kind: 'review', fileName: file.name, ocrPages: extracted.ocrPages, dateUnsure: parsed.dateUnsure });
+      setStage({ kind: 'review', fileName: file.name, ocrPages: extracted.ocrPages, skippedPages: extracted.skippedPages, dateUnsure: parsed.dateUnsure });
     } catch (e) {
       setStage({ kind: 'failed', message: `The report could not be read: ${e instanceof Error ? e.message : String(e)}` });
     }
@@ -126,7 +126,8 @@ export function ReportUpload({ biomarkers, readings, today, onSaved, onCancel }:
         <>
           <div className="rp-head">
             <div className="fld-hint">
-              {stage.fileName}: {rows.length} line{rows.length === 1 ? '' : 's'} read{stage.ocrPages > 0 ? `, ${stage.ocrPages} page${stage.ocrPages === 1 ? '' : 's'} from a scan, so check the numbers closely` : ''}.
+              {stage.fileName}: {rows.length} line{rows.length === 1 ? '' : 's'} read{stage.ocrPages > 0 ? `, ${stage.ocrPages} page${stage.ocrPages === 1 ? '' : 's'} from a scan, so check the numbers closely` : ''}.{' '}
+              {stage.skippedPages > 0 ? ` ${stage.skippedPages} page${stage.skippedPages === 1 ? ' was' : 's were'} too many to read here, so results on ${stage.skippedPages === 1 ? 'it' : 'them'} are missing. Add those by hand.` : ''}{' '}
               Check each ticked row against the report. Unticked rows say why.
             </div>
             <div className="fld">
