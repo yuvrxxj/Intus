@@ -39,6 +39,8 @@ again. Do not add new files to it.
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Files | the `lab-reports` Storage bucket | The same rules for uploaded lab report PDFs: own folder only, `<uuid>.pdf`, at most 10 MiB each and 200 per person, no update policy. `delete_my_account()` refuses while any remain, and the app removes them first |
 | Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
+| Internal | `ai_settings` | Unreachable through the API: row level security with no policy. Edited in the Supabase dashboard |
+| Internal | `ai_usage` | A person can read their own rows. Only the Edge Function writes them |
 
 One log per person per day (`unique (user_id, log_date)`), one profile per person, and one row of heart readings per person, day and source (`unique (user_id, measured_at, source)` on `cardio_metrics`, so the phone sync can upsert).
 
@@ -79,6 +81,12 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261009000100_delete_my_account.sql` | Adds `public.delete_my_account()`, which the Account section's Delete button calls |
 | `20261009000200_photo_check_ins.sql` | Adds the private `check-in-photos` bucket and its policies, the `storage_path` and `pose` columns on `photo_log`, and makes `delete_my_account()` refuse while photos remain |
 | `20261011000100_sleep_sessions.sql` | Adds `sleep_sessions`: one row per sleep per source (what you entered, or later what Apple or Google health reported), as instants with the UTC offset at each end, optional stage segments and your own estimates. Checks on length, plausibility and one record per source id; per-person policies; no derived value is stored |
+| `20261012000100_cardio_source.sql` | Adds a `source` to heart readings and makes (person, day, source) the key, so the phone sync can upsert |
+| `20261012000200_printed_ranges.sql` | Adds `ref_low` and `ref_high` to each result (the range printed on the report) and `ref_sex` to markers whose usual range is for one sex only |
+| `20261012000300_lab_reports.sql` | Adds the private `lab-reports` bucket, and makes `delete_my_account()` refuse while uploaded reports remain |
+| `20261012000400_cycle_and_conditions.sql` | Adds `cycle_days`, `profile_conditions` and the six reproductive hormone markers |
+| `20261012000500_strength.sql` | Adds `workouts` and `workout_sets`, saved by an id made on the device so a resend changes nothing |
+| `20261012000600_ai_reading.sql` | Adds `ai_settings` (off by default: the limits, provider, model and prices), `ai_usage` (one row per AI call, never any report text) and the three functions that enforce the limits |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
@@ -88,6 +96,62 @@ is missing.
 
 To undo the per-user change, put the owner-only policies back by re-running `20261001000200_owner_lockdown.sql`.
 The `user_id` columns can stay, since the owner-only rule ignores them.
+
+## AI reading of lab reports
+
+Optional, off until you switch it on. The upload screen reads a report on the device first. With AI reading on, a
+person can also choose to send the text of their report, with their name, ID numbers and contact details removed on
+their device, to an AI model that lists the results. Every number the model returns is checked against the text that
+was sent: a number that is not printed there is dropped. The person still checks every row before anything is saved.
+
+**What runs where.** `src/features/reports/redact.ts` removes identity on the device. The Edge Function
+`supabase/functions/read-report` checks the person is signed in, asks the database for permission, calls the provider
+and returns the rows. It never logs report text. `src/features/reports/aiRows.ts` checks the rows against the text.
+
+**The limits live in one row, `public.ai_settings`**, and nothing else decides whether a call happens. Change them in
+the dashboard (Table Editor, `ai_settings`, edit the row), with no deploy:
+
+| Column | Starts at | What it does |
+| --- | --- | --- |
+| `enabled` | `false` | The switch. Off means nobody can use AI reading, and the upload screen does not offer it |
+| `per_user_daily` | 3 | Calls one person can make in a UTC day. A failed call counts, so failures cannot be used to hammer it |
+| `global_daily` | 30 | Calls everyone together can make in a UTC day |
+| `monthly_budget_usd` | 5 | Stops calls when this month's estimated spend, plus the worst case of the next call, would pass it |
+| `provider`, `model`, `json_mode` | `gemini`, `gemini-flash-lite-latest`, `schema` | Who reads the report. `openrouter` takes names like `vendor/model:free`. `object` asks for any JSON, for models that cannot do `schema` |
+| `input_usd_per_million`, `output_usd_per_million` | 0.50, 3.00 | The model's real prices. The starting values are high on purpose, so the estimate errs towards stopping. A free model is 0 and 0 |
+| `max_input_chars`, `max_output_tokens` | 200000, 16384 | The largest report accepted, and the most the model may write back |
+
+`ai_take_slot` takes a lock, checks all of this, and reserves the worst-case cost of a call before the provider is
+asked, so two calls at once cannot both squeeze under a limit. `ai_finish` replaces the reserve with the real cost
+from the provider's token counts. A call that fails before the provider answers costs 0 and still counts as a call.
+
+**Limits outside the app, which are the ones that hold even if something here is wrong:**
+
+- Gemini: in Google AI Studio, the project's Spend page has a monthly spend cap. Set it at or below your monthly
+  credit. Google says it takes about ten minutes to act, so it is a backstop and not a hard stop. A Cloud Billing
+  budget sends alerts at the amounts you pick but does not stop anything. Keep the API key restricted to the Gemini API.
+- OpenRouter: it is prepaid. With no credit bought, a paid model fails and nothing can be charged, and free models
+  cost nothing. Leave auto top-up off. Free models are limited to 20 requests a minute and, without a credit purchase,
+  50 a day for the whole account, so keep `global_daily` at 50 or below.
+
+**Privacy.** On OpenRouter every request carries `provider: { data_collection: "deny", require_parameters: true }`,
+set in code (`buildChatRequest`), not in the settings. A model with no host that promises not to keep or train on
+prompts fails with "no endpoints", and nothing is sent. On Gemini, make sure Cloud Billing is on for the key's project:
+the free tier lets Google use prompts to improve its products and human reviewers may read them, which is not
+acceptable for health data.
+
+**Deploying the function.** It is not part of the migration workflow. Deploy `supabase/functions/read-report` with the
+Supabase CLI (`supabase functions deploy read-report --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`) or the
+Supabase connector in a Claude Code session, and keep the repository and the deployed copy the same. It checks the
+caller's login itself, which is why the gateway check is off: projects on the newer signing keys reject their own
+tokens there. Secrets (Edge Functions, Secrets in the dashboard, never in chat): `GEMINI_API_KEY` and/or
+`OPENROUTER_API_KEY`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by Supabase.
+
+**Trying models before choosing one.** `node scripts/report-text.ts report.pdf --name FirstName > report.txt` prepares
+the redacted text. `node scripts/ai-eval.ts --list-free` lists OpenRouter's free models. `node scripts/ai-eval.ts
+report.txt --models a,b` (with `OPENROUTER_API_KEY` set) runs each one through the same request the function sends and
+scores it against the on-device reader: results reproduced, wrong numbers dropped, extra results found, tokens and
+time. A model with no private host is reported as unusable. Keep real reports and their text out of the repository.
 
 ## Sign-in
 

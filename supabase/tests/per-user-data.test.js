@@ -33,6 +33,8 @@ const LAB_REPORTS = migration('20261012000300_lab_reports');
 const CYCLE = migration('20261012000400_cycle_and_conditions');
 // Workouts and sets.
 const STRENGTH = migration('20261012000500_strength');
+// AI reading of lab reports: the settings, the usage log and the functions that enforce every limit.
+const AI_READING = migration('20261012000600_ai_reading');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1460,4 +1462,151 @@ test('workouts and sets are private, a set cannot join someone else\'s workout, 
   await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.workouts'), /permission denied/); });
   await asUser(db, THIRD, () => db.exec('select public.delete_my_account()'));
   assert.equal(await count(db, `select count(*) as n from public.workouts where user_id = '${THIRD}'`), 0);
+});
+
+// ── AI reading: the limits that keep the bill at zero ────────────────────────────────────────────
+
+async function worldWithAi() {
+  const db = await worldWithAccounts();
+  await runScript(db, AI_READING);
+  await runScript(db, AI_READING);
+  return db;
+}
+const asService = (db, fn) => as(db, 'service_role', null, fn);
+const take = async (db, user, chars = 10000) => asService(db, async () => (await db.query('select public.ai_take_slot($1, $2) as r', [user, chars])).rows[0].r);
+const turnOn = (db, set = '') => db.exec(`update public.ai_settings set enabled = true${set ? ', ' + set : ''}`);
+
+test('it is off until the owner turns it on, and applying the migration twice leaves one row of settings', async () => {
+  const db = await worldWithAi();
+  assert.equal(await count(db, 'select count(*) as n from public.ai_settings'), 1);
+  const s = (await db.query('select enabled, per_user_daily, global_daily, monthly_budget_usd::float as budget from public.ai_settings')).rows[0];
+  assert.deepEqual(s, { enabled: false, per_user_daily: 3, global_daily: 30, budget: 5 });
+  assert.deepEqual(await take(db, OTHER), { ok: false, reason: 'off' });
+  assert.equal(await count(db, 'select count(*) as n from public.ai_usage'), 0);
+  await db.exec('update public.ai_settings set per_user_daily = 3'); // still one row, still a boolean key
+  await assert.rejects(() => db.exec('insert into public.ai_settings (id) values (false)'), /check|duplicate/);
+});
+
+test('each person gets their daily number, a day later they get it again, and one person using theirs does not stop another', async () => {
+  const db = await worldWithAi();
+  await turnOn(db);
+  for (let i = 1; i <= 3; i++) {
+    const r = await take(db, OTHER);
+    assert.equal(r.ok, true);
+    assert.equal(r.used_today, i);
+    assert.equal(r.per_user_daily, 3);
+    assert.deepEqual([r.provider, r.model, r.json_mode], ['gemini', 'gemini-flash-lite-latest', 'schema']);
+  }
+  assert.deepEqual(await take(db, OTHER), { ok: false, reason: 'user_limit' });
+  assert.equal((await take(db, THIRD)).ok, true);
+  // yesterday's calls do not count against today
+  await db.exec(`update public.ai_usage set created_at = now() - interval '2 days' where user_id = '${OTHER}'`);
+  assert.equal((await take(db, OTHER)).ok, true);
+});
+
+test('everyone together stop at the daily number for all, and a smaller number can be set at any time', async () => {
+  const db = await worldWithAi();
+  await turnOn(db, 'global_daily = 2');
+  assert.equal((await take(db, OTHER)).ok, true);
+  assert.equal((await take(db, THIRD)).ok, true);
+  assert.deepEqual(await take(db, OWNER), { ok: false, reason: 'busy' });
+  await db.exec('update public.ai_settings set per_user_daily = 0, global_daily = 30');
+  assert.deepEqual(await take(db, OWNER), { ok: false, reason: 'user_limit' });
+});
+
+test('the month\'s money is a limit too: a call is refused if its worst case would go over, and real costs replace the reserve', async () => {
+  const db = await worldWithAi();
+  // 10,000 characters in and a 16,384-token output allowance at the default prices reserve about 0.0517 dollars
+  await turnOn(db, 'monthly_budget_usd = 0.13, per_user_daily = 50, global_daily = 50');
+  const first = await take(db, OTHER);
+  assert.equal(first.ok, true);
+  const reserved = Number((await db.query('select cost_usd::float as c from public.ai_usage')).rows[0].c);
+  assert.ok(reserved > 0.05 && reserved < 0.06, String(reserved));
+  assert.equal((await take(db, THIRD)).ok, true);
+  assert.deepEqual(await take(db, OWNER), { ok: false, reason: 'budget' });
+  // the first call really used 8,000 tokens in and 3,000 out: 0.004 + 0.009 = 0.013, so there is room again
+  await asService(db, () => db.query('select public.ai_finish($1, 8000, 3000, true)', [first.usage_id]));
+  const row = (await db.query('select status, cost_usd::float as c, input_tokens, output_tokens from public.ai_usage where id = $1', [first.usage_id])).rows[0];
+  assert.deepEqual(row, { status: 'done', c: 0.013, input_tokens: 8000, output_tokens: 3000 });
+  assert.equal((await take(db, OWNER)).ok, true);
+});
+
+test('a call that fails before Gemini answers costs nothing, and finishing twice changes nothing', async () => {
+  const db = await worldWithAi();
+  await turnOn(db);
+  const r = await take(db, OTHER);
+  await asService(db, () => db.query('select public.ai_finish($1, null, null, false)', [r.usage_id]));
+  await asService(db, () => db.query('select public.ai_finish($1, 999999, 999999, true)', [r.usage_id]));
+  const row = (await db.query('select status, cost_usd::float as c from public.ai_usage')).rows[0];
+  assert.deepEqual(row, { status: 'failed', c: 0 });
+  // a failed call still counts towards the person's number for the day, so failures cannot be used to hammer it
+  assert.equal(await count(db, `select count(*) as n from public.ai_usage where user_id = '${OTHER}'`), 1);
+});
+
+test('a report bigger than the limit on size is refused before anything is reserved', async () => {
+  const db = await worldWithAi();
+  await turnOn(db);
+  assert.deepEqual(await take(db, OTHER, 200001), { ok: false, reason: 'too_big' });
+  assert.deepEqual(await take(db, OTHER, 0), { ok: false, reason: 'too_big' });
+  assert.deepEqual(await take(db, null, 10), { ok: false, reason: 'too_big' });
+  assert.equal(await count(db, 'select count(*) as n from public.ai_usage'), 0);
+});
+
+test('status says whether a person can use it and how many they have left, from the same numbers', async () => {
+  const db = await worldWithAi();
+  const status = async (id) => asService(db, async () => (await db.query('select public.ai_status($1) as r', [id])).rows[0].r);
+  assert.deepEqual(await status(OTHER), { available: false, provider: null, used_today: 0, per_user_daily: 0 });
+  await turnOn(db, 'per_user_daily = 2');
+  assert.deepEqual(await status(OTHER), { available: true, provider: 'gemini', used_today: 0, per_user_daily: 2 });
+  await take(db, OTHER);
+  await take(db, OTHER);
+  assert.deepEqual(await status(OTHER), { available: false, provider: 'gemini', used_today: 2, per_user_daily: 2 });
+  assert.equal((await status(THIRD)).available, true);
+});
+
+test('nobody signed in or signed out can read the settings or run the functions, and a person only reads their own usage', async () => {
+  const db = await worldWithAi();
+  await turnOn(db);
+  await take(db, OTHER);
+  await take(db, THIRD);
+  for (const run of [(f) => asUser(db, OTHER, f), (f) => asAnon(db, f)]) {
+    await run(async () => {
+      await assert.rejects(() => db.exec('select * from public.ai_settings'), /permission denied/);
+      await assert.rejects(() => db.exec('update public.ai_settings set per_user_daily = 1000'), /permission denied/);
+      await assert.rejects(() => db.query('select public.ai_take_slot($1, 10)', [OTHER]), /permission denied/);
+      await assert.rejects(() => db.query('select public.ai_finish(gen_random_uuid(), 1, 1, true)'), /permission denied/);
+      await assert.rejects(() => db.query('select public.ai_status($1)', [OTHER]), /permission denied/);
+    });
+  }
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'ai_usage'), 1);
+    await assert.rejects(() => db.exec(`insert into public.ai_usage (user_id) values ('${OTHER}')`), /permission denied/);
+    await assert.rejects(() => db.exec('update public.ai_usage set cost_usd = 0'), /permission denied/);
+    await assert.rejects(() => db.exec('delete from public.ai_usage'), /permission denied/);
+  });
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.ai_usage'), /permission denied/); });
+});
+
+test('settings reject nonsense, and deleting an account removes its usage rows and nobody else\'s', async () => {
+  const db = await worldWithAi();
+  for (const bad of ['per_user_daily = -1', 'monthly_budget_usd = -1', "model = ''", "provider = 'openai'", "json_mode = 'text'", 'max_input_chars = 10', 'max_output_tokens = 10']) {
+    await assert.rejects(() => db.exec(`update public.ai_settings set ${bad}`), /check/, bad);
+  }
+  await turnOn(db);
+  await take(db, OTHER);
+  await take(db, THIRD);
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, `select count(*) as n from public.ai_usage where user_id = '${OTHER}'`), 0);
+  assert.equal(await count(db, `select count(*) as n from public.ai_usage where user_id = '${THIRD}'`), 1);
+  assert.ok((await personalTables(db)).includes('ai_usage'));
+});
+
+test('a free model on OpenRouter costs nothing, so only the daily numbers stand between it and the free allowance', async () => {
+  const db = await worldWithAi();
+  await turnOn(db, "provider = 'openrouter', model = 'vendor/some-model:free', json_mode = 'object', input_usd_per_million = 0, output_usd_per_million = 0, monthly_budget_usd = 0, global_daily = 2, per_user_daily = 5");
+  const first = await take(db, OTHER);
+  assert.deepEqual([first.ok, first.provider, first.model, first.json_mode], [true, 'openrouter', 'vendor/some-model:free', 'object']);
+  assert.equal(Number((await db.query('select cost_usd::float as c from public.ai_usage')).rows[0].c), 0);
+  assert.equal((await take(db, THIRD)).ok, true);
+  assert.deepEqual(await take(db, OWNER), { ok: false, reason: 'busy' });
 });
