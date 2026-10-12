@@ -12,28 +12,26 @@ What it reads, and where it goes:
 
 It never writes to Apple Health. The mapping is plain TypeScript in `src/sync/mapping.ts`, tested from the web repo (`test/mobile.sync.test.ts`). The first sync reads 90 days; later ones re-read the last 3 days whole, so late watch data is caught and a day's average is never taken from half a day.
 
-## Run it
+## Run it in the iOS Simulator (free)
 
-HealthKit does not work in Expo Go or in the simulator's Health store without data, so this needs a development build on a real iPhone.
+No paid Apple account is needed for this. HealthKit works in the Simulator: open the Health app there and add samples by hand (Browse, Sleep or Heart, Add Data), then sync from Intus.
+
+**On a Mac with Xcode** (free from the App Store):
 
 ```
 cd mobile
 npm install
 npm run typecheck
-npx eas login                 # an Expo account (free)
-npm run build:dev             # cloud build of the development client; install it on the phone from the link
-npm start                     # then open the development build on the phone
+npm run ios                   # builds the development client, installs it in the Simulator and starts Metro
 ```
 
-On a Mac with Xcode you can build locally instead: `npm run ios` (it generates the `ios/` folder, which is not committed).
+`npm run ios` generates the `ios/` folder (not committed) and runs the HealthKit config plugin, so the permission strings and the HealthKit capability are set up for you.
 
-## TestFlight
+**Without a Mac:** a free Expo account can build the Simulator app in the cloud (`npx eas login`, then `npm run build:simulator`). It produces an `.app` you can drag onto a Simulator on any Mac, so you still need a Mac to run it, but not Xcode's build setup.
 
-Needs the Apple Developer Program (99 USD a year), which is the one cost here.
+## A real iPhone and TestFlight (later, paid)
 
-1. Join the program, then in App Store Connect create the app with the bundle id `fit.intus.app` (change it in `app.json` first if you want a different one).
-2. `npm run build:testflight`. EAS creates the certificates and the provisioning profile with the HealthKit capability, builds, and submits to TestFlight.
-3. App Store review for a HealthKit app wants a privacy policy URL and a clear purpose string (the permission text is in `app.json`). INT-66 covers the policy.
+Installing on a real iPhone for more than a week, and TestFlight, need the Apple Developer Program (99 USD a year). Not now. When it is time: create the app in App Store Connect with the bundle id `fit.intus.app`, then `npm run build:testflight`. EAS makes the certificates and the provisioning profile with the HealthKit capability, builds, and submits. App Store review for a HealthKit app wants a privacy policy URL (INT-66) and a clear purpose string (in `app.json`).
 
 ## Settings
 

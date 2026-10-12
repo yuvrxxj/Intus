@@ -23,7 +23,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "build:dev": "eas build --profile development --platform ios",
-    "build:testflight": "eas build --profile production --platform ios --auto-submit"
+    "build:testflight": "eas build --profile production --platform ios --auto-submit",
+    "build:simulator": "eas build --profile simulator --platform ios"
   },
   "private": true
 }

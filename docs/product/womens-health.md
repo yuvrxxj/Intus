@@ -1,6 +1,6 @@
 # Women's health module: plan
 
-Written 12 Oct 2026 for INT-16. This is a plan, not a build. Nothing here changes the app or the database yet.
+Written 12 Oct 2026 for INT-16, revised the same day after review: **the range printed on the person's own report is the range Intus uses.** Every lab prints its range next to each result, already chosen for the person's sex and age (and for the cycle phase, where the lab does that), so Intus does not need its own clinical range tables and no specialist has to write them.
 
 The rule from the Sprint 2 plan holds throughout: **ranges and flags are data in code and in the database; a model may explain a result but never decides one.** No phase below adds a score, a diagnosis, a fertility prediction or a dose.
 
@@ -13,12 +13,12 @@ The rule from the Sprint 2 plan holds throughout: **ranges and flags are data in
 
 ## Phases
 
-### Phase 0: stop flagging women against male ranges (small, do first)
+### Phase 0: the printed range on every result (do first; with INT-63)
 
-1. Add sex-specific reference ranges as rows, not columns (data model below), starting with the markers where the difference is large and well documented: haemoglobin, ferritin, serum iron, creatinine, uric acid, HDL, testosterone, and the full blood count once it is added.
-2. Until a marker has a range for the person's sex, show the result with **no range flag** rather than the other sex's flag. "No range for you yet" is honest; a wrong "low" is not.
-3. Hide male-only items for women (the prostate screening rows already are; check the knowledge base and any copy that assumes a male reader).
-4. One line in the Bloodwork section's empty space, not a warning: "Cycle-aware ranges are coming." (The README's rule of one footer disclaimer stays; this is a feature note, not a caveat.)
+1. Store the lab's printed range with each result (`biomarker_readings.ref_low`, `ref_high`). The PDF upload (INT-76) reads it off the report; manual entry has two optional fields for it.
+2. A result is flagged against its own printed range when it has one. That is the person's own lab, sex, age and, where the lab does it, phase.
+3. Without a printed range, the marker's stored default range is used only when it applies to the person. Defaults that are sex-specific are marked as such (`biomarkers.ref_sex`), and a woman's result is never flagged against a male default: it shows "no range" instead. A wrong "low" is worse than none.
+4. Hide male-only items for women (the prostate screening rows already are).
 
 ### Phase 1: cycle tracking
 
@@ -35,8 +35,8 @@ The rule from the Sprint 2 plan holds throughout: **ranges and flags are data in
 ### Phase 3: conditions and life stages on the profile
 
 - Optional profile fields: PCOS, endometriosis, thyroid condition, hormonal contraception (type), pregnant (with due date), breastfeeding, perimenopause, menopause (with date of last period).
-- **PCOS and PCOD:** "PCOD" is a term used mainly in India for what international guidelines call PCOS or polycystic ovarian morphology. Store one condition, PCOS, and show the label the person chose. Ask a specialist whether to keep both labels (open question 3).
-- **Pregnancy pauses interpretation.** Many ranges change in pregnancy (haemoglobin, thyroid, creatinine, ALP and more). While "pregnant" is set, results are shown and charted with the lab's printed range only, and no Intus range flag, critical-value banner change, or trend label is shown for markers that pregnancy moves. A pregnancy-specific range set can come later, from a specialist.
+- **PCOS and PCOD:** "PCOD" is a term used mainly in India for what international guidelines call PCOS or polycystic ovarian morphology. Store one condition, PCOS, and show the label the person chose. Decided: one condition, with the person's own label.
+- **Pregnancy pauses interpretation.** Many ranges change in pregnancy (haemoglobin, thyroid, creatinine, ALP and more). While "pregnant" is set, results are shown and charted with the lab's printed range only, and no Intus range flag, critical-value banner change, or trend label is shown for markers that pregnancy moves. Labs that print pregnancy or trimester ranges on the report are used as printed.
 - **Menopause:** after menopause, hormone ranges switch to the postmenopausal set, and the cycle card switches off.
 - Conditions change nothing on their own except which range set applies and which items are shown. They never produce advice.
 
@@ -44,24 +44,20 @@ The rule from the Sprint 2 plan holds throughout: **ranges and flags are data in
 
 Only if the ten-panel lab exercise (`lab-panel-exercise.md`) passes. A small model may write a plain-language explanation from facts code has already computed: the result, the range used, the phase it was taken in, and which range set applied. The same rubric applies: no diagnosis, no dose, no reassurance about an out-of-range result.
 
-## Data model (proposal, for review; no migration yet)
+## Data model
 
-Ranges move from columns on `biomarkers` to a table of rows, so a marker can carry as many ranges as it needs and each says where it came from.
+Phase 0 (built with INT-63 and INT-104):
 
 ```sql
-create table public.reference_ranges (
-  id uuid primary key default gen_random_uuid(),
-  biomarker_id uuid not null references public.biomarkers (id),
-  sex text check (sex in ('female', 'male')),            -- null: applies to both
-  age_min int, age_max int,                              -- null: no bound
-  phase text check (phase in ('menstrual', 'follicular', 'ovulatory', 'luteal', 'postmenopausal', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3')),
-  ref_low numeric, ref_high numeric,
-  unit text not null,                                    -- must equal the marker's unit; a check enforces it
-  source text not null,                                  -- citation: lab, guideline or specialist, with year
-  reviewed_by text, reviewed_on date                     -- who signed it off; null means not yet reviewed
-);
--- readable by everyone signed in, written only by migrations, like biomarkers
+alter table public.biomarker_readings add column ref_low numeric, add column ref_high numeric;  -- as printed on the report
+alter table public.biomarkers add column ref_sex text check (ref_sex in ('female', 'male'));       -- the default range is for one sex only
+```
 
+Range picking is pure code (`src/lib/ranges.ts`, with tests): the reading's printed range if it has one; otherwise the marker's default if it applies to the person's sex; otherwise no range and no flag.
+
+Later phases:
+
+```sql
 alter table public.biomarker_readings add column cycle_day int check (cycle_day between 1 and 60);
 alter table public.biomarker_readings add column cycle_phase text check (cycle_phase in ('menstrual', 'follicular', 'ovulatory', 'luteal', 'not_cycling', 'unknown'));
 
@@ -83,21 +79,11 @@ create table public.profile_conditions (                 -- per user
 );
 ```
 
-**Choosing a range** (pure code in `src/lib/ranges.ts`, with tests): take the marker's ranges; keep those whose sex, age and phase match the person and the reading (a null field matches anything); prefer the most specific (phase over sex over none); if two equally specific rows match, that is a data error and the screen stops, the same as any other untrusted threshold today. If nothing matches, the result has no range flag. The existing `ref_low` and `ref_high` columns stay as the fallback during the move and are dropped afterwards (with INT-67's cleanup).
+**Critical limits stay out of this.** Critical values are a separate safety rule (`src/lib/safety.ts`) and do not change with the printed range, phase or condition.
 
-**Critical limits stay out of this.** Critical values are a separate safety rule (`src/lib/safety.ts`) and are not changed by phase or condition without a specialist's sign-off.
+## Where a lab prints one range for the whole cycle
 
-## The range content: what has to come from a specialist
-
-Phase-specific and pregnancy ranges are clinical content. They are not written here, on purpose. Each row in `reference_ranges` needs a source and a reviewer before it ships.
-
-Where to get them, in order of preference:
-
-1. A women's health specialist (gynaecologist or reproductive endocrinologist) who reviews and signs the table.
-2. The printed reference intervals of a large accredited lab in the launch market (for example the lab's own directory of services), cited by lab and year. Ranges differ between assays and labs, which is why the app should always show the lab's printed range next to its own.
-3. Published guideline or consensus tables (for example the international evidence-based PCOS guideline for the PCOS-related markers, and trimester-specific thyroid ranges from the relevant thyroid association), cited by edition.
-
-Deliverable for the specialist: a CSV with the columns of `reference_ranges` and one row per marker, sex, age band and phase, which a migration then loads. The same review loop as the clinician scoring sheet in `lab-panels/`.
+Some labs print a single range for oestradiol, progesterone, LH or FSH, or several ranges side by side (one per phase) that a text reader cannot pick between. Then Intus shows the printed text and the value, and adds no flag of its own unless the person's recorded phase matches one of the printed phase ranges. Intus never writes phase ranges itself.
 
 ## Safety rules for the module
 
@@ -106,14 +92,13 @@ Deliverable for the specialist: a CSV with the columns of `reference_ranges` and
 - Pregnancy pauses Intus flags on the markers it moves; the lab's own range is still shown.
 - Cycle data is health data in every market, and sensitive in several jurisdictions (reproductive health data in some US states in particular). It stays in the person's own rows, is deleted with the account (`delete_my_account()` must be extended to the new tables, with a test), is included in data export, and is never used for anything but the person's own screens.
 
-## Open questions for you
+## Decisions (12 Oct 2026)
 
-1. **Order:** Phase 0 is really INT-63. Do Phase 0 and INT-63 together as one piece of work?
-2. **Specialist:** who reviews the range table? The lab-panel exercise also needs a clinician (INT-30); one reviewer for both would save time.
-3. **PCOS and PCOD:** one condition with the person's own label, or two separate options?
-4. **Markets:** cycle tracking and reproductive data carry different legal weight in the US, EU, UK and India. This depends on INT-36 (target markets and regulatory advice).
-5. **Contraception:** record only whether it is hormonal and suppresses cycling (affects which ranges apply), or the type as well?
+1. Phase 0 is done together with INT-63.
+2. No specialist: the printed range on the report is the source. INT-105 is cancelled.
+3. PCOS and PCOD: one condition, the person's own label.
+4. Markets and contraception detail follow INT-36.
 
 ## Follow-up issues
 
-In Linear, project Intus: INT-104 (phase 0, with INT-63), INT-105 (the specialist range table), INT-106 (phase 1, cycle tracking), INT-107 (phases 2 and 3).
+In Linear, project Intus: INT-104 (phase 0, with INT-63), INT-76 (PDF upload, which reads the printed ranges), INT-106 (phase 1, cycle tracking), INT-107 (phases 2 and 3).
