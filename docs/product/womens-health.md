@@ -116,4 +116,4 @@ Deliverable for the specialist: a CSV with the columns of `reference_ranges` and
 
 ## Follow-up issues
 
-Created in Linear under the Intus project when this plan is approved: Phase 0 (with INT-63), Phase 1 cycle tracking, Phase 2 phase on blood draws and hormone markers, Phase 3 conditions and pregnancy pause, and the specialist range table.
+In Linear, project Intus: INT-104 (phase 0, with INT-63), INT-105 (the specialist range table), INT-106 (phase 1, cycle tracking), INT-107 (phases 2 and 3).
