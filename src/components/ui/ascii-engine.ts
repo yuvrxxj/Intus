@@ -11,7 +11,7 @@ export type AsciiShape =
 type Vec = [number, number, number];
 
 const RAMP = ' .:-=+*#%@';
-export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop', 'lungs', 'liver', 'kidneys', 'thyroid', 'pancreas']);
+export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop', 'lungs', 'liver', 'kidneys', 'thyroid', 'pancreas', 'bone']);
 export const FPS = 18;
 
 const len = (x: number, y: number, z: number) => Math.sqrt(x * x + y * y + z * z);
@@ -71,7 +71,7 @@ function disc(x: number, y: number, z: number, rad: number, h: number, r = 0): n
 }
 
 /** Shapes seen a little from above, so a flat ring or coin does not turn edge-on to a line. */
-const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2, bone: 0.35, brain: 0.15 };
+const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2, bone: 0.1, brain: 0.15 };
 
 const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   heart: (x, y, z) => {
@@ -136,8 +136,8 @@ const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   brain: (x, y, z) => smin(ellipsoid(x + 0.33, y, z, 0.42, 0.55, 0.7), ellipsoid(x - 0.33, y, z, 0.42, 0.55, 0.7), 0.06),
   // a long bone: a shaft with two knuckles at each end
   bone: (x, y, z) => {
-    const shaft = segment(x, y, z, [-0.55, 0, 0], [0.55, 0, 0], 0.12);
-    const ends = Math.min(len(x + 0.66, y - 0.15, z) - 0.19, len(x + 0.66, y + 0.15, z) - 0.19, len(x - 0.66, y - 0.15, z) - 0.19, len(x - 0.66, y + 0.15, z) - 0.19);
+    const shaft = segment(x, y, z, [-0.55, 0, 0], [0.55, 0, 0], 0.15);
+    const ends = Math.min(len(x + 0.66, y - 0.15, z) - 0.21, len(x + 0.66, y + 0.15, z) - 0.21, len(x - 0.66, y - 0.15, z) - 0.21, len(x - 0.66, y + 0.15, z) - 0.21);
     return smin(shaft, ends, 0.1);
   },
   // a butterfly: two lobes joined low by a narrow bridge

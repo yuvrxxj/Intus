@@ -19,7 +19,7 @@ function Organ({ organ }: { organ: OrganState }) {
   const state = level === null ? 'Nothing logged yet' : LEVEL_LABEL[level];
   return (
     <div className={`card organ organ-${level ?? 'none'}`}>
-      <AsciiArt shape={def.shape} cols={26} rows={13} still label={`${def.label}, ${state.toLowerCase()}`} className="organ-art text-[7px]" />
+      <AsciiArt shape={def.shape} cols={30} rows={15} still label={`${def.label}, ${state.toLowerCase()}`} className="organ-art text-[9px]" />
       <div className="organ-name">{def.label}</div>
       <div className="organ-state">{state}</div>
       {signals.length > 0 && (
@@ -61,13 +61,18 @@ export function BodyPanel({ entries, today }: { entries: Entries; today: string 
     sleep: sleepInput,
   }), [blood, habits, entries, sleepInput]);
 
+  return <BodyPanelView organs={organs} bloodFailed={blood.status === 'error'} />;
+}
+
+/** The panel itself, given its data, so it can be drawn with made-up data and checked by eye. */
+export function BodyPanelView({ organs, bloodFailed }: { organs: readonly OrganState[]; bloodFailed: boolean }) {
   return (
     <section aria-labelledby="body-title" className="pb-16">
       <div className="on-dots mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="body-title" className="font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">Your body today</h2>
         <span className="text-xs text-ink-3">Fades as a reading moves away from your goal or the lab's range</span>
       </div>
-      {blood.status === 'error' && <div className="notice notice-warn" role="note">Blood results could not be loaded, so the organs below show only what you logged.</div>}
+      {bloodFailed && <div className="notice notice-warn" role="note">Blood results could not be loaded, so the organs below show only what you logged.</div>}
       <div className="organ-grid">
         {organs.map((o) => <Organ key={o.def.id} organ={o} />)}
       </div>
