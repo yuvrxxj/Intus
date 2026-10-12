@@ -10,7 +10,7 @@ export const ALIASES: Readonly<Record<string, readonly string[]>> = {
   albumin: ['serum albumin', 'albumin, serum'],
   creatinine: ['serum creatinine', 'creatinine, serum', 'creat'],
   egfr: ['estimated gfr', 'e-gfr', 'gfr, estimated', 'estimated glomerular filtration rate'],
-  blood_urea: ['urea', 'blood urea', 'serum urea', 'bun', 'blood urea nitrogen', 'urea nitrogen'],
+  blood_urea: ['urea', 'blood urea', 'serum urea'],
   uric_acid: ['serum uric acid', 'uric acid, serum', 'urate'],
   hemoglobin: ['haemoglobin', 'hemoglobin', 'hb', 'hgb', 'haemoglobin (hb)', 'hemoglobin (hb)'],
   ferritin: ['serum ferritin', 'ferritin, serum'],
@@ -32,7 +32,7 @@ export const ALIASES: Readonly<Record<string, readonly string[]>> = {
   total_cholesterol: ['cholesterol', 'total cholesterol', 'cholesterol, total', 'serum cholesterol'],
   triglycerides: ['triglyceride', 'triglycerides', 'tg', 'serum triglycerides'],
   crp: ['hs-crp', 'hscrp', 'high sensitivity crp', 'c-reactive protein, high sensitivity', 'hs crp'],
-  nt_probnp: ['nt-probnp', 'nt pro bnp', 'n-terminal pro b-type natriuretic peptide'],
+  nt_probnp: ['nt-probnp', 'nt pro bnp', 'nt-pro bnp', 'nt-pro-bnp', 'n-terminal pro b-type natriuretic peptide'],
   wbc_tlc: ['wbc', 'tlc', 'total leucocyte count', 'total leukocyte count', 'white blood cell count', 'white blood cells', 'wbc count'],
   platelets: ['platelet count', 'platelets', 'plt'],
   potassium: ['serum potassium', 'potassium, serum', 'k+'],
@@ -51,4 +51,21 @@ export const ALIASES: Readonly<Record<string, readonly string[]>> = {
  * or a glucose that is not fasting ("Glucose, post prandial").
  */
 export const NOT_THE_MARKER =
-  /\b(ratio|non[\s-]?hdl|vldl|index|corpuscular|mchc?|binding capacity|tibc|uibc|post[\s-]?prandial|pp|random|urine|urinary)\b|\/hdl|hdl\//i;
+  /\b(ratio|non[\s-]?hdl|vldl|index|corpuscular|mchc?|binding capacity|tibc|uibc|post[\s-]?prandial|pp|random|urine|urinary|average)\b|\/hdl|hdl\//i;
+
+/**
+ * Words that make a line a table of what the numbers mean, not a result ("VITAMIN D STATUS", "Category C", "Goal of
+ * therapy"), so it is never read as a marker.
+ */
+export const NOT_A_RESULT = /\b(status|deficien\w*|insufficien\w*|sufficien\w*|category|targets?|goals?|interpretation|reference group)\b/i;
+
+/**
+ * Per marker, for names that are the same words as another test. A line has to pass: `not` must not match it, and
+ * `only`, when given, must. Free testosterone is not total testosterone, urea nitrogen (BUN) is not urea, and a plain
+ * C-reactive protein is a different test from the high-sensitivity one Intus stores.
+ */
+export const LINE_RULES: Readonly<Record<string, { not?: RegExp; only?: RegExp }>> = {
+  testosterone: { not: /\b(free|bioavailable)\b/i },
+  blood_urea: { not: /\b(nitrogen|bun)\b/i },
+  crp: { only: /\bhs[\s-]?crp\b|high[\s-]?sensitiv/i },
+};

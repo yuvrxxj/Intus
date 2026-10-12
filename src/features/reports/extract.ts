@@ -8,7 +8,10 @@ import { linesFromPieces, type TextPiece } from './lines.ts';
 const SCANNED_BELOW = 40;
 /** Large enough to read small print, small enough to stay quick on a phone. */
 const OCR_SCALE = 2.5;
-export const MAX_PAGES = 12;
+/** Reading text is quick, so long reports (a full health check runs to 40 pages) are read whole. */
+export const MAX_PAGES = 80;
+/** Reading a scan is slow, so only this many scanned pages are read. */
+export const MAX_OCR_PAGES = 12;
 export const MAX_BYTES = 15 * 1024 * 1024;
 
 export interface Extracted {
@@ -16,6 +19,8 @@ export interface Extracted {
   pages: number;
   /** pages that had to be read with OCR, which makes more mistakes than reading the text */
   ocrPages: number;
+  /** pages left unread: past the page limit, or scans past the scan limit */
+  skippedPages: number;
 }
 
 export async function extractLines(file: File, onProgress?: (message: string) => void): Promise<Extracted> {
@@ -31,6 +36,7 @@ export async function extractLines(file: File, onProgress?: (message: string) =>
     const pages = Math.min(doc.numPages, MAX_PAGES);
     const lines: string[] = [];
     let ocrPages = 0;
+    let skippedPages = doc.numPages - pages;
     let ocr: Awaited<ReturnType<typeof import('tesseract.js').createWorker>> | null = null;
     try {
       for (let n = 1; n <= pages; n++) {
@@ -45,6 +51,10 @@ export async function extractLines(file: File, onProgress?: (message: string) =>
         const text = pieces.reduce((n, p) => n + p.str.trim().length, 0);
         if (text >= SCANNED_BELOW) {
           lines.push(...linesFromPieces(pieces));
+          continue;
+        }
+        if (ocrPages >= MAX_OCR_PAGES) {
+          skippedPages++;
           continue;
         }
         onProgress?.(`Page ${n} is a scan. Reading it on this device; the first scan loads the reader, about 15 MB`);
@@ -66,7 +76,7 @@ export async function extractLines(file: File, onProgress?: (message: string) =>
     } finally {
       await ocr?.terminate();
     }
-    return { lines, pages, ocrPages };
+    return { lines, pages, ocrPages, skippedPages };
   } finally {
     await doc.loadingTask.destroy();
   }

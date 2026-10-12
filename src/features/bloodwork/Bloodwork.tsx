@@ -166,7 +166,10 @@ export function Bloodwork({ today, notify }: Props) {
         ))}
 
         {view.noResults.length > 0 && (
-          <div className="bw-none">No results yet for: {view.noResults.join(', ')}.</div>
+          <details className="bw-none">
+            <summary>{view.noResults.length} marker{view.noResults.length === 1 ? '' : 's'} with no results yet</summary>
+            <div>{view.noResults.join(', ')}.</div>
+          </details>
         )}
       </div>
     </div>
