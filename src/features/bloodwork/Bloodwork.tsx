@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { deleteReading } from '../../db/biomarkerReadings.ts';
 import { CriticalBanner } from './CriticalBanner.tsx';
 import { LabEntryForm } from './LabEntryForm.tsx';
+import { ReportUpload } from '../reports/ReportUpload.tsx';
 import { MarkerTable } from './MarkerTable.tsx';
 import { formatDay } from './format.ts';
 import type { Point } from './model.ts';
@@ -16,6 +17,7 @@ export function Bloodwork({ today, notify }: Props) {
   const state = useBloodwork();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -46,6 +48,16 @@ export function Bloodwork({ today, notify }: Props) {
     reload();
   }
 
+  function uploaded(count: number, note: string | null) {
+    setUploading(false);
+    notify(note ?? `${count} result${count === 1 ? '' : 's'} saved from the report`, note !== null);
+    reload();
+  }
+
+  const upload = (
+    <ReportUpload biomarkers={data.biomarkers} readings={data.readings} today={today} onSaved={uploaded} onCancel={() => setUploading(false)} />
+  );
+
   async function removeReading(point: Point, markerName: string) {
     if (!window.confirm(`Delete the ${markerName} result from ${formatDay(point.measured_at)}? This cannot be undone.`)) return;
     try {
@@ -73,9 +85,10 @@ export function Bloodwork({ today, notify }: Props) {
         <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
         <div className="card sec">
           <div className="ct"><span className="dot dot-red" />Bloodwork</div>
-          <div className="empty">No results yet. Add your first one below, straight from your lab report.</div>
+          <div className="empty">No results yet. Upload a lab report PDF, or type your first result in below.</div>
+          {!uploading && <div className="btn-row"><button type="button" className="btn btn-primary" onClick={() => setUploading(true)}>Upload a report</button></div>}
         </div>
-        {form}
+        {uploading ? upload : form}
       </div>
     );
   }
@@ -89,11 +102,14 @@ export function Bloodwork({ today, notify }: Props) {
     <div>
       <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
 
-      {adding ? (
+      {uploading ? (
+        upload
+      ) : adding ? (
         form
       ) : (
         <div className="btn-row" style={{ marginTop: 0, marginBottom: 14 }}>
-          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add a result</button>
+          <button type="button" className="btn btn-primary" onClick={() => setUploading(true)}>Upload a report</button>
+          <button type="button" className="btn" onClick={() => setAdding(true)}>+ Add a result</button>
         </div>
       )}
 

@@ -9,6 +9,7 @@ import {
 } from './format.ts';
 import { Sparkline } from './Sparkline.tsx';
 import { MANUAL_SOURCE } from './entry.ts';
+import { REPORT_SOURCE } from '../reports/review.ts';
 
 const VALUE_CLASS: Record<RangeStatus, string> = {
   in_range: 'bv-ok',
@@ -110,8 +111,9 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
                   <div className="bt-notes">
                   {isDemo(p) ? <span className="tag tag-demo" title="This row was loaded as demo data, not from a lab report.">demo data</span> : null}
                   {p.source === MANUAL_SOURCE ? <span className="tag tag-warn" title="You typed this result in. It was not imported from a lab.">entered by you</span> : null}
+                  {p.source === REPORT_SOURCE ? <span className="tag tag-warn" title="Read from a report you uploaded, and checked by you before saving.">from your report</span> : null}
                   {p.notes ? <span>{p.notes}</span> : null}
-                  {p.source === MANUAL_SOURCE && onDeleteReading
+                  {(p.source === MANUAL_SOURCE || p.source === REPORT_SOURCE) && onDeleteReading
                     ? <button type="button" className="btn btn-danger" onClick={() => onDeleteReading(p, biomarker.name)}>Delete</button>
                     : null}
                   </div>
@@ -130,7 +132,7 @@ interface Props {
   rows: readonly MarkerRow[];
   expanded: ReadonlySet<string>;
   onToggle: (biomarkerId: string) => void;
-  /** offered only for results the person typed in themselves */
+  /** offered only for results the person added themselves, typed in or from an uploaded report */
   onDeleteReading?: (point: Point, markerName: string) => void;
 }
 

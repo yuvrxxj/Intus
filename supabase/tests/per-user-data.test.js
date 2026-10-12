@@ -27,6 +27,8 @@ const SLEEP = migration('20261011000100_sleep_sessions');
 const CARDIO_SOURCE = migration('20261012000100_cardio_source');
 // The printed range on each result, and which default ranges are for one sex only.
 const PRINTED_RANGES = migration('20261012000200_printed_ranges');
+// Uploaded lab reports: a private bucket, and account deletion that waits until they are removed.
+const LAB_REPORTS = migration('20261012000300_lab_reports');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1303,4 +1305,65 @@ test('a result can carry the range printed on the report, never the wrong way ro
   await asUser(db, OTHER, async () => {
     await assert.rejects(() => db.exec(`update public.biomarkers set ref_sex = null`), /permission denied/);
   });
+});
+
+// ── uploaded lab reports ────────────────────────────────────────────────────────────────────────
+
+const REPORTS = 'lab-reports';
+const reportName = (owner, n = 1, ext = 'pdf') => `${owner}/00000000-0000-4000-8000-${String(n).padStart(12, '0')}.${ext}`;
+const addReport = (db, name) => db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [REPORTS, name]);
+const reportCount = (db, where = 'true') => count(db, `select count(*) as n from storage.objects where bucket_id = '${REPORTS}' and ${where}`);
+
+async function worldWithReports() {
+  const db = await worldWithAccounts();
+  await runScript(db, LAB_REPORTS);
+  return db;
+}
+
+test('reports are private: own folder only, PDFs named by uuid, nothing for the signed-out role, and the migration runs twice', async () => {
+  const db = await worldWithReports();
+  await runScript(db, LAB_REPORTS);
+  const bucket = (await db.query(`select public, file_size_limit, allowed_mime_types from storage.buckets where id = '${REPORTS}'`)).rows[0];
+  assert.deepEqual([bucket.public, Number(bucket.file_size_limit), bucket.allowed_mime_types], [false, 10485760, ['application/pdf']]);
+  await asUser(db, OTHER, async () => {
+    await addReport(db, reportName(OTHER));
+    await assert.rejects(() => addReport(db, reportName(THIRD)), RLS, 'into someone else\'s folder');
+    await assert.rejects(() => addReport(db, reportName(OTHER, 2, 'jpg')), RLS, 'not a pdf name');
+    await assert.rejects(() => addReport(db, `${OTHER}/report.pdf`), RLS, 'not a uuid name');
+  });
+  await asUser(db, THIRD, async () => {
+    assert.equal(await reportCount(db), 0, 'another person sees none');
+    assert.equal((await db.query(`delete from storage.objects where bucket_id = '${REPORTS}' returning id`)).rows.length, 0);
+  });
+  await asAnon(db, async () => { await assert.rejects(() => addReport(db, reportName(OTHER, 3)), RLS); });
+  assert.equal(await reportCount(db), 1);
+});
+
+test('a person can keep at most 200 reports', async () => {
+  const db = await worldWithReports();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into storage.objects (bucket_id, name) select '${REPORTS}', '${OTHER}/' || gen_random_uuid() || '.pdf' from generate_series(1, 200)`);
+    await assert.rejects(() => addReport(db, reportName(OTHER, 201)), RLS);
+  });
+});
+
+test('an account with reports cannot be deleted until they are removed; photos are still checked too', async () => {
+  const db = await worldWithReports();
+  await asUser(db, OTHER, () => addReport(db, reportName(OTHER)));
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /remove your reports first/);
+  });
+  assert.equal(await userExists(db, OTHER), true);
+  await asUser(db, THIRD, () => addObject(db, photoName(THIRD)));
+  await asUser(db, THIRD, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /remove your photos first/);
+  });
+  await asUser(db, OTHER, async () => {
+    await db.exec(`delete from storage.objects where name like '${OTHER}/%'`);
+    await db.exec('select public.delete_my_account()');
+  });
+  assert.equal(await userExists(db, OTHER), false);
+  const config = (await db.query(`select prosecdef, proconfig from pg_proc where oid = 'public.delete_my_account()'::regprocedure`)).rows[0];
+  assert.equal(config.prosecdef, true);
+  assert.ok(config.proconfig.includes('row_security=off'));
 });
