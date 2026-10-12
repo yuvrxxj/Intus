@@ -39,7 +39,7 @@ again. Do not add new files to it.
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
 
-One log per person per day (`unique (user_id, log_date)`), and one profile per person.
+One log per person per day (`unique (user_id, log_date)`), one profile per person, and one row of heart readings per person, day and source (`unique (user_id, measured_at, source)` on `cardio_metrics`, so the phone sync can upsert).
 
 ## Deleting an account
 

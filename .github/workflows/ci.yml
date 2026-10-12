@@ -27,3 +27,22 @@ jobs:
         run: npm test
       - name: Database tests (migrations on a throwaway Postgres)
         run: npm run test:db
+
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+      - name: Typecheck the iPhone app
+        run: npm run typecheck

@@ -202,6 +202,7 @@ export type Database = {
           measured_at: string;
           recovery_hr: number | null;
           resting_hr: number | null;
+          source: string;
           user_id: string;
           vo2_max: number | null;
         };
@@ -213,6 +214,7 @@ export type Database = {
           measured_at: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          source?: string;
           user_id?: string;
           vo2_max?: number | null;
         };
@@ -224,6 +226,7 @@ export type Database = {
           measured_at?: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          source?: string;
           user_id?: string;
           vo2_max?: number | null;
         };

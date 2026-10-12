@@ -23,6 +23,8 @@ const ONBOARDING = migration('20261005000500_onboarding_answers');
 const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
 // Sleep: one row per stretch of sleep a source reported, per person from the start.
 const SLEEP = migration('20261011000100_sleep_sessions');
+// Heart readings get a source, and one row per person, day and source, so a phone sync can upsert.
+const CARDIO_SOURCE = migration('20261012000100_cardio_source');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1240,4 +1242,43 @@ test('sleep has row level security with exactly one policy, for signed-in people
   const policies = (await db.query(`select policyname, roles, cmd from pg_policies where schemaname = 'public' and tablename = 'sleep_sessions'`)).rows;
   assert.deepEqual(policies.map((p) => [p.policyname, p.cmd, [...p.roles]]), [['own_rows', 'ALL', ['authenticated']]]);
   assert.equal((await db.query(`select has_table_privilege('anon', 'public.sleep_sessions', 'select') as ok`)).rows[0].ok, false);
+});
+
+// ── heart readings from a phone ─────────────────────────────────────────────────────────────────
+
+async function worldWithCardioSource() {
+  const db = await worldWithAccounts();
+  await runScript(db, CARDIO_SOURCE);
+  return db;
+}
+
+const upsertCardio = (db, day, hrv, source = 'healthkit') => db.query(
+  `insert into public.cardio_metrics (measured_at, hrv_ms, resting_hr, source) values ($1, $2, 55, $3)
+   on conflict (user_id, measured_at, source) do update set hrv_ms = excluded.hrv_ms`, [day, hrv, source]);
+
+test('existing heart readings become manual, and the migration can be applied twice', async () => {
+  const db = await worldWithAccounts();
+  const before = await rowsOf(db, 'cardio_metrics');
+  await runScript(db, CARDIO_SOURCE);
+  await runScript(db, CARDIO_SOURCE);
+  assert.equal(await rowsOf(db, 'cardio_metrics'), before);
+  assert.equal(await count(db, `select count(*) as n from public.cardio_metrics where source <> 'manual'`), 0);
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.cardio_metrics'::regclass and conname = 'cardio_metrics_day_source_key'`), 1);
+});
+
+test('the sync upsert keeps one row per person, day and source, and two sources stay two rows', async () => {
+  const db = await worldWithCardioSource();
+  await asUser(db, OTHER, async () => {
+    await upsertCardio(db, '2026-10-01', 40);
+    await upsertCardio(db, '2026-10-01', 44);
+    await upsertCardio(db, '2026-10-01', 50, 'health_connect');
+    await assert.rejects(() => upsertCardio(db, '2026-10-02', 40, 'fitbit'), /cardio_metrics_source_check/);
+    const rows = (await db.query(`select source, hrv_ms from public.cardio_metrics where measured_at = '2026-10-01' order by source`)).rows;
+    assert.deepEqual(rows.map((r) => [r.source, r.hrv_ms]), [['health_connect', 50], ['healthkit', 44]]);
+  });
+  // another person syncing the same day is not a clash, and cannot see the first person's rows
+  await asUser(db, THIRD, async () => {
+    await upsertCardio(db, '2026-10-01', 61);
+    assert.equal(await count(db, `select count(*) as n from public.cardio_metrics where measured_at = '2026-10-01'`), 1);
+  });
 });
