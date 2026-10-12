@@ -1,9 +1,12 @@
+import type { CardioLog } from '../../db/cardio.ts';
 import type { EffectLog } from '../../db/dailyLogs.ts';
+import type { Habit } from '../../db/habits.ts';
 import type { Medication } from '../../db/medications.ts';
 import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { dayNumber, isoDay } from '../../lib/dates.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
 import { rangeStatus, type RangeStatus } from '../bloodwork/model.ts';
+import { isKind, parseEntries } from '../habits/model.ts';
 
 /*
  * "What changed since I started" for a supplement. This is two periods set side by side, not an experiment:
@@ -28,6 +31,9 @@ export const SE_MULTIPLE = 2;
 /** A blood result drawn sooner than this after starting says little about the supplement. */
 export const BLOOD_MIN_DAYS_ON = 14;
 
+/** Where a row comes from, so the screen can group them: the daily log's own numbers, your habits, or heart readings. */
+export type MetricGroup = 'log' | 'habit' | 'cardio';
+
 export interface MetricDef {
   id: string;
   label: string;
@@ -44,6 +50,43 @@ export const METRICS: readonly MetricDef[] = [
   { id: 'protein', label: 'Protein', unit: 'g', read: (l) => l.protein },
   { id: 'water', label: 'Water', unit: 'ml', read: (l) => l.water_ml },
   { id: 'active', label: 'Active calories', unit: 'kcal', read: (l) => l.active_kcal },
+];
+
+/** A yes or no habit is shown as the share of logged days it was a yes, so its average reads as a percentage. */
+export const YES_NO_UNIT = '% of days';
+
+/**
+ * One row per habit, archived ones included (a habit dropped since the start can still have a before period).
+ * A yes or no habit counts a yes as 100 and a no as 0; a count or an amount is its number. A day with no entry for
+ * the habit is not a logged day for it, which is not the same as a no or a zero.
+ */
+export function habitMetrics(habits: readonly Pick<Habit, 'id' | 'name' | 'kind' | 'unit'>[]): MetricDef[] {
+  return habits
+    .filter((h) => isKind(h.kind))
+    .map((h) => ({
+      id: `habit:${h.id}`,
+      label: h.name,
+      unit: h.kind === 'yesno' ? YES_NO_UNIT : (h.unit ?? '').trim(),
+      read: (log: EffectLog) => {
+        const entry = parseEntries(log.habits)[h.id];
+        if (entry === undefined) return null;
+        if (h.kind === 'yesno') return entry.value === true || (typeof entry.value === 'number' && entry.value > 0) ? 100 : 0;
+        return typeof entry.value === 'number' ? entry.value : null;
+      },
+    }));
+}
+
+interface CardioDef {
+  id: string;
+  label: string;
+  unit: string;
+  read: (row: CardioLog) => unknown;
+}
+
+/** Heart readings from a watch or a phone. Several readings on one day are averaged into that day's value. */
+export const CARDIO_METRICS: readonly CardioDef[] = [
+  { id: 'hrv', label: 'Heart rate variability', unit: 'ms', read: (r) => r.hrv_ms },
+  { id: 'resting_hr', label: 'Resting heart rate', unit: 'bpm', read: (r) => r.resting_hr },
 ];
 
 export interface Windows {
@@ -113,27 +156,38 @@ export interface MetricEffect extends Comparison {
   id: string;
   label: string;
   unit: string;
+  group: MetricGroup;
   before: WindowStats;
   after: WindowStats;
 }
 
+/** What else, beyond the daily log's own numbers, the comparison can read. Both are optional. */
+export interface EffectExtras {
+  habits?: readonly Pick<Habit, 'id' | 'name' | 'kind' | 'unit'>[];
+  cardio?: readonly CardioLog[];
+}
+
 /** One value per calendar day. A day whose value is missing or not a finite number is left out rather than read as zero. */
-function seriesOf(logs: readonly EffectLog[], metric: MetricDef): Map<number, number> {
-  const out = new Map<number, number>();
-  for (const log of logs) {
+function seriesOf<T>(rows: readonly T[], dateOf: (row: T) => string, read: (row: T) => unknown, label: string): Map<number, number> {
+  const sums = new Map<number, { total: number; n: number }>();
+  for (const row of rows) {
     let value: number | null;
+    let day: number;
     try {
-      value = toNumberOrNull(metric.read(log), metric.id);
+      value = toNumberOrNull(read(row), label);
+      day = dayNumber(dateOf(row));
     } catch {
+      // an unreadable value, or a date that cannot be placed in either period
       continue;
     }
     if (value === null) continue;
-    try {
-      out.set(dayNumber(log.log_date), value);
-    } catch {
-      // a log with an unreadable date cannot be placed in either period
-    }
+    const sum = sums.get(day) ?? { total: 0, n: 0 };
+    sum.total += value;
+    sum.n += 1;
+    sums.set(day, sum);
   }
+  const out = new Map<number, number>();
+  for (const [day, { total, n }] of sums) out.set(day, total / n);
   return out;
 }
 
@@ -143,17 +197,29 @@ function within(series: ReadonlyMap<number, number>, from: number, to: number): 
   return values;
 }
 
-/** Only metrics with at least one logged day in either period are returned; the rest have nothing to show. */
-export function metricEffects(item: Pick<Medication, 'start_date' | 'end_date'>, logs: readonly EffectLog[], today: string): MetricEffect[] {
+/**
+ * The daily log's numbers first, then habits, then heart readings. Only metrics with at least one logged day in either
+ * period are returned; the rest have nothing to show.
+ */
+export function metricEffects(
+  item: Pick<Medication, 'start_date' | 'end_date'>,
+  logs: readonly EffectLog[],
+  today: string,
+  extras: EffectExtras = {},
+): MetricEffect[] {
   const w = windowsFor(item, today);
   if (!w) return [];
+  const sources: { id: string; label: string; unit: string; group: MetricGroup; series: Map<number, number> }[] = [
+    ...METRICS.map((m) => ({ ...m, group: 'log' as const, series: seriesOf(logs, (l) => l.log_date, m.read, m.id) })),
+    ...habitMetrics(extras.habits ?? []).map((m) => ({ ...m, group: 'habit' as const, series: seriesOf(logs, (l) => l.log_date, m.read, m.id) })),
+    ...CARDIO_METRICS.map((m) => ({ ...m, group: 'cardio' as const, series: seriesOf(extras.cardio ?? [], (r) => r.measured_at, m.read, m.id) })),
+  ];
   const out: MetricEffect[] = [];
-  for (const metric of METRICS) {
-    const series = seriesOf(logs, metric);
+  for (const { id, label, unit, group, series } of sources) {
     const before = statsOf(within(series, w.beforeFrom, w.beforeTo));
     const after = statsOf(within(series, w.afterFrom, w.afterTo));
     if (before.n === 0 && after.n === 0) continue;
-    out.push({ id: metric.id, label: metric.label, unit: metric.unit, before, after, ...compare(before, after) });
+    out.push({ id, label, unit, group, before, after, ...compare(before, after) });
   }
   return out;
 }
@@ -262,6 +328,7 @@ export function effectReport(
   biomarkers: readonly Biomarker[],
   readings: readonly BiomarkerReading[],
   today: string,
+  extras: EffectExtras = {},
 ): EffectReport {
   const windows = windowsFor(item, today);
   if (!windows || item.start_date == null) {
@@ -275,7 +342,7 @@ export function effectReport(
   return {
     status: 'ready',
     windows,
-    metrics: metricEffects(item, logs, today),
+    metrics: metricEffects(item, logs, today, extras),
     blood: bloodPairs(item, biomarkers, readings),
     overlaps: concurrentChanges(item, all, today),
     earliestVerdict,

@@ -211,3 +211,56 @@ test('effectReport: no start date, not started yet, and ready', () => {
   assert.equal(report.earliestVerdict, day(17));
   assert.equal(report.metrics.find((m) => m.id === 'steps')?.verdict, 'higher');
 });
+
+test('metricEffects: habits, yes or no as a share of days, a missing entry is not a no, archived habits still count', () => {
+  const habits = [
+    { id: 'lift', name: 'Lifted', kind: 'yesno', unit: null },
+    { id: 'cigs', name: 'Cigarettes', kind: 'count', unit: 'cigs' },
+    { id: 'odd', name: 'Broken', kind: 'nonsense', unit: null },
+  ];
+  const logs: DailyLog[] = [];
+  // before: lifted on 3 of every 10 days; cigarettes about 10 a day; one day in ten has no lift entry at all
+  for (let off = -28; off <= -1; off++) {
+    const k = off + 28;
+    const entries: Record<string, unknown> = { cigs: { value: 10 + wobble(k) * 5 } };
+    if (k % 10 !== 9) entries.lift = { value: k % 10 < 3 };
+    logs.push(log(day(off), { habits: entries as DailyLog['habits'] }));
+  }
+  // after: lifted every day; cigarettes about 2
+  for (let off = 8; off <= 40; off++) logs.push(log(day(off), { habits: { lift: { value: true }, cigs: { value: 2 + wobble(off) * 5 } } }));
+  const effects = metricEffects({ start_date: START, end_date: null }, logs, day(100), { habits });
+  const lift = effects.find((e) => e.id === 'habit:lift');
+  const cigs = effects.find((e) => e.id === 'habit:cigs');
+  assert.equal(lift?.group, 'habit');
+  assert.equal(lift?.unit, '% of days');
+  assert.equal(lift?.before.n, 26); // the two days with no entry are not logged days
+  assert.ok(Math.abs((lift?.before.mean ?? 0) - 900 / 26) < 1e-9); // 9 yes days of 26
+  assert.equal(lift?.after.mean, 100);
+  assert.equal(lift?.verdict, 'higher');
+  assert.equal(cigs?.unit, 'cigs');
+  assert.equal(cigs?.verdict, 'lower');
+  assert.equal(effects.some((e) => e.id === 'habit:odd'), false);
+  // the daily log's own numbers come first, and without habits passed in there are no habit rows
+  assert.equal(metricEffects({ start_date: START, end_date: null }, logs, day(100)).some((e) => e.group === 'habit'), false);
+});
+
+test('metricEffects: heart readings are averaged per day, missing and unreadable ones skipped', () => {
+  const cardio = [];
+  for (let off = -28; off <= -1; off++) {
+    // two readings a day before, averaging 60; one of them has no HRV
+    cardio.push({ measured_at: day(off), hrv_ms: 40 + wobble(off + 30) * 5, resting_hr: 58 });
+    cardio.push({ measured_at: day(off), hrv_ms: null, resting_hr: 62 });
+  }
+  for (let off = 8; off <= 40; off++) cardio.push({ measured_at: day(off), hrv_ms: 55 + wobble(off) * 5, resting_hr: off === 9 ? ('x' as unknown as number) : 54 + wobble(off) });
+  const effects = metricEffects({ start_date: START, end_date: null }, [], day(100), { cardio });
+  const hrv = effects.find((e) => e.id === 'hrv');
+  const rhr = effects.find((e) => e.id === 'resting_hr');
+  assert.equal(hrv?.group, 'cardio');
+  assert.equal(hrv?.unit, 'ms');
+  assert.equal(hrv?.before.n, 28);
+  assert.equal(hrv?.verdict, 'higher');
+  assert.equal(rhr?.before.n, 28);
+  assert.equal(rhr?.before.mean, 60);
+  assert.equal(rhr?.after.n, 32); // day 9 could not be read
+  assert.equal(rhr?.verdict, 'lower');
+});
