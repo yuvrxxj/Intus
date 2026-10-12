@@ -61,7 +61,8 @@ One page, inspired by Apple's large titles and grouped cards, in a Swiss red and
 
 ## Bloodwork and safety
 
-- A reading counts as critical when it reaches a stored critical limit (inclusive). A marker with no limit can never be flagged as critical. Results are also flagged against the stored reference range.
+- A reading counts as critical when it reaches a stored critical limit (inclusive). A marker with no limit can never be flagged as critical.
+- Each result is flagged against the range printed on its own report when it has one (stored with the result; the lab chose it for the person's sex and age). Without one, the marker's usual range is used only when it applies to the person: usual ranges that are men's ranges (`biomarkers.ref_sex`) are never used for a woman, or for someone whose sex is not recorded, and the result shows no range instead. The rule is `src/lib/ranges.ts`; the screen says which range each result was read against.
 - The only disclaimer in the app is the one line in the footer. No screen carries its own warning or caveat.
 - Results can be typed in on the Bloodwork screen. They are stored with the source `manual`, shown as "entered by you", and can be deleted from the screen. Only plain decimals are accepted, a second result for the same marker on the same day is refused, and a number ten times outside the usual range asks for confirmation in case it was typed in the wrong unit.
 - Arrows compare the latest result with the one before. A statistical trend (Mann-Kendall) needs five results, so most markers will not show one yet.

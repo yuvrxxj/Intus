@@ -9,10 +9,10 @@ import type { Habit } from '../src/db/habits.ts';
 const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biomarker => ({
   name: over.code.toUpperCase(), unit: 'u', category: 'x', organ_systems: [], ref_low: null, ref_high: null,
   optimal_low: null, optimal_high: null, description: null, sort_order: 0, created_at: '2026-01-01T00:00:00Z',
-  critical_low: null, critical_high: null, threshold_source: null, ...over,
+  critical_low: null, critical_high: null, threshold_source: null, ref_sex: null, ...over,
 });
 const reading = (biomarker_id: string, measured_at: string, value: number | string): BiomarkerReading => ({
-  id: `${biomarker_id}-${measured_at}`, biomarker_id, measured_at, value: value as number, notes: null, created_at: '2026-01-01T00:00:00Z', status: null, source: 'lab', user_id: 'u',
+  id: `${biomarker_id}-${measured_at}`, biomarker_id, measured_at, value: value as number, notes: null, created_at: '2026-01-01T00:00:00Z', status: null, source: 'lab', user_id: 'u', ref_low: null, ref_high: null,
 });
 const habit = (over: Partial<Habit> & Pick<Habit, 'id' | 'name' | 'kind'>): Habit => ({
   archived_at: null, better: 'higher', created_at: '2026-01-01T00:00:00Z', goal: null, sort_order: 0, unit: null, user_id: 'u', ...over,
@@ -20,15 +20,15 @@ const habit = (over: Partial<Habit> & Pick<Habit, 'id' | 'name' | 'kind'>): Habi
 
 test('markerLevel: in range is full; past a limit fades at 10% and 25% of that limit', () => {
   const alt = marker({ id: 'a', code: 'alt', ref_low: 7, ref_high: 56, unit: 'U/L' });
-  assert.equal(markerLevel(alt, 30)?.level, 'full');
-  assert.equal(markerLevel(alt, 61.5)?.level, 'light'); // just under 10% past
-  assert.equal(markerLevel(alt, 70)?.level, 'pale'); // 25% past
-  assert.equal(markerLevel(alt, 71)?.level, 'grey');
-  assert.equal(markerLevel(alt, 6.5)?.level, 'light'); // below, about 7% past
-  assert.match(markerLevel(alt, 70)?.detail ?? '', /above the lab's range of 56 \(25% past\)/);
+  assert.equal(markerLevel(alt, 30, { sex: 'male' })?.level, 'full');
+  assert.equal(markerLevel(alt, 61.5, { sex: 'male' })?.level, 'light'); // just under 10% past
+  assert.equal(markerLevel(alt, 70, { sex: 'male' })?.level, 'pale'); // 25% past
+  assert.equal(markerLevel(alt, 71, { sex: 'male' })?.level, 'grey');
+  assert.equal(markerLevel(alt, 6.5, { sex: 'male' })?.level, 'light'); // below, about 7% past
+  assert.match(markerLevel(alt, 70, { sex: 'male' })?.detail ?? '', /above the lab's range of 56 \(25% past\)/);
   // no printed range, or a range the wrong way round, gives no reading rather than a guess
-  assert.equal(markerLevel(marker({ id: 'b', code: 'b' }), 5), null);
-  assert.equal(markerLevel(marker({ id: 'c', code: 'c', ref_low: 9, ref_high: 3 }), 5), null);
+  assert.equal(markerLevel(marker({ id: 'b', code: 'b' }), 5, { sex: 'male' }), null);
+  assert.equal(markerLevel(marker({ id: 'c', code: 'c', ref_low: 9, ref_high: 3 }), 5, { sex: 'male' }), null);
 });
 
 test('habitLevel: each cigarette past the slack fades the lungs further; higher habits against their goal', () => {

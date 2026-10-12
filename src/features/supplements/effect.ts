@@ -5,7 +5,7 @@ import type { Medication } from '../../db/medications.ts';
 import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { dayNumber, isoDay } from '../../lib/dates.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
-import { rangeStatus, type RangeStatus } from '../bloodwork/model.ts';
+import { rangeStatus, type RangeContext, type RangeStatus } from '../bloodwork/model.ts';
 import { isKind, parseEntries } from '../habits/model.ts';
 
 /*
@@ -165,6 +165,8 @@ export interface MetricEffect extends Comparison {
 export interface EffectExtras {
   habits?: readonly Pick<Habit, 'id' | 'name' | 'kind' | 'unit'>[];
   cardio?: readonly CardioLog[];
+  /** the person's sex, for the blood results' ranges */
+  sex?: string | null;
 }
 
 /** One value per calendar day. A day whose value is missing or not a finite number is left out rather than read as zero. */
@@ -234,9 +236,9 @@ export interface BloodPair {
   daysOn: number;
 }
 
-function rangeOrNone(biomarker: Biomarker, value: number): RangeStatus {
+function rangeOrNone(biomarker: Biomarker, value: number, ctx: RangeContext): RangeStatus {
   try {
-    return rangeStatus(biomarker, value);
+    return rangeStatus(biomarker, value, ctx);
   } catch {
     return 'no_range';
   }
@@ -252,11 +254,13 @@ export function bloodPairs(
   item: Pick<Medication, 'start_date' | 'end_date'>,
   biomarkers: readonly Biomarker[],
   readings: readonly BiomarkerReading[],
+  /** the person's sex, so a default range for the other sex is never used; each result's printed range comes first */
+  sex: string | null = null,
 ): BloodPair[] {
   if (item.start_date == null) return [];
   const start = dayNumber(item.start_date);
   const end = item.end_date != null ? dayNumber(item.end_date) : Infinity;
-  const byMarker = new Map<string, { day: number; at: string; value: number }[]>();
+  const byMarker = new Map<string, { day: number; at: string; value: number; reading: BiomarkerReading }[]>();
   for (const r of readings) {
     let value: number;
     let day: number;
@@ -268,7 +272,7 @@ export function bloodPairs(
     }
     if (!Number.isFinite(value)) continue;
     const list = byMarker.get(r.biomarker_id) ?? [];
-    list.push({ day, at: r.measured_at.slice(0, 10), value });
+    list.push({ day, at: r.measured_at.slice(0, 10), value, reading: r });
     byMarker.set(r.biomarker_id, list);
   }
 
@@ -281,8 +285,8 @@ export function bloodPairs(
     const delta = after.value - before.value;
     out.push({
       biomarker,
-      before: { measured_at: before.at, value: before.value, range: rangeOrNone(biomarker, before.value) },
-      after: { measured_at: after.at, value: after.value, range: rangeOrNone(biomarker, after.value) },
+      before: { measured_at: before.at, value: before.value, range: rangeOrNone(biomarker, before.value, { sex, printed: before.reading }) },
+      after: { measured_at: after.at, value: after.value, range: rangeOrNone(biomarker, after.value, { sex, printed: after.reading }) },
       delta,
       percent: before.value === 0 ? null : (delta / Math.abs(before.value)) * 100,
       daysOn: after.day - start,
@@ -343,7 +347,7 @@ export function effectReport(
     status: 'ready',
     windows,
     metrics: metricEffects(item, logs, today, extras),
-    blood: bloodPairs(item, biomarkers, readings),
+    blood: bloodPairs(item, biomarkers, readings, extras.sex ?? null),
     overlaps: concurrentChanges(item, all, today),
     earliestVerdict,
   };

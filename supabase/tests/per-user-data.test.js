@@ -25,6 +25,8 @@ const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
 const SLEEP = migration('20261011000100_sleep_sessions');
 // Heart readings get a source, and one row per person, day and source, so a phone sync can upsert.
 const CARDIO_SOURCE = migration('20261012000100_cardio_source');
+// The printed range on each result, and which default ranges are for one sex only.
+const PRINTED_RANGES = migration('20261012000200_printed_ranges');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1280,5 +1282,25 @@ test('the sync upsert keeps one row per person, day and source, and two sources 
   await asUser(db, THIRD, async () => {
     await upsertCardio(db, '2026-10-01', 61);
     assert.equal(await count(db, `select count(*) as n from public.cardio_metrics where measured_at = '2026-10-01'`), 1);
+  });
+});
+
+// ── the printed range on each result ────────────────────────────────────────────────────────────
+
+test('a result can carry the range printed on the report, never the wrong way round, and the migration runs twice', async () => {
+  const db = await worldWithAccounts();
+  await db.exec(`insert into public.biomarkers (code, name, unit, category, ref_low, ref_high) values ('hemoglobin', 'Hemoglobin', 'g/dL', 'hematologic', 13.5, 17.5)`);
+  await runScript(db, PRINTED_RANGES);
+  await runScript(db, PRINTED_RANGES);
+  assert.equal((await db.query(`select ref_sex from public.biomarkers where code = 'hemoglobin'`)).rows[0].ref_sex, 'male');
+  assert.equal((await db.query(`select ref_sex from public.biomarkers where code = 'potassium'`)).rows[0].ref_sex, null);
+  await asUser(db, OTHER, async () => {
+    await db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_low, ref_high) values ($1, '2026-10-01', 12.5, 12, 15.5)`, [BIOMARKER]);
+    await db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_high) values ($1, '2026-10-02', 4, 5.1)`, [BIOMARKER]);
+    await assert.rejects(() => db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_low, ref_high) values ($1, '2026-10-03', 4, 6, 5)`, [BIOMARKER]), /biomarker_readings_printed_range_order/);
+  });
+  // the reference table stays closed to the API
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec(`update public.biomarkers set ref_sex = null`), /permission denied/);
   });
 });

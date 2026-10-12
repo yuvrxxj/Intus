@@ -2,7 +2,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
 import { CRITICAL, checkCritical } from '../../lib/safety.ts';
 import { TREND } from '../../lib/trends.ts';
-import { rangeStatus, type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
+import { rangeSourceLabel } from '../../lib/ranges.ts';
+import { type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
 import {
   ARROW, DIRECTION_WORD, RANGE_LABEL, describeDays, formatDay, formatDelta, formatRange, formatValue,
 } from './format.ts';
@@ -83,7 +84,7 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
       <div>
         <Sparkline points={points} refLow={row.refLow} refHigh={row.refHigh} />
         <div className="bt-limits">
-          <div>Reference range: {formatRange(row.refLow, row.refHigh)} {biomarker.unit}</div>
+          <div>Reference range: {row.rangeUsed.source === 'none' ? rangeSourceLabel(row.rangeUsed) : <>{formatRange(row.refLow, row.refHigh)} {biomarker.unit}, {rangeSourceLabel(row.rangeUsed)}</>}</div>
           {noLimit ? null : <div>Critical limits: {limits.join(', ')} {biomarker.unit}</div>}
           {biomarker.description ? <div className="bt-desc">{biomarker.description}</div> : null}
         </div>
@@ -95,7 +96,7 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
         </thead>
         <tbody>
           {newestFirst.map((p) => {
-            const range = rangeStatus(biomarker, p.value);
+            const range = p.range;
             const crit = checkCritical(biomarker, p.value).status;
             return (
               <tr key={p.id}>
@@ -170,7 +171,10 @@ export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props
                     <span className={VALUE_CLASS[row.range]}>{formatValue(row.latest.value)}</span>{' '}
                     <span className="bt-unit">{row.biomarker.unit}</span>
                   </td>
-                  <td data-label="Range">{formatRange(row.refLow, row.refHigh)}</td>
+                  <td data-label="Range">
+                    {formatRange(row.refLow, row.refHigh)}
+                    <div className="bt-range-src">{row.rangeUsed.source === 'printed' ? 'from your report' : row.rangeUsed.source === 'default' ? 'usual range' : row.rangeUsed.reason === 'default_other_sex' ? `usual range is for ${row.biomarker.ref_sex === 'female' ? 'women' : 'men'}` : row.rangeUsed.reason === 'sex_unknown' ? 'depends on sex' : ''}</div>
+                  </td>
                   <td data-label="Status"><StatusCell row={row} /></td>
                   <td data-label="Change"><ChangeCell row={row} /></td>
                 </tr>

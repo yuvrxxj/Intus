@@ -59,7 +59,8 @@ export function BodyPanel({ entries, today }: { entries: Entries; today: string 
     habits,
     entries: withUntouchedCounts(habits, entries),
     sleep: sleepInput,
-  }), [blood, habits, entries, sleepInput]);
+    sex: profile?.sex ?? null,
+  }), [blood, habits, entries, sleepInput, profile?.sex]);
 
   return <BodyPanelView organs={organs} bloodFailed={blood.status === 'error'} />;
 }

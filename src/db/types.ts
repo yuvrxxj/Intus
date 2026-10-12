@@ -53,6 +53,8 @@ export type Database = {
           id: string;
           measured_at: string;
           notes: string | null;
+          ref_high: number | null;
+          ref_low: number | null;
           source: string | null;
           status: string | null;
           user_id: string;
@@ -64,6 +66,8 @@ export type Database = {
           id?: string;
           measured_at: string;
           notes?: string | null;
+          ref_high?: number | null;
+          ref_low?: number | null;
           source?: string | null;
           status?: string | null;
           user_id?: string;
@@ -75,6 +79,8 @@ export type Database = {
           id?: string;
           measured_at?: string;
           notes?: string | null;
+          ref_high?: number | null;
+          ref_low?: number | null;
           source?: string | null;
           status?: string | null;
           user_id?: string;
@@ -105,6 +111,8 @@ export type Database = {
           organ_systems: string[];
           ref_high: number | null;
           ref_low: number | null;
+          /** 'male' or 'female' when the default range is for one sex only */
+          ref_sex: string | null;
           sort_order: number | null;
           threshold_source: string | null;
           /** set by a clinician sign-off; null means the critical limits are unverified and raise no alert */
@@ -124,6 +132,7 @@ export type Database = {
           organ_systems?: string[];
           ref_high?: number | null;
           ref_low?: number | null;
+          ref_sex?: string | null;
           sort_order?: number | null;
           threshold_source?: string | null;
           unit: string;
@@ -142,6 +151,7 @@ export type Database = {
           organ_systems?: string[];
           ref_high?: number | null;
           ref_low?: number | null;
+          ref_sex?: string | null;
           sort_order?: number | null;
           threshold_source?: string | null;
           unit?: string;

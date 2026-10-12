@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchBloodwork, type BloodworkData } from '../../db/queries.ts';
+import { useProfile } from '../profile/ProfileContext.tsx';
 import { buildBloodworkView, type BloodworkView } from './model.ts';
 
 export type BloodworkState =
@@ -17,6 +18,7 @@ function messageOf(error: unknown): string {
  * half-drawn screen, so a result that could not be checked is never shown as if it had been.
  */
 export function useBloodwork(): BloodworkState & { reload: () => void } {
+  const sex = useProfile().profile?.sex ?? null;
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<{ data: BloodworkData } | { error: string } | null>(null);
 
@@ -36,11 +38,11 @@ export function useBloodwork(): BloodworkState & { reload: () => void } {
     if (loaded === null) return { status: 'loading' };
     if ('error' in loaded) return { status: 'error', message: loaded.error };
     try {
-      return { status: 'ready', view: buildBloodworkView(loaded.data), data: loaded.data };
+      return { status: 'ready', view: buildBloodworkView({ ...loaded.data, sex }), data: loaded.data };
     } catch (error) {
       return { status: 'error', message: `Could not check these results safely: ${messageOf(error)}` };
     }
-  }, [loaded]);
+  }, [loaded, sex]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { ...state, reload };

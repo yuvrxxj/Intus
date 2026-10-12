@@ -3,7 +3,8 @@ import type { Habit } from '../../db/habits.ts';
 import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
-import { rangeStatus } from '../bloodwork/model.ts';
+import { chooseRange, statusIn } from '../../lib/ranges.ts';
+import type { RangeContext } from '../bloodwork/model.ts';
 import { activeHabits, betterOf, goalOf, type Entries } from '../habits/model.ts';
 import type { DurationClass } from '../sleep/ageBand.ts';
 
@@ -85,17 +86,18 @@ const worse = (a: Level, b: Level): Level => (LEVELS.indexOf(a) >= LEVELS.indexO
 const fmt = (v: number) => String(Number(v.toPrecision(4)));
 
 /** Where a lab result sits: in range, or how far past the nearer limit as a share of that limit. */
-export function markerLevel(biomarker: Biomarker, value: number): { level: Level; detail: string } | null {
-  let status;
+export function markerLevel(biomarker: Biomarker, value: number, ctx: RangeContext): { level: Level; detail: string } | null {
+  let range;
   try {
-    status = rangeStatus(biomarker, value);
+    range = chooseRange(biomarker, ctx.printed, ctx.sex);
   } catch {
     return null;
   }
+  const status = statusIn(range, value);
   if (status === 'no_range') return null;
   const unit = biomarker.unit ? ` ${biomarker.unit}` : '';
   if (status === 'in_range') return { level: 'full', detail: `${fmt(value)}${unit}, in the lab's range` };
-  const limit = toNumberOrNull(status === 'above' ? biomarker.ref_high : biomarker.ref_low, 'reference limit');
+  const limit = status === 'above' ? range.high : range.low;
   if (limit === null) return null;
   const past = limit === 0 ? Infinity : Math.abs(value - limit) / Math.abs(limit);
   const level: Level = past <= LIGHT_UP_TO ? 'light' : past <= PALE_UP_TO ? 'pale' : 'grey';
@@ -105,17 +107,17 @@ export function markerLevel(biomarker: Biomarker, value: number): { level: Level
 
 /** The latest result for each marker code asked for. Readings that cannot be read as numbers are skipped. */
 function latestByCode(biomarkers: readonly Biomarker[], readings: readonly BiomarkerReading[], codes: readonly string[]) {
-  const out: { biomarker: Biomarker; value: number; day: number }[] = [];
+  const out: { biomarker: Biomarker; value: number; day: number; reading: BiomarkerReading }[] = [];
   for (const code of codes) {
     const biomarker = biomarkers.find((b) => b.code === code);
     if (!biomarker) continue;
-    let best: { value: number; day: number } | null = null;
+    let best: { value: number; day: number; reading: BiomarkerReading } | null = null;
     for (const r of readings) {
       if (r.biomarker_id !== biomarker.id) continue;
       try {
         const value = toNumberOrNull(r.value, 'reading');
         const day = dayNumber(r.measured_at);
-        if (value !== null && (best === null || day > best.day)) best = { value, day };
+        if (value !== null && (best === null || day > best.day)) best = { value, day, reading: r };
       } catch {
         continue;
       }
@@ -174,14 +176,16 @@ export interface OrganInputs {
   /** today's habit entries */
   entries: Entries;
   sleep: SleepInput | null;
+  /** the person's sex, so a default range for the other sex is never used */
+  sex?: string | null;
 }
 
-export function organStates({ biomarkers, readings, habits, entries, sleep }: OrganInputs): OrganState[] {
+export function organStates({ biomarkers, readings, habits, entries, sleep, sex = null }: OrganInputs): OrganState[] {
   const active = activeHabits(habits);
   return ORGANS.map((def) => {
     const signals: Signal[] = [];
-    for (const { biomarker, value } of latestByCode(biomarkers, readings, def.markers)) {
-      const read = markerLevel(biomarker, value);
+    for (const { biomarker, value, reading } of latestByCode(biomarkers, readings, def.markers)) {
+      const read = markerLevel(biomarker, value, { sex, printed: reading });
       if (read) signals.push({ label: biomarker.name, ...read });
     }
     for (const habit of active) {

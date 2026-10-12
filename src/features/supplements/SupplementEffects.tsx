@@ -4,6 +4,7 @@ import { RANGE_LABEL, formatDay } from '../bloodwork/format.ts';
 import type { RangeStatus } from '../bloodwork/model.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
+import { useProfile } from '../profile/ProfileContext.tsx';
 import { BEFORE_DAYS, MIN_DAYS, YES_NO_UNIT, type BloodPair, type MetricEffect, type MetricGroup, type Verdict } from './effect.ts';
 import { sortSupplements } from './model.ts';
 import { useSupplementEffects, type EffectsState, type SupplementEffect } from './useSupplementEffects.ts';
@@ -167,7 +168,8 @@ function Detail({ effect, today }: { effect: SupplementEffect; today: string }) 
  */
 export function SupplementEffects({ items, today }: { items: readonly Supplement[]; today: string }) {
   const { habits } = useHabits();
-  const state = useSupplementEffects(items, today, habits);
+  const sex = useProfile().profile?.sex ?? null;
+  const state = useSupplementEffects(items, today, habits, sex);
   return <SupplementEffectsView items={items} today={today} state={state} />;
 }
 
