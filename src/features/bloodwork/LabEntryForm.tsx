@@ -100,6 +100,12 @@ export function LabEntryForm({ biomarkers, readings, today, onDone, onCancel }: 
           <Field id="lab-date" label="Date of the test" error={errors.measured_at} hint="The day the sample was taken, not the day the report came back.">
             <input id="lab-date" type="date" max={today} value={form.measured_at} onChange={(e) => set('measured_at', e.target.value)} />
           </Field>
+          <Field id="lab-ref-low" label="Range on the report: low" error={errors.ref_low} hint="Optional. The reference range printed next to the result. It is used instead of the usual range, because the lab chose it for you.">
+            <input id="lab-ref-low" type="text" inputMode="decimal" autoComplete="off" value={form.ref_low} placeholder="3.5" onChange={(e) => set('ref_low', e.target.value)} />
+          </Field>
+          <Field id="lab-ref-high" label="Range on the report: high" error={errors.ref_high} hint="Leave one end blank if the report prints only one, such as < 5.0.">
+            <input id="lab-ref-high" type="text" inputMode="decimal" autoComplete="off" value={form.ref_high} placeholder="5.1" onChange={(e) => set('ref_high', e.target.value)} />
+          </Field>
           <Field id="lab-notes" label="Notes" error={errors.notes} wide>
             <textarea id="lab-notes" value={form.notes} placeholder="Lab name, fasting or not, anything the report said" onChange={(e) => set('notes', e.target.value)} />
           </Field>
@@ -109,7 +115,7 @@ export function LabEntryForm({ biomarkers, readings, today, onDone, onCancel }: 
       {failure && <div className="notice notice-bad" role="alert">Could not save: {failure}</div>}
 
       <div className="bw-legend">
-        Saved as entered by you, then checked against the marker's reference range and critical limits.
+        Saved as entered by you, then checked against the range printed on your report (or the usual range, where it applies to you) and the critical limits.
       </div>
 
       <div className="btn-row">

@@ -18,10 +18,13 @@ export interface ReadingForm {
   /** 'YYYY-MM-DD' */
   measured_at: string;
   notes: string;
+  /** the range printed on the report, as typed; both optional */
+  ref_low: string;
+  ref_high: string;
 }
 
 export function emptyReadingForm(today: string): ReadingForm {
-  return { biomarker_id: '', value: '', measured_at: today, notes: '' };
+  return { biomarker_id: '', value: '', measured_at: today, notes: '', ref_low: '', ref_high: '' };
 }
 
 export type ReadingFormErrors = Partial<Record<keyof ReadingForm, string>>;
@@ -97,6 +100,13 @@ export function validateReadingForm(
   const notes = form.notes.trim();
   if (notes.length > MAX_NOTES) errors.notes = `Keep notes under ${MAX_NOTES} characters`;
 
+  // the range printed on the report: either end may be blank (some reports print only "< 5.0")
+  const low = form.ref_low.trim() === '' ? null : parseResultValue(form.ref_low);
+  const high = form.ref_high.trim() === '' ? null : parseResultValue(form.ref_high);
+  if (form.ref_low.trim() !== '' && low === null) errors.ref_low = 'Enter a plain number, or leave it blank';
+  if (form.ref_high.trim() !== '' && high === null) errors.ref_high = 'Enter a plain number, or leave it blank';
+  if (low !== null && high !== null && low > high) errors.ref_high = 'The high end has to be at or above the low end';
+
   if (biomarker && day !== null && !errors.measured_at && existing.some((r) => r.biomarker_id === biomarker.id && r.measured_at.slice(0, 10) === date)) {
     errors.measured_at = `You already have a ${biomarker.name} result for this date. Delete it first if it was a mistake, or choose another date.`;
   }
@@ -111,7 +121,11 @@ export function validateReadingForm(
       value: parsed,
       source: MANUAL_SOURCE,
       notes: notes === '' ? null : notes,
+      // left out when blank, so the row is the same shape as before the printed range existed
+      ...(low !== null ? { ref_low: low } : {}),
+      ...(high !== null ? { ref_high: high } : {}),
     },
-    warning: unitWarning(biomarker, parsed),
+    // a printed range is the report's own, so there is no unit to second-guess
+    warning: low !== null || high !== null ? null : unitWarning(biomarker, parsed),
   };
 }

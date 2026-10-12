@@ -1,0 +1,19 @@
+/* the body panel: one card per organ, the drawing's colour set by how far its readings are from on track */
+.organ-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.organ{padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.organ-art{align-self:center;margin-bottom:6px;transition:color .4s ease}
+.organ-name{font-size:14px;font-weight:650}
+.organ-state{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.organ-why{list-style:none;margin:8px 0 0;padding:0;font-size:12px;line-height:1.45;color:var(--ink-2)}
+.organ-why li{display:flex;gap:6px;align-items:baseline}
+.organ-pip{flex:none;width:7px;height:7px;border-radius:50%;background:currentColor;transform:translateY(-1px)}
+/* the fade: full red, a lighter red, a pale red, then the grey of the background dots */
+.organ-full{color:var(--red)}
+.organ-light{color:color-mix(in srgb, var(--red) 62%, var(--paper))}
+.organ-pale{color:color-mix(in srgb, var(--red) 32%, var(--dot))}
+.organ-grey{color:var(--dot)}
+.organ-none{color:color-mix(in srgb, var(--dot) 55%, var(--paper))}
+.organ .organ-name{color:var(--ink)}
+.organ .organ-why{color:var(--ink-2)}
+@media (prefers-reduced-motion: reduce){.organ-art{transition:none}}
+@media (forced-colors: active){.organ-art{color:CanvasText}}

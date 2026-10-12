@@ -1,0 +1,17 @@
+/* the doctor's report: hidden on screen, the only thing printed while it is open */
+.print-only{display:none}
+@media print{
+  html,body{background:#fff !important}
+  body > *:not(.print-only){display:none !important}
+  .print-only{display:block !important;color:#000;background:#fff;font:10.5pt/1.4 var(--font-sans, system-ui), sans-serif;padding:0}
+  .doctor-report h1{font-size:16pt;margin:0 0 4pt}
+  .doctor-report h2{font-size:12pt;margin:14pt 0 4pt}
+  .doctor-report p{margin:0 0 4pt}
+  .doctor-report table{width:100%;border-collapse:collapse;margin-top:8pt}
+  .doctor-report th,.doctor-report td{border-bottom:0.5pt solid #999;padding:3pt 4pt;text-align:left;vertical-align:top}
+  .doctor-report th{font-size:9pt;text-transform:uppercase;letter-spacing:.04em}
+  .doctor-report tr.out td{font-weight:700}
+  .doctor-report .from{font-weight:400;color:#444}
+  .doctor-report footer{margin-top:14pt;font-size:9pt;color:#444}
+  @page{margin:14mm}
+}

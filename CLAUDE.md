@@ -24,4 +24,4 @@
 
 ## Checks before pushing
 
-`npm run build`, `npm test` and `npm run test:db` must pass. CI (`.github/workflows/ci.yml`) runs the same three.
+`npm run build`, `npm test` and `npm run test:db` must pass. CI (`.github/workflows/ci.yml`) runs the same three, and typechecks the iPhone app in `mobile/` (`npm run typecheck` there).

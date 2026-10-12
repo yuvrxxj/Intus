@@ -193,19 +193,28 @@ test('a folder that never empties gives up after a fixed number of rounds', asyn
 
 test('an account is deleted after its photos, in that order', async () => {
   const order: string[] = [];
-  await runDeletion({ removePhotos: async () => { order.push('photos'); }, deleteAccount: async () => { order.push('account'); } });
-  assert.deepEqual(order, ['photos', 'account']);
+  await runDeletion({ removePhotos: async () => { order.push('photos'); }, removeReports: async () => { order.push('reports'); }, deleteAccount: async () => { order.push('account'); } });
+  assert.deepEqual(order, ['photos', 'reports', 'account']);
 });
 
 test('if the photos cannot be removed the account is not touched, and the person is told why', async () => {
   let deleted = false;
   await assert.rejects(
-    () => runDeletion({ removePhotos: async () => { throw new Error('2 of your photos could not be removed'); }, deleteAccount: async () => { deleted = true; } }),
+    () => runDeletion({ removePhotos: async () => { throw new Error('2 of your photos could not be removed'); }, removeReports: async () => {}, deleteAccount: async () => { deleted = true; } }),
     /Your photos could not be removed, so nothing was deleted\. 2 of your photos could not be removed/,
   );
   assert.equal(deleted, false);
 });
 
 test('an error from deleting the account itself is passed on as it is', async () => {
-  await assert.rejects(() => runDeletion({ removePhotos: async () => {}, deleteAccount: async () => { throw new Error('remove your photos first'); } }), /^Error: remove your photos first$/);
+  await assert.rejects(() => runDeletion({ removePhotos: async () => {}, removeReports: async () => {}, deleteAccount: async () => { throw new Error('remove your photos first'); } }), /^Error: remove your photos first$/);
+});
+
+test('if the reports cannot be removed the account is not deleted, and the person is told the photos already went', async () => {
+  let deleted = false;
+  await assert.rejects(
+    () => runDeletion({ removePhotos: async () => {}, removeReports: async () => { throw new Error('1 could not be removed'); }, deleteAccount: async () => { deleted = true; } }),
+    /photos were removed, but your uploaded reports could not be/,
+  );
+  assert.equal(deleted, false);
 });

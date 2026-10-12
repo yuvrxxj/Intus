@@ -2,12 +2,15 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
 import { CRITICAL, checkCritical } from '../../lib/safety.ts';
 import { TREND } from '../../lib/trends.ts';
-import { rangeStatus, type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
+import { rangeSourceLabel } from '../../lib/ranges.ts';
+import { type Change, type MarkerRow, type Point, type RangeStatus } from './model.ts';
 import {
   ARROW, DIRECTION_WORD, RANGE_LABEL, describeDays, formatDay, formatDelta, formatRange, formatValue,
 } from './format.ts';
+import { MarkerPopover } from './MarkerPopover.tsx';
 import { Sparkline } from './Sparkline.tsx';
 import { MANUAL_SOURCE } from './entry.ts';
+import { REPORT_SOURCE } from '../reports/review.ts';
 
 const VALUE_CLASS: Record<RangeStatus, string> = {
   in_range: 'bv-ok',
@@ -69,7 +72,7 @@ function StatusCell({ row }: { row: MarkerRow }) {
   );
 }
 
-function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (point: Point, markerName: string) => void }) {
+function Detail({ row, onDeleteReading, cycleDayFor }: { row: MarkerRow; onDeleteReading?: (point: Point, markerName: string) => void; cycleDayFor?: (date: string) => number | null }) {
   const { biomarker, points } = row;
   const newestFirst = [...points].reverse();
   const noLimit = biomarker.critical_low == null && biomarker.critical_high == null;
@@ -83,7 +86,7 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
       <div>
         <Sparkline points={points} refLow={row.refLow} refHigh={row.refHigh} />
         <div className="bt-limits">
-          <div>Reference range: {formatRange(row.refLow, row.refHigh)} {biomarker.unit}</div>
+          <div>Reference range: {row.rangeUsed.source === 'none' ? rangeSourceLabel(row.rangeUsed) : <>{formatRange(row.refLow, row.refHigh)} {biomarker.unit}, {rangeSourceLabel(row.rangeUsed)}</>}</div>
           {noLimit ? null : <div>Critical limits: {limits.join(', ')} {biomarker.unit}</div>}
           {biomarker.description ? <div className="bt-desc">{biomarker.description}</div> : null}
         </div>
@@ -95,11 +98,14 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
         </thead>
         <tbody>
           {newestFirst.map((p) => {
-            const range = rangeStatus(biomarker, p.value);
+            const range = p.range;
             const crit = checkCritical(biomarker, p.value).status;
             return (
               <tr key={p.id}>
-                <td>{formatDay(p.measured_at)}</td>
+                <td>
+                  {formatDay(p.measured_at)}
+                  {cycleDayFor && cycleDayFor(p.measured_at) !== null ? <div className="bt-range-src">cycle day {cycleDayFor(p.measured_at)}</div> : null}
+                </td>
                 <td className={VALUE_CLASS[range]}>{formatValue(p.value)}</td>
                 <td>
                   {crit === CRITICAL.LOW || crit === CRITICAL.HIGH ? <span className="bk bk-crit">{crit === CRITICAL.LOW ? 'Critical low' : 'Critical high'}</span> : null}{' '}
@@ -109,8 +115,9 @@ function Detail({ row, onDeleteReading }: { row: MarkerRow; onDeleteReading?: (p
                   <div className="bt-notes">
                   {isDemo(p) ? <span className="tag tag-demo" title="This row was loaded as demo data, not from a lab report.">demo data</span> : null}
                   {p.source === MANUAL_SOURCE ? <span className="tag tag-warn" title="You typed this result in. It was not imported from a lab.">entered by you</span> : null}
+                  {p.source === REPORT_SOURCE ? <span className="tag tag-warn" title="Read from a report you uploaded, and checked by you before saving.">from your report</span> : null}
                   {p.notes ? <span>{p.notes}</span> : null}
-                  {p.source === MANUAL_SOURCE && onDeleteReading
+                  {(p.source === MANUAL_SOURCE || p.source === REPORT_SOURCE) && onDeleteReading
                     ? <button type="button" className="btn btn-danger" onClick={() => onDeleteReading(p, biomarker.name)}>Delete</button>
                     : null}
                   </div>
@@ -129,11 +136,13 @@ interface Props {
   rows: readonly MarkerRow[];
   expanded: ReadonlySet<string>;
   onToggle: (biomarkerId: string) => void;
-  /** offered only for results the person typed in themselves */
+  /** offered only for results the person added themselves, typed in or from an uploaded report */
   onDeleteReading?: (point: Point, markerName: string) => void;
+  /** for people who log their cycle: the cycle day a sample was taken on */
+  cycleDayFor?: (date: string) => number | null;
 }
 
-export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props) {
+export function MarkerTable({ rows, expanded, onToggle, onDeleteReading, cycleDayFor }: Props) {
   return (
     <div className="bt-wrap">
       <table className="bt bt-main">
@@ -164,19 +173,23 @@ export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props
                       <span className="bt-caret" aria-hidden="true">{open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</span>
                       {row.biomarker.name}
                     </button>
+                    <MarkerPopover code={row.biomarker.code} name={row.biomarker.name} unit={row.biomarker.unit} range={row.rangeUsed} />
                     {isDemo(row.latest) ? <span className="tag tag-demo" title="The latest result is demo data.">demo data</span> : null}
                   </td>
                   <td data-label="Latest">
                     <span className={VALUE_CLASS[row.range]}>{formatValue(row.latest.value)}</span>{' '}
                     <span className="bt-unit">{row.biomarker.unit}</span>
                   </td>
-                  <td data-label="Range">{formatRange(row.refLow, row.refHigh)}</td>
+                  <td data-label="Range">
+                    {formatRange(row.refLow, row.refHigh)}
+                    <div className="bt-range-src">{row.rangeUsed.source === 'printed' ? 'from your report' : row.rangeUsed.source === 'default' ? 'usual range' : row.rangeUsed.reason === 'default_other_sex' ? `usual range is for ${row.biomarker.ref_sex === 'female' ? 'women' : 'men'}` : row.rangeUsed.reason === 'sex_unknown' ? 'depends on sex' : ''}</div>
+                  </td>
                   <td data-label="Status"><StatusCell row={row} /></td>
                   <td data-label="Change"><ChangeCell row={row} /></td>
                 </tr>
                 {open && (
                   <tr className="bt-detail" id={`detail-${row.biomarker.id}`}>
-                    <td colSpan={5}><Detail row={row} onDeleteReading={onDeleteReading} /></td>
+                    <td colSpan={5}><Detail row={row} onDeleteReading={onDeleteReading} cycleDayFor={cycleDayFor} /></td>
                   </tr>
                 )}
               </Fragment>

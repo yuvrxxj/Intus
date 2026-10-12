@@ -3,7 +3,10 @@ import type { Medication as Supplement } from '../../db/medications.ts';
 import { RANGE_LABEL, formatDay } from '../bloodwork/format.ts';
 import type { RangeStatus } from '../bloodwork/model.ts';
 import { dayNumber } from '../../lib/dates.ts';
-import { BEFORE_DAYS, MIN_DAYS, type BloodPair, type MetricEffect, type Verdict } from './effect.ts';
+import { useHabits } from '../habits/HabitsContext.tsx';
+import { useProfile } from '../profile/ProfileContext.tsx';
+import { useConditions } from '../cycle/useConditions.ts';
+import { BEFORE_DAYS, MIN_DAYS, YES_NO_UNIT, type BloodPair, type MetricEffect, type MetricGroup, type Verdict } from './effect.ts';
 import { sortSupplements } from './model.ts';
 import { useSupplementEffects, type EffectsState, type SupplementEffect } from './useSupplementEffects.ts';
 
@@ -36,6 +39,21 @@ function unitOf(m: { unit: string }): string {
   return m.unit ? ` ${m.unit}` : '';
 }
 
+/** A yes or no habit's average is a share of days, so its change is in percentage points, not a percent of a percent. */
+function changeOf(m: MetricEffect): string {
+  if (m.diff === null) return '—';
+  if (m.diff === 0) return 'No change';
+  if (m.unit === YES_NO_UNIT) return `${signed(m.diff)} points`;
+  return `${signed(m.diff)}${percentOf(m.percent)}`;
+}
+
+const GROUP_HEAD: Record<MetricGroup, string> = {
+  log: 'What you log',
+  habit: 'Habits',
+  cardio: 'Heart',
+};
+const GROUPS: readonly MetricGroup[] = ['log', 'habit', 'cardio'];
+
 function MetricRow({ m }: { m: MetricEffect }) {
   const enough = m.verdict !== 'insufficient_data';
   return (
@@ -43,7 +61,7 @@ function MetricRow({ m }: { m: MetricEffect }) {
       <td>{m.label}</td>
       <td data-label="Before">{m.before.mean === null ? '—' : <>{fmt(m.before.mean)}{unitOf(m)} <span className="fx-n">{daysOf(m.before.n)}</span></>}</td>
       <td data-label="After">{m.after.mean === null ? '—' : <>{fmt(m.after.mean)}{unitOf(m)} <span className="fx-n">{daysOf(m.after.n)}</span></>}</td>
-      <td data-label="Change">{enough && m.diff !== null ? (m.diff === 0 ? 'No change' : `${signed(m.diff)}${percentOf(m.percent)}`) : '—'}</td>
+      <td data-label="Change">{enough ? changeOf(m) : '—'}</td>
       <td data-label="Reading">
         {enough ? (
           <span className={`fx-verdict fx-${m.verdict}`}>{VERDICT_WORD[m.verdict as Exclude<Verdict, 'insufficient_data'>]}</span>
@@ -109,12 +127,21 @@ function Detail({ effect, today }: { effect: SupplementEffect; today: string }) 
               {waiting ? ` The first comparison could be made around ${formatDay(report.earliestVerdict as string)}.` : ''}
             </div>
           ) : (
-            <div className="bt-wrap">
-              <table className="bt fx-table">
-                <thead><tr><th>What you log</th><th>Before</th><th>After</th><th>Change</th><th>Reading</th></tr></thead>
-                <tbody>{report.metrics.map((m) => <MetricRow key={m.id} m={m} />)}</tbody>
-              </table>
-            </div>
+            GROUPS.map((group) => {
+              const rows = report.metrics.filter((m) => m.group === group);
+              if (rows.length === 0) return null;
+              return (
+                <div key={group}>
+                  {group !== 'log' && <div className="bio-sec">{GROUP_HEAD[group]}</div>}
+                  <div className="bt-wrap">
+                    <table className="bt fx-table">
+                      <thead><tr><th>{GROUP_HEAD[group]}</th><th>Before</th><th>After</th><th>Change</th><th>Reading</th></tr></thead>
+                      <tbody>{rows.map((m) => <MetricRow key={m.id} m={m} />)}</tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })
           )}
 
           {report.blood.length > 0 && (
@@ -141,7 +168,10 @@ function Detail({ effect, today }: { effect: SupplementEffect; today: string }) 
  * comparison are on the screen the whole time, not behind a click.
  */
 export function SupplementEffects({ items, today }: { items: readonly Supplement[]; today: string }) {
-  const state = useSupplementEffects(items, today);
+  const { habits } = useHabits();
+  const sex = useProfile().profile?.sex ?? null;
+  const { pregnant } = useConditions();
+  const state = useSupplementEffects(items, today, habits, sex, pregnant);
   return <SupplementEffectsView items={items} today={today} state={state} />;
 }
 

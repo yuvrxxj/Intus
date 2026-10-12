@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchCardioSince, type CardioLog } from '../../db/cardio.ts';
 import { fetchLogsSince, type EffectLog } from '../../db/dailyLogs.ts';
+import type { Habit } from '../../db/habits.ts';
 import type { Medication as Supplement } from '../../db/medications.ts';
 import { fetchBloodwork, type BloodworkData } from '../../db/queries.ts';
 import { dayNumber, isoDay } from '../../lib/dates.ts';
@@ -28,13 +30,14 @@ export function earliestNeeded(items: readonly Pick<Supplement, 'start_date'>[])
 }
 
 /**
- * Loads the daily logs and bloodwork a comparison needs, once, and builds a report per supplement. It reads only
- * what the supplements' own start dates call for, and nothing at all while none has a start date.
+ * Loads the daily logs, heart readings and bloodwork a comparison needs, once, and builds a report per supplement. It
+ * reads only what the supplements' own start dates call for, and nothing at all while none has a start date. Habits
+ * come from the caller, which already has them loaded.
  */
-export function useSupplementEffects(items: readonly Supplement[], today: string): EffectsState & { reload: () => void } {
+export function useSupplementEffects(items: readonly Supplement[], today: string, habits: readonly Habit[] = [], sex: string | null = null, pregnant = false): EffectsState & { reload: () => void } {
   const from = useMemo(() => earliestNeeded(items), [items]);
   const [attempt, setAttempt] = useState(0);
-  const [loaded, setLoaded] = useState<{ logs: EffectLog[]; blood: BloodworkData } | { error: string } | null>(null);
+  const [loaded, setLoaded] = useState<{ logs: EffectLog[]; cardio: CardioLog[]; blood: BloodworkData } | { error: string } | null>(null);
 
   useEffect(() => {
     if (from === null) {
@@ -43,8 +46,8 @@ export function useSupplementEffects(items: readonly Supplement[], today: string
     }
     let cancelled = false;
     setLoaded(null);
-    Promise.all([fetchLogsSince(from), fetchBloodwork()]).then(
-      ([logs, blood]) => !cancelled && setLoaded({ logs, blood }),
+    Promise.all([fetchLogsSince(from), fetchCardioSince(from), fetchBloodwork()]).then(
+      ([logs, cardio, blood]) => !cancelled && setLoaded({ logs, cardio, blood }),
       (e: unknown) => !cancelled && setLoaded({ error: e instanceof Error ? e.message : String(e) }),
     );
     return () => {
@@ -59,12 +62,12 @@ export function useSupplementEffects(items: readonly Supplement[], today: string
     try {
       const effects = items
         .filter((item) => item.start_date != null)
-        .map((item) => ({ item, report: effectReport(item, items, loaded.logs, loaded.blood.biomarkers, loaded.blood.readings, today) }));
+        .map((item) => ({ item, report: effectReport(item, items, loaded.logs, loaded.blood.biomarkers, loaded.blood.readings, today, { habits, cardio: loaded.cardio, sex, pregnant }) }));
       return { status: 'ready', effects };
     } catch (e) {
       return { status: 'error', message: e instanceof Error ? e.message : String(e) };
     }
-  }, [from, loaded, items, today]);
+  }, [from, loaded, items, today, habits, sex, pregnant]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { ...state, reload };

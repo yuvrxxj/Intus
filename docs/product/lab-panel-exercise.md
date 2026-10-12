@@ -33,12 +33,12 @@ Aim for a mix of sexes and at least two age bands. Cover the common groups acros
 
 ## Procedure, per panel
 
-1. **Transcribe.** One row per marker into `panels.csv`: `panel_id, marker, value, unit, lab_ref_low, lab_ref_high, sex, age_band, test_date, context`. Check every value twice. A transcription error here would look like a model error later.
+1. **Transcribe.** One row per marker into `panels.csv` (template and column notes in [`lab-panels/`](lab-panels/README.md)): `panel_id, marker, value, unit, lab_ref_low, lab_ref_high, sex, age_band, test_date, context`. Check every value twice. A transcription error here would look like a model error later.
 2. **Interpret by hand, before looking at any app or model output.** Write three short parts: what is in range, what is out of range and by how much, and what the person could ask their doctor. No diagnosis, no dose, no "you are fine" about anything outside the printed range. This is the answer key.
 3. **Clinician review.** A qualified clinician reads each hand interpretation and marks it: wrong, unsafe, true but useless, or something they would say to a patient.
 4. **Run the baseline.** Enter the panel through the current app (range flags and trends only) and record what it shows. This is what "no new work" already delivers.
 5. **Run the candidate narrator.** Have a small model write the explanation from facts that code has already computed (status against the printed range, size of the gap, change since the last panel) and nothing else. Record the output and the token cost.
-6. **Score** with the rubric below.
+6. **Score** with the rubric below, one row per panel in `scores.csv`, and run `node scripts/lab-panels.ts panels.csv scores.csv` to check both files and read the gate.
 
 ## Rubric (per panel)
 

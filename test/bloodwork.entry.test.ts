@@ -9,7 +9,7 @@ import type { Biomarker } from '../src/db/queries.ts';
 const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biomarker => ({
   name: over.code.toUpperCase(), unit: 'u', category: 'Group A', organ_systems: [], ref_low: null, ref_high: null,
   optimal_low: null, optimal_high: null, description: null, sort_order: 0, created_at: '2026-01-01T00:00:00Z',
-  critical_low: null, critical_high: null, threshold_source: null,
+  critical_low: null, critical_high: null, threshold_source: null, ref_sex: null,
   ...over,
 });
 const potassium = marker({ id: 'k', code: 'potassium', name: 'Potassium', unit: 'mmol/L', ref_low: 3.5, ref_high: 5.1 });
@@ -96,7 +96,7 @@ test('notes are capped', () => {
 });
 
 test('every problem is reported at once, so the person fixes the form in one pass', () => {
-  const result = check({ biomarker_id: '', value: 'x', measured_at: '', notes: 'x'.repeat(MAX_NOTES + 1) });
+  const result = check({ biomarker_id: '', value: 'x', measured_at: '', notes: 'x'.repeat(MAX_NOTES + 1), ref_low: '', ref_high: '' });
   assert.ok(!result.ok);
   assert.deepEqual(Object.keys(result.errors).sort(), ['biomarker_id', 'measured_at', 'notes', 'value']);
 });
@@ -125,4 +125,24 @@ test('a stored range that cannot be read disables the warning instead of breakin
   const result = validateReadingForm(form(), broken, [], TODAY);
   assert.ok(result.ok);
   assert.equal(result.warning, null);
+});
+
+test('the range printed on the report is optional, either end can be blank, and it must read the right way round', () => {
+  const both = check(form({ ref_low: '3,4', ref_high: '5.2' }));
+  assert.ok(both.ok);
+  assert.equal(both.value.ref_low, 3.4);
+  assert.equal(both.value.ref_high, 5.2);
+  const onlyHigh = check(form({ ref_high: '5' }));
+  assert.ok(onlyHigh.ok);
+  assert.equal('ref_low' in onlyHigh.value, false);
+  // blank range: the row keeps its old shape
+  const none = check(form());
+  assert.ok(none.ok);
+  assert.equal('ref_low' in none.value || 'ref_high' in none.value, false);
+  const backwards = check(form({ ref_low: '6', ref_high: '5' }));
+  assert.ok(!backwards.ok);
+  assert.match(backwards.errors.ref_high ?? '', /at or above/);
+  const junk = check(form({ ref_low: '<5' }));
+  assert.ok(!junk.ok);
+  assert.ok(junk.errors.ref_low);
 });

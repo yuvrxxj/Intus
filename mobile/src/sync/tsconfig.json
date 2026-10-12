@@ -1,0 +1,12 @@
+{
+  "//": "mapping.ts is also built by the web app (src/features/import), which does not install the Expo packages. Without this file the web build would find mobile/tsconfig.json, which extends expo/tsconfig.base, and fail. Neither TypeScript project reads it: the app is checked with mobile/tsconfig.json and the web repo with its own.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true
+  }
+}

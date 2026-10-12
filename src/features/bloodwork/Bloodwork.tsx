@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchCycleDays, type CycleDay } from '../../db/cycle.ts';
+import { cycleDayOn, isFemale, periodsOf } from '../cycle/model.ts';
 import { deleteReading } from '../../db/biomarkerReadings.ts';
 import { CriticalBanner } from './CriticalBanner.tsx';
 import { LabEntryForm } from './LabEntryForm.tsx';
+import { ReportUpload } from '../reports/ReportUpload.tsx';
+import { DoctorReport } from '../export/DoctorReport.tsx';
+import { doctorReport, type DoctorReport as Report } from '../export/doctor.ts';
+import { fetchMedications } from '../../db/medications.ts';
+import { useProfile } from '../profile/ProfileContext.tsx';
 import { MarkerTable } from './MarkerTable.tsx';
 import { formatDay } from './format.ts';
 import type { Point } from './model.ts';
@@ -16,6 +23,23 @@ export function Bloodwork({ today, notify }: Props) {
   const state = useBloodwork();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [printing, setPrinting] = useState<Report | null>(null);
+  const { profile } = useProfile();
+  const female = isFemale(profile?.sex);
+  const [cycleDays, setCycleDays] = useState<CycleDay[]>([]);
+  useEffect(() => {
+    if (!female) return;
+    let live = true;
+    // only a nicety beside the dates, so a failure to load leaves it out rather than stopping the screen
+    fetchCycleDays().then((d) => live && setCycleDays(d), () => {});
+    return () => { live = false; };
+  }, [female]);
+  const cycleDayFor = useMemo(() => {
+    if (!female || cycleDays.length === 0) return undefined;
+    const periods = periodsOf(cycleDays);
+    return (date: string) => cycleDayOn(periods, date);
+  }, [female, cycleDays]);
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -46,6 +70,25 @@ export function Bloodwork({ today, notify }: Props) {
     reload();
   }
 
+  function uploaded(count: number, note: string | null) {
+    setUploading(false);
+    notify(note ?? `${count} result${count === 1 ? '' : 's'} saved from the report`, note !== null);
+    reload();
+  }
+
+  async function printForDoctor() {
+    try {
+      const supplements = await fetchMedications();
+      setPrinting(doctorReport({ groups: view.groups, supplements, name: profile?.name ?? null, age: profile?.age ?? null, sex: profile?.sex ?? null, today }));
+    } catch (e) {
+      notify(`Error: ${e instanceof Error ? e.message : String(e)}`, true);
+    }
+  }
+
+  const upload = (
+    <ReportUpload biomarkers={data.biomarkers} readings={data.readings} today={today} onSaved={uploaded} onCancel={() => setUploading(false)} />
+  );
+
   async function removeReading(point: Point, markerName: string) {
     if (!window.confirm(`Delete the ${markerName} result from ${formatDay(point.measured_at)}? This cannot be undone.`)) return;
     try {
@@ -73,9 +116,10 @@ export function Bloodwork({ today, notify }: Props) {
         <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
         <div className="card sec">
           <div className="ct"><span className="dot dot-red" />Bloodwork</div>
-          <div className="empty">No results yet. Add your first one below, straight from your lab report.</div>
+          <div className="empty">No results yet. Upload a lab report PDF, or type your first result in below.</div>
+          {!uploading && <div className="btn-row"><button type="button" className="btn btn-primary" onClick={() => setUploading(true)}>Upload a report</button></div>}
         </div>
-        {form}
+        {uploading ? upload : form}
       </div>
     );
   }
@@ -88,12 +132,17 @@ export function Bloodwork({ today, notify }: Props) {
   return (
     <div>
       <CriticalBanner current={view.currentCritical} past={view.pastCritical} />
+      {printing && <DoctorReport report={printing} onDone={() => setPrinting(null)} />}
 
-      {adding ? (
+      {uploading ? (
+        upload
+      ) : adding ? (
         form
       ) : (
         <div className="btn-row" style={{ marginTop: 0, marginBottom: 14 }}>
-          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add a result</button>
+          <button type="button" className="btn btn-primary" onClick={() => setUploading(true)}>Upload a report</button>
+          <button type="button" className="btn" onClick={() => setAdding(true)}>+ Add a result</button>
+          <button type="button" className="btn" onClick={printForDoctor}>Print for your doctor</button>
         </div>
       )}
 
@@ -112,12 +161,15 @@ export function Bloodwork({ today, notify }: Props) {
         {view.groups.map((group) => (
           <section key={group.category}>
             <div className="bio-sec">{group.category}</div>
-            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} onDeleteReading={removeReading} />
+            <MarkerTable rows={group.rows} expanded={expanded} onToggle={toggle} onDeleteReading={removeReading} cycleDayFor={cycleDayFor} />
           </section>
         ))}
 
         {view.noResults.length > 0 && (
-          <div className="bw-none">No results yet for: {view.noResults.join(', ')}.</div>
+          <details className="bw-none">
+            <summary>{view.noResults.length} marker{view.noResults.length === 1 ? '' : 's'} with no results yet</summary>
+            <div>{view.noResults.join(', ')}.</div>
+          </details>
         )}
       </div>
     </div>

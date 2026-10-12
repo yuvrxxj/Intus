@@ -10,6 +10,7 @@ import { sourceId, type Flag, type Night, type Sleep as NightSleep } from './nig
 import { dayStrip, MIN_NIGHTS, summarize } from './summary.ts';
 import { formatClock, formatDuration, roundTo5 } from './time.ts';
 import { useSleep } from './useSleep.ts';
+import { ImportAppleHealth } from '../import/ImportAppleHealth.tsx';
 import type { SleepSession } from './model.ts';
 
 const WINDOW = 28;
@@ -236,6 +237,8 @@ export function Sleep({ today, notify }: { today: string; notify: (message: stri
           ) : null}
         </section>
       ) : null}
+
+      <ImportAppleHealth onDone={reload} notify={notify} />
 
       {status === 'ready' && built.quarantined.length > 0 ? (
         <section className="card sec" aria-labelledby="sleep-set-aside">

@@ -1,0 +1,15 @@
+.cy-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+.cy-stats>div{display:flex;flex-direction:column;gap:2px}
+.cy-k{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.cy-v{font-family:var(--font-mono);font-size:24px;font-weight:600;color:var(--ink)}
+.cy-n{font-size:11px;color:var(--ink-3)}
+.cy-sym{display:flex;flex-wrap:wrap;gap:8px 16px;border:none;padding:0;margin:0}
+.cy-sym legend{font-size:12px;font-weight:600;margin-bottom:6px}
+.cy-sym label{display:flex;gap:6px;align-items:center;font-size:13px}
+.cy-list{list-style:none;margin:0;padding:0;font-size:13px}
+.cy-list li{padding:4px 0;border-bottom:1px solid var(--line)}
+.cy-conds{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 16px;margin-top:10px}
+.cy-cond{display:flex;flex-direction:column;gap:4px}
+.cy-cond label{display:flex;gap:8px;align-items:center;font-size:14px}
+.cy-label{font-size:12px;padding:6px 8px}
+@media (max-width:560px){.cy-stats{grid-template-columns:1fr 1fr}}

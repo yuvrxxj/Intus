@@ -53,6 +53,8 @@ export type Database = {
           id: string;
           measured_at: string;
           notes: string | null;
+          ref_high: number | null;
+          ref_low: number | null;
           source: string | null;
           status: string | null;
           user_id: string;
@@ -64,6 +66,8 @@ export type Database = {
           id?: string;
           measured_at: string;
           notes?: string | null;
+          ref_high?: number | null;
+          ref_low?: number | null;
           source?: string | null;
           status?: string | null;
           user_id?: string;
@@ -75,6 +79,8 @@ export type Database = {
           id?: string;
           measured_at?: string;
           notes?: string | null;
+          ref_high?: number | null;
+          ref_low?: number | null;
           source?: string | null;
           status?: string | null;
           user_id?: string;
@@ -105,6 +111,8 @@ export type Database = {
           organ_systems: string[];
           ref_high: number | null;
           ref_low: number | null;
+          /** 'male' or 'female' when the default range is for one sex only */
+          ref_sex: string | null;
           sort_order: number | null;
           threshold_source: string | null;
           /** set by a clinician sign-off; null means the critical limits are unverified and raise no alert */
@@ -124,6 +132,7 @@ export type Database = {
           organ_systems?: string[];
           ref_high?: number | null;
           ref_low?: number | null;
+          ref_sex?: string | null;
           sort_order?: number | null;
           threshold_source?: string | null;
           unit: string;
@@ -142,6 +151,7 @@ export type Database = {
           organ_systems?: string[];
           ref_high?: number | null;
           ref_low?: number | null;
+          ref_sex?: string | null;
           sort_order?: number | null;
           threshold_source?: string | null;
           unit?: string;
@@ -202,6 +212,7 @@ export type Database = {
           measured_at: string;
           recovery_hr: number | null;
           resting_hr: number | null;
+          source: string;
           user_id: string;
           vo2_max: number | null;
         };
@@ -213,6 +224,7 @@ export type Database = {
           measured_at: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          source?: string;
           user_id?: string;
           vo2_max?: number | null;
         };
@@ -224,9 +236,16 @@ export type Database = {
           measured_at?: string;
           recovery_hr?: number | null;
           resting_hr?: number | null;
+          source?: string;
           user_id?: string;
           vo2_max?: number | null;
         };
+        Relationships: [];
+      };
+      cycle_days: {
+        Row: { created_at: string; day: string; flow: string; source: string; symptoms: string[]; user_id: string };
+        Insert: { created_at?: string; day: string; flow: string; source?: string; symptoms?: string[]; user_id?: string };
+        Update: { created_at?: string; day?: string; flow?: string; source?: string; symptoms?: string[]; user_id?: string };
         Relationships: [];
       };
       daily_logs: {
@@ -470,6 +489,12 @@ export type Database = {
         Row: { id: string; label: string | null; log_date: string; photo_url: string | null; pose: string | null; storage_path: string | null; user_id: string; weight: number | null };
         Insert: { id?: string; label?: string | null; log_date: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
         Update: { id?: string; label?: string | null; log_date?: string; photo_url?: string | null; pose?: string | null; storage_path?: string | null; user_id?: string; weight?: number | null };
+        Relationships: [];
+      };
+      profile_conditions: {
+        Row: { condition: string; created_at: string; label: string | null; since: string | null; user_id: string };
+        Insert: { condition: string; created_at?: string; label?: string | null; since?: string | null; user_id?: string };
+        Update: { condition?: string; created_at?: string; label?: string | null; since?: string | null; user_id?: string };
         Relationships: [];
       };
       profile: {
@@ -722,6 +747,35 @@ export type Database = {
           when_taken?: string | null;
         };
         Relationships: [];
+      };
+      workouts: {
+        Row: { created_at: string; ended_at: string | null; id: string; notes: string | null; started_at: string; user_id: string };
+        Insert: { created_at?: string; ended_at?: string | null; id?: string; notes?: string | null; started_at?: string; user_id?: string };
+        Update: { created_at?: string; ended_at?: string | null; id?: string; notes?: string | null; started_at?: string; user_id?: string };
+        Relationships: [];
+      };
+      workout_sets: {
+        Row: {
+          created_at: string; exercise: string; id: string; notes: string | null; position: number; reps: number;
+          rpe: number | null; user_id: string; weight_kg: number | null; workout_id: string;
+        };
+        Insert: {
+          created_at?: string; exercise: string; id: string; notes?: string | null; position?: number; reps: number;
+          rpe?: number | null; user_id?: string; weight_kg?: number | null; workout_id: string;
+        };
+        Update: {
+          created_at?: string; exercise?: string; id?: string; notes?: string | null; position?: number; reps?: number;
+          rpe?: number | null; user_id?: string; weight_kg?: number | null; workout_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'workout_sets_own_workout';
+            columns: ['workout_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'workouts';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
       };
     };
     Views: { [_ in never]: never };

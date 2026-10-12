@@ -23,6 +23,16 @@ const ONBOARDING = migration('20261005000500_onboarding_answers');
 const DELETE_ACCOUNT = migration('20261009000100_delete_my_account');
 // Sleep: one row per stretch of sleep a source reported, per person from the start.
 const SLEEP = migration('20261011000100_sleep_sessions');
+// Heart readings get a source, and one row per person, day and source, so a phone sync can upsert.
+const CARDIO_SOURCE = migration('20261012000100_cardio_source');
+// The printed range on each result, and which default ranges are for one sex only.
+const PRINTED_RANGES = migration('20261012000200_printed_ranges');
+// Uploaded lab reports: a private bucket, and account deletion that waits until they are removed.
+const LAB_REPORTS = migration('20261012000300_lab_reports');
+// Cycle days, profile conditions and the reproductive hormone markers.
+const CYCLE = migration('20261012000400_cycle_and_conditions');
+// Workouts and sets.
+const STRENGTH = migration('20261012000500_strength');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1240,4 +1250,214 @@ test('sleep has row level security with exactly one policy, for signed-in people
   const policies = (await db.query(`select policyname, roles, cmd from pg_policies where schemaname = 'public' and tablename = 'sleep_sessions'`)).rows;
   assert.deepEqual(policies.map((p) => [p.policyname, p.cmd, [...p.roles]]), [['own_rows', 'ALL', ['authenticated']]]);
   assert.equal((await db.query(`select has_table_privilege('anon', 'public.sleep_sessions', 'select') as ok`)).rows[0].ok, false);
+});
+
+// ── heart readings from a phone ─────────────────────────────────────────────────────────────────
+
+async function worldWithCardioSource() {
+  const db = await worldWithAccounts();
+  await runScript(db, CARDIO_SOURCE);
+  return db;
+}
+
+const upsertCardio = (db, day, hrv, source = 'healthkit') => db.query(
+  `insert into public.cardio_metrics (measured_at, hrv_ms, resting_hr, source) values ($1, $2, 55, $3)
+   on conflict (user_id, measured_at, source) do update set hrv_ms = excluded.hrv_ms`, [day, hrv, source]);
+
+test('existing heart readings become manual, and the migration can be applied twice', async () => {
+  const db = await worldWithAccounts();
+  const before = await rowsOf(db, 'cardio_metrics');
+  await runScript(db, CARDIO_SOURCE);
+  await runScript(db, CARDIO_SOURCE);
+  assert.equal(await rowsOf(db, 'cardio_metrics'), before);
+  assert.equal(await count(db, `select count(*) as n from public.cardio_metrics where source <> 'manual'`), 0);
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.cardio_metrics'::regclass and conname = 'cardio_metrics_day_source_key'`), 1);
+});
+
+test('the sync upsert keeps one row per person, day and source, and two sources stay two rows', async () => {
+  const db = await worldWithCardioSource();
+  await asUser(db, OTHER, async () => {
+    await upsertCardio(db, '2026-10-01', 40);
+    await upsertCardio(db, '2026-10-01', 44);
+    await upsertCardio(db, '2026-10-01', 50, 'health_connect');
+    await assert.rejects(() => upsertCardio(db, '2026-10-02', 40, 'fitbit'), /cardio_metrics_source_check/);
+    const rows = (await db.query(`select source, hrv_ms from public.cardio_metrics where measured_at = '2026-10-01' order by source`)).rows;
+    assert.deepEqual(rows.map((r) => [r.source, r.hrv_ms]), [['health_connect', 50], ['healthkit', 44]]);
+  });
+  // another person syncing the same day is not a clash, and cannot see the first person's rows
+  await asUser(db, THIRD, async () => {
+    await upsertCardio(db, '2026-10-01', 61);
+    assert.equal(await count(db, `select count(*) as n from public.cardio_metrics where measured_at = '2026-10-01'`), 1);
+  });
+});
+
+// ── the printed range on each result ────────────────────────────────────────────────────────────
+
+test('a result can carry the range printed on the report, never the wrong way round, and the migration runs twice', async () => {
+  const db = await worldWithAccounts();
+  await db.exec(`insert into public.biomarkers (code, name, unit, category, ref_low, ref_high) values ('hemoglobin', 'Hemoglobin', 'g/dL', 'hematologic', 13.5, 17.5)`);
+  await runScript(db, PRINTED_RANGES);
+  await runScript(db, PRINTED_RANGES);
+  assert.equal((await db.query(`select ref_sex from public.biomarkers where code = 'hemoglobin'`)).rows[0].ref_sex, 'male');
+  assert.equal((await db.query(`select ref_sex from public.biomarkers where code = 'potassium'`)).rows[0].ref_sex, null);
+  await asUser(db, OTHER, async () => {
+    await db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_low, ref_high) values ($1, '2026-10-01', 12.5, 12, 15.5)`, [BIOMARKER]);
+    await db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_high) values ($1, '2026-10-02', 4, 5.1)`, [BIOMARKER]);
+    await assert.rejects(() => db.query(`insert into public.biomarker_readings (biomarker_id, measured_at, value, ref_low, ref_high) values ($1, '2026-10-03', 4, 6, 5)`, [BIOMARKER]), /biomarker_readings_printed_range_order/);
+  });
+  // the reference table stays closed to the API
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec(`update public.biomarkers set ref_sex = null`), /permission denied/);
+  });
+});
+
+// ── uploaded lab reports ────────────────────────────────────────────────────────────────────────
+
+const REPORTS = 'lab-reports';
+const reportName = (owner, n = 1, ext = 'pdf') => `${owner}/00000000-0000-4000-8000-${String(n).padStart(12, '0')}.${ext}`;
+const addReport = (db, name) => db.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [REPORTS, name]);
+const reportCount = (db, where = 'true') => count(db, `select count(*) as n from storage.objects where bucket_id = '${REPORTS}' and ${where}`);
+
+async function worldWithReports() {
+  const db = await worldWithAccounts();
+  await runScript(db, LAB_REPORTS);
+  return db;
+}
+
+test('reports are private: own folder only, PDFs named by uuid, nothing for the signed-out role, and the migration runs twice', async () => {
+  const db = await worldWithReports();
+  await runScript(db, LAB_REPORTS);
+  const bucket = (await db.query(`select public, file_size_limit, allowed_mime_types from storage.buckets where id = '${REPORTS}'`)).rows[0];
+  assert.deepEqual([bucket.public, Number(bucket.file_size_limit), bucket.allowed_mime_types], [false, 10485760, ['application/pdf']]);
+  await asUser(db, OTHER, async () => {
+    await addReport(db, reportName(OTHER));
+    await assert.rejects(() => addReport(db, reportName(THIRD)), RLS, 'into someone else\'s folder');
+    await assert.rejects(() => addReport(db, reportName(OTHER, 2, 'jpg')), RLS, 'not a pdf name');
+    await assert.rejects(() => addReport(db, `${OTHER}/report.pdf`), RLS, 'not a uuid name');
+  });
+  await asUser(db, THIRD, async () => {
+    assert.equal(await reportCount(db), 0, 'another person sees none');
+    assert.equal((await db.query(`delete from storage.objects where bucket_id = '${REPORTS}' returning id`)).rows.length, 0);
+  });
+  await asAnon(db, async () => { await assert.rejects(() => addReport(db, reportName(OTHER, 3)), RLS); });
+  assert.equal(await reportCount(db), 1);
+});
+
+test('a person can keep at most 200 reports', async () => {
+  const db = await worldWithReports();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into storage.objects (bucket_id, name) select '${REPORTS}', '${OTHER}/' || gen_random_uuid() || '.pdf' from generate_series(1, 200)`);
+    await assert.rejects(() => addReport(db, reportName(OTHER, 201)), RLS);
+  });
+});
+
+test('an account with reports cannot be deleted until they are removed; photos are still checked too', async () => {
+  const db = await worldWithReports();
+  await asUser(db, OTHER, () => addReport(db, reportName(OTHER)));
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /remove your reports first/);
+  });
+  assert.equal(await userExists(db, OTHER), true);
+  await asUser(db, THIRD, () => addObject(db, photoName(THIRD)));
+  await asUser(db, THIRD, async () => {
+    await assert.rejects(() => db.exec('select public.delete_my_account()'), /remove your photos first/);
+  });
+  await asUser(db, OTHER, async () => {
+    await db.exec(`delete from storage.objects where name like '${OTHER}/%'`);
+    await db.exec('select public.delete_my_account()');
+  });
+  assert.equal(await userExists(db, OTHER), false);
+  const config = (await db.query(`select prosecdef, proconfig from pg_proc where oid = 'public.delete_my_account()'::regprocedure`)).rows[0];
+  assert.equal(config.prosecdef, true);
+  assert.ok(config.proconfig.includes('row_security=off'));
+});
+
+// ── cycle days and conditions ───────────────────────────────────────────────────────────────────
+
+async function worldWithCycle() {
+  const db = await worldWithAccounts();
+  await runScript(db, CYCLE);
+  return db;
+}
+
+test('cycle days are private, one per person, day and source, with known flows and symptoms', async () => {
+  const db = await worldWithCycle();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.cycle_days (day, flow, symptoms) values ('2026-10-01', 'medium', '{cramps,tiredness}')`);
+    await db.exec(`insert into public.cycle_days (day, flow, source) values ('2026-10-01', 'light', 'healthkit')`);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-01', 'heavy')`), /duplicate key/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-02', 'lots')`), /check/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (day, flow, symptoms) values ('2026-10-03', 'light', '{fever}')`), /check/);
+    await assert.rejects(() => db.exec(`insert into public.cycle_days (user_id, day, flow) values ('${THIRD}', '2026-10-04', 'light')`), RLS);
+  });
+  await asUser(db, THIRD, async () => assert.equal(await rowsOf(db, 'cycle_days'), 0));
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.cycle_days'), /permission denied/); });
+});
+
+test('conditions are private, one row per condition, and keep the person\'s own label', async () => {
+  const db = await worldWithCycle();
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.profile_conditions (condition, label) values ('pcos', 'PCOD')`);
+    await db.exec(`insert into public.profile_conditions (condition, since) values ('pregnant', '2026-08-01')`);
+    await assert.rejects(() => db.exec(`insert into public.profile_conditions (condition) values ('pcos')`), /duplicate key/);
+    await assert.rejects(() => db.exec(`insert into public.profile_conditions (condition) values ('flu')`), /check/);
+  });
+  await asUser(db, THIRD, async () => assert.equal(await rowsOf(db, 'profile_conditions'), 0));
+});
+
+test('deleting an account removes its cycle days and conditions; hormones are added once, with no usual range', async () => {
+  const db = await worldWithCycle();
+  await runScript(db, CYCLE);
+  const hormones = (await db.query(`select code, ref_low, ref_high from public.biomarkers where category = 'hormonal' and 'reproductive' = any(organ_systems) order by sort_order`)).rows;
+  assert.deepEqual(hormones.map((h) => h.code), ['oestradiol', 'progesterone', 'lh', 'fsh', 'prolactin', 'shbg']);
+  assert.ok(hormones.every((h) => h.ref_low === null && h.ref_high === null));
+  await asUser(db, OTHER, async () => {
+    await db.exec(`insert into public.cycle_days (day, flow) values ('2026-10-01', 'medium')`);
+    await db.exec(`insert into public.profile_conditions (condition) values ('pcos')`);
+    await db.exec('select public.delete_my_account()');
+  });
+  assert.equal(await count(db, `select count(*) as n from public.cycle_days where user_id = '${OTHER}'`), 0);
+  assert.equal(await count(db, `select count(*) as n from public.profile_conditions where user_id = '${OTHER}'`), 0);
+  assert.ok((await personalTables(db)).includes('cycle_days'));
+});
+
+// ── strength ─────────────────────────────────────────────────────────────────────────────────────
+
+async function worldWithStrength() {
+  const db = await worldWithAccounts();
+  await runScript(db, STRENGTH);
+  await runScript(db, STRENGTH);
+  return db;
+}
+const SET_A = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+test('a set is saved by its device-made id, and resending it changes nothing', async () => {
+  const db = await worldWithStrength();
+  await asUser(db, OTHER, async () => {
+    const w = (await db.query(`insert into public.workouts default values returning id`)).rows[0].id;
+    const send = () => db.query(
+      `insert into public.workout_sets (id, workout_id, exercise, weight_kg, reps, rpe) values ($1, $2, 'Squat', 100, 5, 8.5)
+       on conflict (id) do update set exercise = excluded.exercise, weight_kg = excluded.weight_kg, reps = excluded.reps, rpe = excluded.rpe`, [SET_A, w]);
+    await send();
+    await send();
+    assert.equal(await rowsOf(db, 'workout_sets'), 1);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps, rpe) values (gen_random_uuid(), $1, 'Squat', 5, 8.3)`, [w]), /check/);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, '', 5)`, [w]), /check/);
+  });
+});
+
+test('workouts and sets are private, a set cannot join someone else\'s workout, and deleting cascades', async () => {
+  const db = await worldWithStrength();
+  const theirs = await asUser(db, THIRD, async () => (await db.query(`insert into public.workouts default values returning id`)).rows[0].id);
+  await asUser(db, OTHER, async () => {
+    assert.equal(await rowsOf(db, 'workouts'), 0);
+    await assert.rejects(() => db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, 'Squat', 5)`, [theirs]), /foreign key|violates/);
+    const w = (await db.query(`insert into public.workouts default values returning id`)).rows[0].id;
+    await db.query(`insert into public.workout_sets (id, workout_id, exercise, reps) values (gen_random_uuid(), $1, 'Bench', 8)`, [w]);
+    await db.query(`delete from public.workouts where id = $1`, [w]);
+    assert.equal(await rowsOf(db, 'workout_sets'), 0);
+  });
+  await asAnon(db, async () => { await assert.rejects(() => db.exec('select * from public.workouts'), /permission denied/); });
+  await asUser(db, THIRD, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, `select count(*) as n from public.workouts where user_id = '${THIRD}'`), 0);
 });

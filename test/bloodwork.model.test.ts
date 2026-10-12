@@ -6,6 +6,8 @@ import { CRITICAL } from '../src/lib/safety.ts';
 import { TREND } from '../src/lib/trends.ts';
 import type { Biomarker, BiomarkerReading } from '../src/db/queries.ts';
 
+const MALE = { sex: 'male' };
+
 // Invented numbers, shaped like rows from the live tables. They exercise the logic and say nothing about real limits.
 let n = 0;
 const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biomarker => ({
@@ -22,7 +24,7 @@ const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biom
   created_at: '2026-01-01T00:00:00Z',
   critical_low: null,
   critical_high: null,
-  threshold_source: null,
+  threshold_source: null, ref_sex: null,
   ...over,
 });
 const reading = (id: string, biomarker_id: string, measured_at: string, value: number | string): BiomarkerReading => ({
@@ -35,6 +37,8 @@ const reading = (id: string, biomarker_id: string, measured_at: string, value: n
   status: null,
   source: 'lab',
   user_id: 'u',
+  ref_low: null,
+  ref_high: null,
 });
 
 const potassium = marker({ id: 'k', code: 'potassium', ref_low: 3.5, ref_high: 5.1, critical_low: 2.8, critical_high: 6 });
@@ -45,6 +49,7 @@ const biomarkers = [potassium, albumin, tsh, unmeasured];
 
 test('markers are grouped by category in database order, and markers without results are listed apart', () => {
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers,
     readings: [reading('r1', 'a', '2026-06-06', 4.1), reading('r2', 'k', '2026-06-06', 4.2), reading('r3', 't', '2026-06-06', 2)],
   });
@@ -58,18 +63,19 @@ test('markers are grouped by category in database order, and markers without res
 });
 
 test('reference range is inclusive at both ends and says no_range when none is stored', () => {
-  assert.equal(rangeStatus(potassium, 3.5), 'in_range');
-  assert.equal(rangeStatus(potassium, 5.1), 'in_range');
-  assert.equal(rangeStatus(potassium, 3.49), 'below');
-  assert.equal(rangeStatus(potassium, 5.11), 'above');
-  assert.equal(rangeStatus(tsh, 0.01), 'in_range');
-  assert.equal(rangeStatus(tsh, 4.79), 'above');
-  assert.equal(rangeStatus(unmeasured, 1e9), 'no_range');
-  assert.throws(() => rangeStatus({ ...potassium, ref_low: 6, ref_high: 5 }, 4), RangeError);
+  assert.equal(rangeStatus(potassium, 3.5, MALE), 'in_range');
+  assert.equal(rangeStatus(potassium, 5.1, MALE), 'in_range');
+  assert.equal(rangeStatus(potassium, 3.49, MALE), 'below');
+  assert.equal(rangeStatus(potassium, 5.11, MALE), 'above');
+  assert.equal(rangeStatus(tsh, 0.01, MALE), 'in_range');
+  assert.equal(rangeStatus(tsh, 4.79, MALE), 'above');
+  assert.equal(rangeStatus(unmeasured, 1e9, MALE), 'no_range');
+  assert.throws(() => rangeStatus({ ...potassium, ref_low: 6, ref_high: 5 }, 4, MALE), RangeError);
 });
 
 test('change compares the latest result with the one before it, in date order whatever order rows arrive in', () => {
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium],
     readings: [reading('r3', 'k', '2026-06-06', 4.5), reading('r1', 'k', '2022-04-10', 4), reading('r2', 'k', '2024-06-16', 4.2)],
   });
@@ -83,11 +89,11 @@ test('change compares the latest result with the one before it, in date order wh
 });
 
 test('a single result has no change, and an unchanged or zero baseline is handled', () => {
-  const only = buildBloodworkView({ biomarkers: [potassium], readings: [reading('r1', 'k', '2026-06-06', 4)] });
+  const only = buildBloodworkView({ sex: 'male', biomarkers: [potassium], readings: [reading('r1', 'k', '2026-06-06', 4)] });
   assert.equal(only.groups[0].rows[0].change, null);
   assert.equal(only.groups[0].rows[0].previous, null);
 
-  const point = (value: number, day: number): Point => ({ id: 'p', measured_at: 'x', day, value, source: null, notes: null });
+  const point = (value: number, day: number): Point => ({ id: 'p', measured_at: 'x', day, value, source: null, notes: null, rangeUsed: { low: null, high: null, source: 'none', reason: 'none_set' }, range: 'no_range' });
   assert.equal(changeBetween(point(4, 10), point(4, 20)).direction, 'flat');
   assert.equal(changeBetween(point(4, 10), point(3, 20)).direction, 'down');
   assert.equal(changeBetween(point(0, 10), point(3, 20)).percent, null);
@@ -96,6 +102,7 @@ test('a single result has no change, and an unchanged or zero baseline is handle
 
 test('numeric strings from the database behave like numbers', () => {
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers: [{ ...potassium, ref_low: '3.5' as unknown as number, critical_high: '6.0' as unknown as number }],
     readings: [reading('r1', 'k', '2024-01-01', '4.0'), reading('r2', 'k', '2026-01-01', '6.0')],
   });
@@ -107,6 +114,7 @@ test('numeric strings from the database behave like numbers', () => {
 
 test('a critical result is current when it is the marker\'s latest, and past once a later result exists', () => {
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium, albumin],
     readings: [
       reading('r1', 'k', '2022-04-10', 6.2), // critical high, later superseded
@@ -118,6 +126,7 @@ test('a critical result is current when it is the marker\'s latest, and past onc
   assert.deepEqual(view.pastCritical.map((f) => [f.code, f.measured_at, f.status]), [['potassium', '2022-04-10', CRITICAL.HIGH]]);
 
   const now = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium],
     readings: [reading('r1', 'k', '2022-04-10', 4.1), reading('r2', 'k', '2026-06-06', 2.8)],
   });
@@ -127,6 +136,7 @@ test('a critical result is current when it is the marker\'s latest, and past onc
 
 test('markers with no critical limit never read as ok', () => {
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers,
     readings: [reading('r1', 'a', '2026-06-06', 0.1)],
   });
@@ -137,6 +147,7 @@ test('markers with no critical limit never read as ok', () => {
 test('stored limits raise an alert on their own, with no sign-off step', () => {
   const sodium = marker({ id: 'n', code: 'sodium', ref_low: 135, ref_high: 145, critical_low: 120, critical_high: 160 });
   const view = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium, sodium, albumin],
     readings: [reading('r1', 'k', '2026-06-06', 6.4), reading('r2', 'n', '2026-06-06', 170), reading('r3', 'a', '2026-06-06', 4)],
   });
@@ -145,25 +156,26 @@ test('stored limits raise an alert on their own, with no sign-off step', () => {
 
 test('data that cannot be trusted throws instead of being skipped', () => {
   assert.throws(
-    () => buildBloodworkView({ biomarkers: [potassium], readings: [reading('r1', 'ghost', '2026-06-06', 4)] }),
+    () => buildBloodworkView({ sex: 'male', biomarkers: [potassium], readings: [reading('r1', 'ghost', '2026-06-06', 4)] }),
     /unknown biomarker ghost/,
   );
   assert.throws(
-    () => buildBloodworkView({ biomarkers: [potassium], readings: [reading('r1', 'k', '2026-06-06', 'abc')] }),
+    () => buildBloodworkView({ sex: 'male', biomarkers: [potassium], readings: [reading('r1', 'k', '2026-06-06', 'abc')] }),
     TypeError,
   );
   assert.throws(
-    () => buildBloodworkView({ biomarkers: [potassium], readings: [reading('r1', 'k', 'sometime', 4)] }),
+    () => buildBloodworkView({ sex: 'male', biomarkers: [potassium], readings: [reading('r1', 'k', 'sometime', 4)] }),
     TypeError,
   );
   assert.throws(
-    () => buildBloodworkView({ biomarkers: [{ ...potassium, critical_low: 7 }], readings: [reading('r1', 'k', '2026-06-06', 4)] }),
+    () => buildBloodworkView({ sex: 'male', biomarkers: [{ ...potassium, critical_low: 7 }], readings: [reading('r1', 'k', '2026-06-06', 4)] }),
     RangeError,
   );
 });
 
 test('a statistical trend needs five results; with fewer the row says so and the view counts none', () => {
   const four = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium],
     readings: ['2022-01-01', '2023-01-01', '2024-01-01', '2025-01-01'].map((d, i) => reading(`r${i}`, 'k', d, 4 + i * 0.1)),
   });
@@ -171,6 +183,7 @@ test('a statistical trend needs five results; with fewer the row says so and the
   assert.equal(four.trendable, 0);
 
   const six = buildBloodworkView({
+    sex: 'male',
     biomarkers: [potassium],
     readings: ['2022-01-01', '2022-07-01', '2023-01-01', '2023-07-01', '2024-01-01', '2024-07-01'].map((d, i) =>
       reading(`r${i}`, 'k', d, 3.6 + i * 0.2),
@@ -181,7 +194,7 @@ test('a statistical trend needs five results; with fewer the row says so and the
 });
 
 test('an empty database yields an empty but valid view', () => {
-  const view = buildBloodworkView({ biomarkers, readings: [] });
+  const view = buildBloodworkView({ sex: 'male', biomarkers, readings: [] });
   assert.deepEqual([view.groups, view.latestDate, view.readingCount, view.dateCount], [[], null, 0, 0]);
   assert.deepEqual(view.noResults, ['POTASSIUM', 'ALBUMIN', 'TSH', 'Ferritin']);
 });
@@ -201,4 +214,21 @@ test('formatting reads dates from the text and keeps lab values as written', () 
   assert.equal(describeDays(1), '1 day earlier');
   assert.equal(describeDays(200), '7 months earlier');
   assert.equal(describeDays(720), '2.0 years earlier');
+});
+
+test('a woman is not flagged against a male default, and a printed range is used for each result', () => {
+  const hb = marker({ id: 'hb', code: 'hemoglobin', name: 'Hemoglobin', ref_low: 13.5, ref_high: 17.5, ref_sex: 'male' });
+  const r1 = { ...reading('r1', 'hb', '2026-05-01', 12.6) };
+  const r2 = { ...reading('r2', 'hb', '2026-06-01', 12.6), ref_low: 12, ref_high: 15.5 };
+  const her = buildBloodworkView({ sex: 'female', biomarkers: [hb], readings: [r1, r2] });
+  const row = her.groups[0].rows[0];
+  assert.equal(row.range, 'in_range');
+  assert.equal(row.rangeUsed.source, 'printed');
+  assert.deepEqual([row.refLow, row.refHigh], [12, 15.5]);
+  // the older result had no printed range, so for her it has none at all rather than a man's "below"
+  assert.equal(row.points[0].range, 'no_range');
+  assert.equal(row.points[0].rangeUsed.reason, 'default_other_sex');
+  // the same first result for a man is read against the default
+  const him = buildBloodworkView({ sex: 'male', biomarkers: [hb], readings: [r1] });
+  assert.equal(him.groups[0].rows[0].range, 'below');
 });

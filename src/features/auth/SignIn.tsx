@@ -67,6 +67,7 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
   const settings = useAuthSettings();
   const [view, setView] = useState<View>({ kind: 'form' });
   const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [agreed, setAgreed] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -130,6 +131,7 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
     const errors = validateCredentials(mode, { email, password, confirm });
     const first = errors.email ?? errors.password ?? errors.confirm;
     if (first) return fail(first, errors);
+    if (signingUp && !agreed) return fail('Read and agree to the privacy policy and terms to create an account.');
     setFieldErrors({});
     setBusy(true);
     try {
@@ -268,6 +270,9 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
             <Button variant="secondary" size="lg" className="mt-6 w-full" disabled={busy} onClick={google}>
               <GoogleMark /> Continue with Google
             </Button>
+            <p className="mt-2 text-center text-xs text-ink-3">
+              By continuing with Google you agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>.
+            </p>
             <div className="mt-6 flex items-center gap-3 font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">
               <span className="h-px flex-1 bg-line-strong" aria-hidden="true" />
               or with email
@@ -324,6 +329,15 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
             </Field>
           )}
         </div>
+
+        {signingUp && (
+          <label className="mt-4 flex items-start gap-2 text-[13px] leading-snug text-ink-2">
+            <input type="checkbox" className="mt-0.5" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>
+              I have read and agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>. Intus is a tracker, not medical advice.
+            </span>
+          </label>
+        )}
 
         {!signingUp && (
           <div className="mt-2 text-right">
