@@ -43,7 +43,8 @@ export interface QuantitySampleIn {
 
 /** Matches the sleep_sessions columns the sync writes. */
 export interface SleepRow {
-  source_kind: 'healthkit';
+  /** 'healthkit' from the phone app; the web app's import of Apple's export file uses 'apple_health_export' */
+  source_kind: 'healthkit' | 'apple_health_export';
   source_name: string;
   external_id: string;
   start_at: string;
