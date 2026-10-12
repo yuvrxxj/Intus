@@ -7,6 +7,7 @@ import { type Change, type MarkerRow, type Point, type RangeStatus } from './mod
 import {
   ARROW, DIRECTION_WORD, RANGE_LABEL, describeDays, formatDay, formatDelta, formatRange, formatValue,
 } from './format.ts';
+import { MarkerPopover } from './MarkerPopover.tsx';
 import { Sparkline } from './Sparkline.tsx';
 import { MANUAL_SOURCE } from './entry.ts';
 import { REPORT_SOURCE } from '../reports/review.ts';
@@ -167,6 +168,7 @@ export function MarkerTable({ rows, expanded, onToggle, onDeleteReading }: Props
                       <span className="bt-caret" aria-hidden="true">{open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</span>
                       {row.biomarker.name}
                     </button>
+                    <MarkerPopover code={row.biomarker.code} name={row.biomarker.name} unit={row.biomarker.unit} range={row.rangeUsed} />
                     {isDemo(row.latest) ? <span className="tag tag-demo" title="The latest result is demo data.">demo data</span> : null}
                   </td>
                   <td data-label="Latest">

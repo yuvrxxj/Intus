@@ -65,3 +65,16 @@ table.bt-hist{min-width:0}
   table.bt-hist{table-layout:auto}
 }
 }
+
+/* the marker popover: an "i" beside the name, a card on hover, tap or focus */
+.mp{position:relative;display:inline-block;vertical-align:middle;margin-left:4px}
+.mp-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:var(--ink-3);background:transparent;border:none;cursor:pointer}
+.mp-btn:hover,.mp-btn[aria-expanded=true]{color:var(--red);background:var(--red3)}
+.mp-btn:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+.mp-card{position:fixed;z-index:60;width:min(340px,80vw);display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 10px 30px rgb(31 19 0 / .14);text-align:left;font-weight:500;white-space:normal}
+.mp-title{font-size:14px;font-weight:700;color:var(--ink)}
+.mp-h{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.mp-p{font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+.mp-range{font-size:12px;color:var(--ink);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.mp-src{font-size:11px;color:var(--ink-3)}
+.mp-src a{color:var(--red);text-decoration:underline}
