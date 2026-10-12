@@ -10,14 +10,17 @@
 - Never edit a migration that has been merged. Add a new file.
 - Do not add files to `supabase/baseline.txt`.
 
-## Notion and Miro
+## Linear and Miro
 
-- There is one Notion page, "Intus" (https://app.notion.com/p/3f0ed785ad7881d1b357f89c1abd9048), and one Miro board,
-  "Intus" (https://miro.com/app/board/uXjVEeXXqhk=/). Everything for the project goes inside them.
-- Never create a new top-level Notion page or a new Miro board. Search first, then add a child page under the
-  matching section of the Intus page, or a new numbered frame (a section) on the Intus board below the last one.
-- If a page or board for the project already exists elsewhere, move or copy it into these two instead of adding
-  another, and tell the user which old ones can be deleted.
+- Linear is the one place for daily logging and product management: tasks, roadmap, decisions, research notes and
+  the build record. The workspace is "Intus" (https://linear.app/intus), team INT, project "Intus".
+- Keep it current as you work. Move the issue you are on to In Progress. When a change ships, set the issue to Done
+  and comment with the PR link. Search before creating an issue and never add a duplicate.
+- Do not use Notion for the project. The old "Intus" Notion page
+  (https://app.notion.com/p/3f0ed785ad7881d1b357f89c1abd9048) is an archive and stays as it is.
+- Miro is only for visualisation (journey maps, diagrams, flows), and only when one is needed. There is one board,
+  "Intus" (https://miro.com/app/board/uXjVEeXXqhk=/). Never create a new board. Add a new numbered frame (a section)
+  below the last one. Anything that is a task or a status goes in Linear, not on the board.
 
 ## Checks before pushing
 
