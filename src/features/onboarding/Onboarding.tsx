@@ -14,9 +14,11 @@ import { todayKey } from '../../util/dates.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
 import { nextSortOrder } from '../habits/model.ts';
+import { ageOn } from '../../lib/age.ts';
+import { calorieBreakdown } from '../goals/advice.ts';
 import {
-  ACTIVITY, DIET_LABEL, STEPS, firstInvalidStep, formFromProfile, goalNotes, goalSentence, habitsFromForm, profileFromForm,
-  suggestCalories, validateStep, type Diet, type OnboardingErrors, type OnboardingForm, type StepId,
+  ACTIVITY, DIET_LABEL, STEPS, adviceFor, firstInvalidStep, formFromProfile, goalNotes, goalSentence, habitsFromForm, profileFromForm,
+  validateStep, type Diet, type OnboardingErrors, type OnboardingForm, type StepId,
 } from './model.ts';
 
 /** What each step is for, shown under its title so nobody wonders why a question is asked. */
@@ -119,7 +121,8 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => (key in e ? { ...e, [key]: undefined } : e));
   };
-  const suggested = useMemo(() => suggestCalories(form), [form]);
+  const advice = useMemo(() => adviceFor(form, today), [form, today]);
+  const age = ageOn(form.date_of_birth.trim(), today);
   const notes = goalNotes(form);
   const alreadyTracked = habits.active.map((h) => h.name);
   const toCreate = habitsFromForm(form, alreadyTracked);
@@ -132,7 +135,7 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
   }
 
   function next() {
-    const found = validateStep(step.id, form);
+    const found = validateStep(step.id, form, today);
     if (Object.keys(found).length > 0) {
       setErrors(found);
       return;
@@ -152,10 +155,10 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
   }
 
   async function finish() {
-    const bad = firstInvalidStep(form);
+    const bad = firstInvalidStep(form, today);
     if (bad !== null) {
       go(STEPS.findIndex((s) => s.id === bad));
-      setErrors(validateStep(bad, form));
+      setErrors(validateStep(bad, form, today));
       return;
     }
     const values = profileFromForm(form, today);
@@ -233,8 +236,9 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
                       </Field>
                       <Choice compact label="Sex" value={form.sex} error={errors.sex} onChange={(v) => set('sex', v)}
                         options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />
-                      <Field id="ob-age" label="Age" error={errors.age}>
-                        <input id="ob-age" type="number" inputMode="numeric" min="18" max="120" value={form.age} placeholder="30" onChange={(e) => set('age', e.target.value)} />
+                      <Field id="ob-dob" label="Date of birth" error={errors.date_of_birth}
+                        hint={age !== null && !errors.date_of_birth ? `You are ${age}. Your age updates itself on your birthday.` : 'Your age is worked out from this, so it stays right.'}>
+                        <input id="ob-dob" type="date" autoComplete="bday" min="1900-01-01" max={today} value={form.date_of_birth} onChange={(e) => set('date_of_birth', e.target.value)} />
                       </Field>
                       <Field id="ob-height" label="Height (cm)" error={errors.height_cm}>
                         <input id="ob-height" type="number" inputMode="decimal" step="0.5" value={form.height_cm} placeholder="175" onChange={(e) => set('height_cm', e.target.value)} />
@@ -260,10 +264,17 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
                         <input id="ob-weeks" type="number" inputMode="numeric" min="1" max="104" value={form.weeks} onChange={(e) => set('weeks', e.target.value)} />
                       </Field>
                       <Field id="ob-calories" label="Daily calories (optional)" error={errors.calorie_target} className="col-span-full"
-                        hint={suggested === null ? 'Fill in the earlier steps to get a suggestion.' : `A starting point from a standard formula is ${suggested.toLocaleString('en-US')} kcal.`}>
+                        hint={advice === null ? 'Fill in the earlier steps to get a suggestion.' : calorieBreakdown(advice)}>
                         <div className="flex flex-wrap gap-2">
                           <input id="ob-calories" className="min-w-0 flex-1 basis-40" type="number" inputMode="numeric" value={form.calorie_target} placeholder="2000" onChange={(e) => set('calorie_target', e.target.value)} />
-                          <Button disabled={suggested === null} onClick={() => set('calorie_target', String(suggested))}>Use the suggestion</Button>
+                          <Button disabled={advice === null} onClick={() => advice && set('calorie_target', String(advice.calories.target))}>Use the suggestion</Button>
+                        </div>
+                      </Field>
+                      <Field id="ob-protein" label="Daily protein, grams (optional)" error={errors.protein_target} className="col-span-full"
+                        hint={advice?.protein != null ? `A common starting point is ${advice.protein} g, based on your weight and activity.` : 'Fill in the earlier steps to get a suggestion.'}>
+                        <div className="flex flex-wrap gap-2">
+                          <input id="ob-protein" className="min-w-0 flex-1 basis-40" type="number" inputMode="numeric" value={form.protein_target} placeholder="120" onChange={(e) => set('protein_target', e.target.value)} />
+                          <Button disabled={advice?.protein == null} onClick={() => advice?.protein != null && set('protein_target', String(advice.protein))}>Use the suggestion</Button>
                         </div>
                       </Field>
                       {notes.map((n) => <div key={n} className="notice notice-warn col-span-full mt-0">{n}</div>)}
@@ -315,7 +326,7 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
                   {step.id === 'review' && (
                     <div>
                       <ul>
-                        <ReviewRow label="Your goal">{sentence ?? 'Not set yet'}{form.calorie_target ? ` Around ${Number(form.calorie_target).toLocaleString('en-US')} kcal a day.` : ''}</ReviewRow>
+                        <ReviewRow label="Your goal">{sentence ?? 'Not set yet'}{form.calorie_target ? ` Around ${Number(form.calorie_target).toLocaleString('en-US')} kcal a day.` : ''}{form.protein_target ? ` About ${Number(form.protein_target).toLocaleString('en-US')} g of protein.` : ''}</ReviewRow>
                         <ReviewRow label="You will track">{toCreate.length > 0 ? toCreate.map((h) => h.name).join(', ') : 'Nothing new. Add habits any time under Goals.'}</ReviewRow>
                         <ReviewRow label="Bloodwork">Add results from your lab report in the Bloodwork section. Booking the same full panel each time keeps your history comparable.</ReviewRow>
                         <ReviewRow label="Supplements">Add anything you take in the Supplements section and it appears on your daily checklist.</ReviewRow>

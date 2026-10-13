@@ -35,6 +35,8 @@ const CYCLE = migration('20261012000400_cycle_and_conditions');
 const STRENGTH = migration('20261012000500_strength');
 // AI reading of lab reports: the settings, the usage log and the functions that enforce every limit.
 const AI_READING = migration('20261012000600_ai_reading');
+// The exact date of birth, so a person's age rolls over on their birthday.
+const DATE_OF_BIRTH = migration('20261013000100_date_of_birth');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -1609,4 +1611,27 @@ test('a free model on OpenRouter costs nothing, so only the daily numbers stand 
   assert.equal(Number((await db.query('select cost_usd::float as c from public.ai_usage')).rows[0].c), 0);
   assert.equal((await take(db, THIRD)).ok, true);
   assert.deepEqual(await take(db, OWNER), { ok: false, reason: 'busy' });
+});
+
+
+// ── date of birth on the profile ─────────────────────────────────────────────────────────────────────
+
+test('the date of birth starts empty, takes a real date, and is not accepted before 1900', async () => {
+  const db = await world({ stage: 'expanded', onboarding: 'after' });
+  await runScript(db, DATE_OF_BIRTH);
+  assert.equal(await count(db, 'select count(*) as n from public.profile where date_of_birth is null'), 1);
+  await db.exec(`update public.profile set date_of_birth = '1990-05-17'`);
+  assert.equal((await db.query(`select date_of_birth::text as d from public.profile`)).rows[0].d, '1990-05-17');
+  await assert.rejects(() => db.exec(`update public.profile set date_of_birth = '1899-12-31'`), /profile_date_of_birth_plausible/);
+  await db.exec(`update public.profile set date_of_birth = null`);
+});
+
+test('the date of birth migration can be applied twice and keeps what is stored', async () => {
+  const db = await world({ stage: 'expanded', onboarding: 'after' });
+  await runScript(db, DATE_OF_BIRTH);
+  await db.exec(`update public.profile set date_of_birth = '1988-02-29', age = 38`);
+  await runScript(db, DATE_OF_BIRTH);
+  const row = (await db.query(`select date_of_birth::text as d, age from public.profile`)).rows[0];
+  assert.deepEqual(row, { d: '1988-02-29', age: 38 });
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.profile'::regclass and conname = 'profile_date_of_birth_plausible'`), 1);
 });

@@ -196,7 +196,7 @@ export function Sleep({ today, notify }: { today: string; notify: (message: stri
 
             <div className="mt-5"><SleepChart strip={strip} band={mainBand} /></div>
 
-            {!band ? <p className="mt-3 text-xs leading-relaxed text-ink-3">Add your age under Screening to see the range recommended for it behind the bars. Nothing is assumed in its place.</p> : null}
+            {!band ? <p className="mt-3 text-xs leading-relaxed text-ink-3">Add your date of birth under Goals and habits to see the range recommended for it behind the bars. Nothing is assumed in its place.</p> : null}
 
             <details className="mt-4 text-sm text-ink-2">
               <summary className="cursor-pointer text-ink-3 hover:text-ink">How this is worked out</summary>

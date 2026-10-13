@@ -4,12 +4,14 @@
  * off screen or in a background tab, and holds one still frame when the person prefers reduced motion.
  */
 export type AsciiShape =
-  | 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube' | 'moon';
+  | 'heart' | 'drop' | 'capsule' | 'ring' | 'sphere' | 'bars' | 'cross' | 'stack' | 'coin' | 'cube' | 'moon'
+  // one piece for each page of the app, built from several parts so they read as objects rather than symbols
+  | 'hourglass' | 'target' | 'vials' | 'bottle' | 'stairs';
 
 type Vec = [number, number, number];
 
 const RAMP = ' .:-=+*#%@';
-export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop']);
+export const SWAYS: ReadonlySet<AsciiShape> = new Set(['heart', 'drop', 'target', 'vials', 'bottle', 'stairs']);
 export const FPS = 18;
 
 const len = (x: number, y: number, z: number) => Math.sqrt(x * x + y * y + z * z);
@@ -40,6 +42,15 @@ function smin(a: number, b: number, k: number): number {
   return b + (a - b) * h - k * h * (1 - h);
 }
 
+/** Distance to the segment from a to b, less radius r: a capsule between two points. */
+function segment(x: number, y: number, z: number, a: Vec, b: Vec, r: number): number {
+  const bax = b[0] - a[0], bay = b[1] - a[1], baz = b[2] - a[2];
+  const pax = x - a[0], pay = y - a[1], paz = z - a[2];
+  const h = clamp((pax * bax + pay * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1);
+  return len(pax - bax * h, pay - bay * h, paz - baz * h) - r;
+}
+
+
 /** Signed distance to a box with half sizes bx, by, bz, corners rounded by r. */
 function box(x: number, y: number, z: number, bx: number, by: number, bz: number, r = 0): number {
   const dx = Math.abs(x) - bx + r, dy = Math.abs(y) - by + r, dz = Math.abs(z) - bz + r;
@@ -53,7 +64,12 @@ function disc(x: number, y: number, z: number, rad: number, h: number, r = 0): n
 }
 
 /** Shapes seen a little from above, so a flat ring or coin does not turn edge-on to a line. */
-const PITCH_BIAS: Partial<Record<AsciiShape, number>> = { ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2 };
+const PITCH_BIAS: Partial<Record<AsciiShape, number>> = {
+  ring: 0.5, coin: 0.7, stack: 0.38, cube: 0.45, bars: 0.3, cross: 0.25, moon: 0.2, target: 0.1, vials: 0.28, bottle: 0.2, stairs: 0.25, hourglass: 0.12,
+};
+
+/** How much of the frame a shape fills. The bigger, many-part shapes are drawn smaller so no turn or tilt reaches the edge. */
+const FIT: Partial<Record<AsciiShape, number>> = { hourglass: 0.8, target: 0.86, vials: 0.82, bottle: 0.86, stairs: 0.86 };
 
 const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
   heart: (x, y, z) => {
@@ -97,11 +113,71 @@ const SDF: Record<AsciiShape, (x: number, y: number, z: number) => number> = {
     const wz = Math.abs(z) - 0.16;
     return Math.min(Math.max(crescent, wz), 0) + Math.hypot(Math.max(crescent, 0), Math.max(wz, 0)) - 0.04;
   },
+  // an hourglass: two glass bulbs meeting at a neck, a plate at each end and three posts between the plates
+  hourglass: (x, y, z) => {
+    const top = roundCone(x, y, z, [0, 0.03, 0], [0, 0.72, 0], 0.05, 0.52);
+    const bottom = roundCone(x, y, z, [0, -0.03, 0], [0, -0.72, 0], 0.05, 0.52);
+    const plates = Math.min(disc(x, y - 0.9, z, 0.68, 0.05, 0.03), disc(x, y + 0.9, z, 0.68, 0.05, 0.03));
+    let posts = Infinity;
+    for (let k = 0; k < 3; k++) {
+      const a = (k * 2 * Math.PI) / 3 + 0.5;
+      posts = Math.min(posts, segment(x, y, z, [0.6 * Math.cos(a), -0.88, 0.6 * Math.sin(a)], [0.6 * Math.cos(a), 0.88, 0.6 * Math.sin(a)], 0.035));
+    }
+    return Math.min(smin(top, bottom, 0.04), plates, posts);
+  },
+  // a target built of rings with gaps between them, a bullseye ball, and an arrow in it that leans out towards you
+  target: (x, y, z) => {
+    const r = Math.sqrt(x * x + y * y);
+    const ring = (radius: number) => Math.sqrt((r - radius) ** 2 + z * z) - 0.075;
+    const stand = Math.min(segment(x, y, z, [0, -0.78, 0], [-0.4, -1.0, 0], 0.04), segment(x, y, z, [0, -0.78, 0], [0.4, -1.0, 0], 0.04));
+    const bull = len(x, y, z * 1.3) - 0.15;
+    const shaft = segment(x, y, z, [0.02, 0.02, 0.1], [0.34, 0.26, 1.0], 0.026);
+    const feathers = Math.min(
+      segment(x, y, z, [0.3, 0.23, 0.9], [0.44, 0.42, 1.0], 0.038),
+      segment(x, y, z, [0.3, 0.23, 0.9], [0.46, 0.07, 1.0], 0.038),
+    );
+    // three thin spokes tie the rings together so they read as one object
+    const spokes = Math.min(segment(x, y, z, [0, 0.82, 0], [0, -0.82, 0], 0.025), segment(x, y, z, [-0.82, 0, 0], [0.82, 0, 0], 0.025));
+    return Math.min(ring(0.8), ring(0.52), ring(0.26), bull, shaft, feathers, spokes, stand);
+  },
+  // three test tubes of different heights, capped, standing in a rack with a base and two end posts
+  vials: (x, y, z) => {
+    const tube = (cx: number, cz: number, top: number) => Math.min(
+      segment(x, y, z, [cx, -0.55, cz], [cx, top, cz], 0.17),
+      disc(x - cx, y - (top + 0.08), z - cz, 0.2, 0.09, 0.03),
+    );
+    const base = box(x, y + 0.78, z, 0.86, 0.1, 0.34, 0.04);
+    const posts = Math.min(segment(x, y, z, [-0.78, -0.7, 0], [-0.78, 0.15, 0], 0.045), segment(x, y, z, [0.78, -0.7, 0], [0.78, 0.15, 0], 0.045));
+    const bar = box(x, y - 0.15, z, 0.82, 0.04, 0.05, 0.015);
+    return Math.min(tube(-0.5, -0.1, 0.62), tube(0, 0.1, 0.38), tube(0.5, -0.1, 0.78), base, posts, bar);
+  },
+  // a pill bottle with a ridged cap and a label band, and one capsule lying beside it
+  bottle: (x, y, z) => {
+    const body = disc(x, y + 0.38, z, 0.46, 0.5, 0.06);
+    const shoulder = roundCone(x, y, z, [0, 0.1, 0], [0, 0.46, 0], 0.44, 0.27);
+    const angle = Math.atan2(z, x);
+    const capRadius = 0.31 + 0.018 * Math.sin(angle * 16);
+    const cap = Math.max(Math.max(Math.sqrt(x * x + z * z) - capRadius, Math.abs(y - 0.68) - 0.2), -0.0);
+    const label = disc(x, y + 0.42, z, 0.485, 0.22, 0.02);
+    const pill = segment(x, y, z, [0.5, -0.82, 0.5], [0.82, -0.82, 0.2], 0.09);
+    return Math.min(smin(body, shoulder, 0.05), cap, label, pill);
+  },
+  // five steps going up to the right, with a ball resting on the top one
+  stairs: (x, y, z) => {
+    let d = Infinity;
+    for (let i = 0; i < 5; i++) {
+      const height = 0.3 * (i + 1);
+      d = Math.min(d, box(x - (-0.72 + 0.36 * i), y - (-0.9 + height / 2), z, 0.18, height / 2, 0.34, 0.025));
+    }
+    return Math.min(d, len(x - 0.72, y - 0.76, z) - 0.16);
+  },
 };
 
 /** One frame as text. t is seconds; the shape turns about the vertical axis with a slight nod. */
 export function renderAscii(shape: AsciiShape, cols: number, rows: number, t: number, aspect = 0.6): string {
-  const sdf = SDF[shape];
+  const fit = FIT[shape] ?? 1;
+  const raw = SDF[shape];
+  const sdf = fit === 1 ? raw : (x: number, y: number, z: number) => raw(x / fit, y / fit, z / fit) * fit;
   // shapes that only read from the front sway; the rest turn all the way round
   const yaw = SWAYS.has(shape) ? 0.75 * Math.sin(t * 0.6) : t * 0.55;
   const pitch = 0.22 * Math.sin(t * 0.4) + (PITCH_BIAS[shape] ?? 0);

@@ -1,7 +1,7 @@
 // Cycles from the days a person logged bleeding. Pure: no network. Nothing is predicted: no next period, no ovulation,
 // no fertile days. Only what already happened is summarised, and nothing until there is enough of it.
 import { dayNumber, isoDay } from '../../lib/dates.ts';
-import { normalizeSex } from '../screening/model.ts';
+import { normalizeSex } from '../../lib/sex.ts';
 
 export type Flow = 'spotting' | 'light' | 'medium' | 'heavy';
 export const FLOWS: readonly Flow[] = ['spotting', 'light', 'medium', 'heavy'];

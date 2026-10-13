@@ -20,11 +20,10 @@ const NAV = [
 ] as const;
 
 const ABOUT = [
-  ['Daily log', 'Weigh in, log calories, steps and the habits you set, in under a minute. Your latest 30 entries are charted, and every day you logged is kept in History.'],
+  ['Daily log', 'Weigh in, log calories, steps and the habits you set, in under a minute. Your latest 30 entries are charted, with a dive deeper into the full history of each chart.'],
   ['Bloodwork', 'Type in results from your lab report. Each one is flagged against its reference range, critical limits are called out, and an arrow compares it with your previous result.'],
   ['Sleep', 'Add when you went to bed and got up. Intus shows time asleep night by night, your usual times and how much they vary, and which source each number came from. Missing nights stay missing, and nothing is scored.'],
   ['Supplements', 'Record what you take, with start and end dates. Intus sets the days before against the days after, using only days you logged, and says nothing until there is enough to compare.'],
-  ['Screening', 'A calendar of the checks that are due for your age and sex, and when you last had each one.'],
 ] as const;
 
 const WHY = [
@@ -38,7 +37,7 @@ const WHY = [
 const PRICING = {
   headline: 'Free during early access.',
   points: [
-    'Everything in the app today: the daily log, goals and habits, sleep, bloodwork, supplements, screening and history.',
+    'Everything in the app today: the daily log, goals and habits, sleep, bloodwork, supplements and progress.',
     'No card needed. Make an account and start.',
     'Paid plans arrive with the phone apps. The price will be published before anything is charged.',
   ],

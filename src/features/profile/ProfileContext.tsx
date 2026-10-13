@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchProfile, type Profile } from '../../db/profile.ts';
+import { currentAge } from '../../lib/age.ts';
 import { programmeFromProfile, type Programme } from '../../lib/programme.ts';
+import { todayKey } from '../../util/dates.ts';
 
 export interface ProfileState {
   status: 'loading' | 'ready' | 'error';
@@ -12,6 +14,23 @@ export interface ProfileState {
 }
 
 const ProfileContext = createContext<ProfileState | null>(null);
+
+/** Today's date as text, changing by itself at midnight, so an age worked out from a birthday rolls over while the app is open. */
+function useDayKey(): string {
+  const [key, setKey] = useState(() => todayKey());
+  useEffect(() => {
+    const id = window.setInterval(() => setKey((k) => { const now = todayKey(); return now === k ? k : now; }), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return key;
+}
+
+/** The profile with its age worked out from the date of birth, when there is one. Nothing downstream reads the stored age. */
+function withLiveAge(profile: Profile | null, today: string): Profile | null {
+  if (profile === null) return null;
+  const age = currentAge(profile, today);
+  return age === profile.age ? profile : { ...profile, age };
+}
 
 /**
  * Loads the signed-in person's profile once and shares it, so the header, Today, Progress and the Goals screen all
@@ -33,12 +52,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  const day = useDayKey();
 
   const value = useMemo<ProfileState>(() => {
     if (loaded === null) return { status: 'loading', profile: null, programme: null, error: null, reload };
     if ('error' in loaded) return { status: 'error', profile: null, programme: null, error: loaded.error, reload };
-    return { status: 'ready', profile: loaded.profile, programme: programmeFromProfile(loaded.profile), error: null, reload };
-  }, [loaded, reload]);
+    return { status: 'ready', profile: withLiveAge(loaded.profile, day), programme: programmeFromProfile(loaded.profile), error: null, reload };
+  }, [loaded, reload, day]);
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 }
