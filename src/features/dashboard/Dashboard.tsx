@@ -124,7 +124,7 @@ export function Dashboard() {
                 <p className="mt-3 font-mono text-xs text-ink-2 tabular-nums">{profileLine(profile, programme)}</p>
                 <p className="mt-1 font-mono text-xs text-ink-3 tabular-nums xl:hidden">{clock.date} / {clock.time}</p>
               </motion.div>
-              <AsciiArt shape={meta.art} cols={40} rows={20} label="A heart drawn in characters, turning slowly" className="on-dots hidden shrink-0 text-[9px] text-primary md:block xl:text-[10px]" />
+              <AsciiArt shape="heart" cols={40} rows={20} label="A heart drawn in characters, turning slowly" className="on-dots hidden shrink-0 text-[9px] text-primary md:block xl:text-[10px]" />
             </header>
             <div className="grid gap-4 pb-8">
               <Overview stats={stats} draft={form.draft} today={today} onJump={go} />

@@ -1,4 +1,5 @@
 import type { AsciiShape } from '../../components/ui/ascii-engine.ts';
+import type { SceneId } from '../../components/ui/scene-engine.ts';
 
 /** The pages of the signed-in app. The first six are in the top bar, in this order; Account sits at its right. */
 export type PageId = 'dashboard' | 'today' | 'goals' | 'bloodwork' | 'supplements' | 'progress' | 'account';
@@ -11,18 +12,23 @@ export interface PageMeta {
   /** the word in the top bar */
   short: string;
   blurb: string;
-  /** the artwork on the page. The dashboard has the heart beside its greeting, and the ribs down its left side */
-  art: AsciiShape;
+  /**
+   * The artwork on the page. Today to Progress each have an engraved picture that moves (a scene); the dashboard has
+   * the heart beside its greeting, and the ribs down its left side, and Account a cube
+   */
+  art: PageArt;
 }
 
+export type PageArt = { shape: AsciiShape } | { scene: SceneId };
+
 export const PAGES: readonly PageMeta[] = [
-  { id: 'dashboard', n: '01', title: 'Dashboard', short: 'Dashboard', blurb: 'Where you stand today.', art: 'heart' },
-  { id: 'today', n: '02', title: 'Today', short: 'Today', blurb: 'Log the day, then see last night\'s sleep and what you ate.', art: 'hourglass' },
-  { id: 'goals', n: '03', title: 'Goals and habits', short: 'Goals', blurb: 'Your details, your target, your daily targets, what you track and your photo check-ins.', art: 'target' },
-  { id: 'bloodwork', n: '04', title: 'Bloodwork', short: 'Bloodwork', blurb: 'Results from your lab reports, flagged against their reference ranges.', art: 'vials' },
-  { id: 'supplements', n: '05', title: 'Supplements', short: 'Supplements', blurb: 'What you take, when, and what changed since you started.', art: 'bottle' },
-  { id: 'progress', n: '06', title: 'Progress', short: 'Progress', blurb: 'Your latest 30 entries, charted, with a way into the full history of each.', art: 'stairs' },
-  { id: 'account', n: '07', title: 'Account', short: 'Account', blurb: 'Who is signed in, your data, and how to delete your account.', art: 'cube' },
+  { id: 'dashboard', n: '01', title: 'Dashboard', short: 'Dashboard', blurb: 'Where you stand today.', art: { shape: 'heart' } },
+  { id: 'today', n: '02', title: 'Today', short: 'Today', blurb: 'Log the day, then see last night\'s sleep and what you ate.', art: { scene: 'hourglass' } },
+  { id: 'goals', n: '03', title: 'Goals and habits', short: 'Goals', blurb: 'Your details, your target, your daily targets, what you track and your photo check-ins.', art: { scene: 'archery' } },
+  { id: 'bloodwork', n: '04', title: 'Bloodwork', short: 'Bloodwork', blurb: 'Results from your lab reports, flagged against their reference ranges.', art: { scene: 'bloodwork' } },
+  { id: 'supplements', n: '05', title: 'Supplements', short: 'Supplements', blurb: 'What you take, when, and what changed since you started.', art: { scene: 'supplements' } },
+  { id: 'progress', n: '06', title: 'Progress', short: 'Progress', blurb: 'Your latest 30 entries, charted, with a way into the full history of each.', art: { scene: 'sisyphus' } },
+  { id: 'account', n: '07', title: 'Account', short: 'Account', blurb: 'Who is signed in, your data, and how to delete your account.', art: { shape: 'cube' } },
 ];
 
 /** The pages in the top bar's main list. */
@@ -42,6 +48,6 @@ export function pageFromHash(hash: string): PageId | null {
 
 export const pageMeta = (id: PageId): PageMeta => PAGES.find((p) => p.id === id)!;
 
-/** The size every page's artwork is drawn at (characters). The tests check no shape is clipped at this size. */
+/** The size every page's 3D shape is drawn at (characters). The tests check no shape is clipped at this size. */
 export const PAGE_ART_COLS = 52;
 export const PAGE_ART_ROWS = 26;

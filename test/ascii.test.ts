@@ -1,21 +1,32 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderAscii, type AsciiShape } from '../src/components/ui/ascii-engine.ts';
-import { PAGES, PAGE_ART_COLS as SECTION_ART_COLS, PAGE_ART_ROWS as SECTION_ART_ROWS } from '../src/features/dashboard/pages.ts';
+import { SCENE_IDS } from '../src/components/ui/scene-engine.ts';
+import { PAGES, PAGE_ART_COLS as SECTION_ART_COLS, PAGE_ART_ROWS as SECTION_ART_ROWS, type PageMeta } from '../src/features/dashboard/pages.ts';
 
 const ALL: AsciiShape[] = [
   'heart', 'drop', 'capsule', 'ring', 'sphere', 'bars', 'cross', 'stack', 'coin', 'cube', 'moon',
   'hourglass', 'target', 'vials', 'bottle', 'stairs',
 ];
 
+const drawing = (p: PageMeta) => ('scene' in p.art ? `scene:${p.art.scene}` : `shape:${p.art.shape}`);
+
 test('every page has a drawing, and no two neighbouring pages share one', () => {
-  PAGES.forEach((p) => assert.ok(ALL.includes(p.art), `${p.id} has an unknown drawing`));
-  PAGES.slice(1).forEach((p, i) => assert.notEqual(p.art, PAGES[i].art, `${PAGES[i].id} and ${p.id} look the same`));
+  PAGES.forEach((p) => {
+    const known = 'scene' in p.art ? SCENE_IDS.includes(p.art.scene) : ALL.includes(p.art.shape);
+    assert.ok(known, `${p.id} has an unknown drawing`);
+  });
+  PAGES.slice(1).forEach((p, i) => assert.notEqual(drawing(p), drawing(PAGES[i]), `${PAGES[i].id} and ${p.id} look the same`));
 });
 
 test('every page from Today to Progress has its own drawing', () => {
-  const own = PAGES.filter((p) => p.id !== 'dashboard' && p.id !== 'account').map((p) => p.art);
-  assert.equal(new Set(own).size, own.length);
+  const own = PAGES.filter((p) => p.id !== 'dashboard' && p.id !== 'account');
+  assert.equal(new Set(own.map(drawing)).size, own.length);
+});
+
+test('Today to Progress each have a moving engraving, in this order', () => {
+  const own = PAGES.filter((p) => p.id !== 'dashboard' && p.id !== 'account');
+  assert.deepEqual(own.map((p) => ('scene' in p.art ? p.art.scene : null)), ['hourglass', 'archery', 'bloodwork', 'supplements', 'sisyphus']);
 });
 
 test('every shape draws something, in the same way every time', () => {
