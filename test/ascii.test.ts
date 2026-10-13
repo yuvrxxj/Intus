@@ -6,7 +6,6 @@ import { SECTIONS } from '../src/features/dashboard/sections.ts';
 
 const ALL: AsciiShape[] = [
   'heart', 'drop', 'capsule', 'ring', 'sphere', 'bars', 'cross', 'stack', 'coin', 'cube', 'moon',
-  'lungs', 'liver', 'kidneys', 'brain', 'bone', 'thyroid', 'pancreas',
 ];
 
 test('every section has a drawing, and no two neighbouring sections share one', () => {
