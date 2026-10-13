@@ -1,0 +1,197 @@
+[
+ {
+  "code": "alt",
+  "name": "ALT",
+  "unit": "U/L"
+ },
+ {
+  "code": "ast",
+  "name": "AST",
+  "unit": "U/L"
+ },
+ {
+  "code": "creatinine",
+  "name": "Creatinine",
+  "unit": "mg/dL"
+ },
+ {
+  "code": "egfr",
+  "name": "eGFR",
+  "unit": "mL/min"
+ },
+ {
+  "code": "hemoglobin",
+  "name": "Hemoglobin",
+  "unit": "g/dL"
+ },
+ {
+  "code": "ferritin",
+  "name": "Ferritin",
+  "unit": "ng/mL"
+ },
+ {
+  "code": "tsh",
+  "name": "TSH",
+  "unit": "mIU/L"
+ },
+ {
+  "code": "t3_free",
+  "name": "Free T3",
+  "unit": "pg/mL"
+ },
+ {
+  "code": "t4_free",
+  "name": "Free T4",
+  "unit": "ng/dL"
+ },
+ {
+  "code": "testosterone",
+  "name": "Testosterone",
+  "unit": "ng/dL"
+ },
+ {
+  "code": "cortisol",
+  "name": "Cortisol",
+  "unit": "µg/dL"
+ },
+ {
+  "code": "glucose",
+  "name": "Glucose",
+  "unit": "mg/dL"
+ },
+ {
+  "code": "hba1c",
+  "name": "HbA1c",
+  "unit": "%"
+ },
+ {
+  "code": "ldl",
+  "name": "LDL",
+  "unit": "mg/dL"
+ },
+ {
+  "code": "hdl",
+  "name": "HDL",
+  "unit": "mg/dL"
+ },
+ {
+  "code": "crp",
+  "name": "hs-CRP",
+  "unit": "mg/L"
+ },
+ {
+  "code": "vitamin_d",
+  "name": "Vitamin D",
+  "unit": "ng/mL"
+ },
+ {
+  "code": "nt_probnp",
+  "name": "NT-proBNP",
+  "unit": "pg/mL"
+ },
+ {
+  "code": "vitamin_b12",
+  "name": "Vitamin B12",
+  "unit": "pg/ml"
+ },
+ {
+  "code": "serum_iron",
+  "name": "Serum Iron",
+  "unit": "ug/dl"
+ },
+ {
+  "code": "calcium",
+  "name": "Calcium",
+  "unit": "mg/dl"
+ },
+ {
+  "code": "transferrin_sat",
+  "name": "Transferrin Saturation",
+  "unit": "%"
+ },
+ {
+  "code": "total_cholesterol",
+  "name": "Total Cholesterol",
+  "unit": "mg/dl"
+ },
+ {
+  "code": "triglycerides",
+  "name": "Triglycerides",
+  "unit": "mg/dL"
+ },
+ {
+  "code": "blood_urea",
+  "name": "Blood Urea",
+  "unit": "mg/dl"
+ },
+ {
+  "code": "uric_acid",
+  "name": "Uric Acid",
+  "unit": "mg/dl"
+ },
+ {
+  "code": "ggt",
+  "name": "GGT",
+  "unit": "U/L"
+ },
+ {
+  "code": "albumin",
+  "name": "Albumin",
+  "unit": "g/dl"
+ },
+ {
+  "code": "wbc_tlc",
+  "name": "WBC / TLC",
+  "unit": "10³/µL"
+ },
+ {
+  "code": "platelets",
+  "name": "Platelets",
+  "unit": "10³/µl"
+ },
+ {
+  "code": "t4_total",
+  "name": "T4 Total",
+  "unit": "ug/dl"
+ },
+ {
+  "code": "potassium",
+  "name": "Potassium",
+  "unit": "mmol/L"
+ },
+ {
+  "code": "sodium",
+  "name": "Sodium",
+  "unit": "mmol/L"
+ },
+ {
+  "code": "oestradiol",
+  "name": "Oestradiol",
+  "unit": "pg/mL"
+ },
+ {
+  "code": "progesterone",
+  "name": "Progesterone",
+  "unit": "ng/mL"
+ },
+ {
+  "code": "lh",
+  "name": "LH",
+  "unit": "mIU/mL"
+ },
+ {
+  "code": "fsh",
+  "name": "FSH",
+  "unit": "mIU/mL"
+ },
+ {
+  "code": "prolactin",
+  "name": "Prolactin",
+  "unit": "ng/mL"
+ },
+ {
+  "code": "shbg",
+  "name": "SHBG",
+  "unit": "nmol/L"
+ }
+]

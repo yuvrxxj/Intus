@@ -271,7 +271,7 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
               <GoogleMark /> Continue with Google
             </Button>
             <p className="mt-2 text-center text-xs text-ink-3">
-              By continuing with Google you agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>.
+              By continuing with Google you agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>, confirm you are 18 or over, and consent to Intus storing the health information you enter.
             </p>
             <div className="mt-6 flex items-center gap-3 font-mono text-[11px] tracking-[0.08em] text-ink-3 uppercase">
               <span className="h-px flex-1 bg-line-strong" aria-hidden="true" />
@@ -334,7 +334,7 @@ export function SignIn({ initialMode = 'sign-in' }: { initialMode?: AuthMode }) 
           <label className="mt-4 flex items-start gap-2 text-[13px] leading-snug text-ink-2">
             <input type="checkbox" className="mt-0.5" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
             <span>
-              I have read and agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>. Intus is a tracker, not medical advice.
+              I have read and agree to the <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink">terms</a>, I am 18 or over, and I consent to Intus storing the health information I enter, to provide the service to me. Intus is a tracker, not medical advice.
             </span>
           </label>
         )}
