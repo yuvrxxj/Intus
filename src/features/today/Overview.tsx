@@ -9,6 +9,7 @@ import { shortDate } from '../../util/dates.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
 import { summarize, withUntouchedCounts } from '../habits/model.ts';
 import { useProgramme } from '../profile/ProfileContext.tsx';
+import type { PageId } from '../dashboard/pages.ts';
 import type { TodayDraft } from './useToday.ts';
 import { daysToGoal, type WeightStats } from './stats.ts';
 
@@ -40,7 +41,7 @@ export function Overview({ stats, draft, today, onJump }: {
   stats: WeightStats;
   draft: TodayDraft;
   today: string;
-  onJump: (id: 'goals') => void;
+  onJump: (id: PageId) => void;
 }) {
   const programme = useProgramme();
   const screen = useScreenSize();

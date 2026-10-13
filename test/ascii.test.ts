@@ -1,17 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderAscii, type AsciiShape } from '../src/components/ui/ascii-engine.ts';
-import { SECTION_ART, SECTION_ART_COLS, SECTION_ART_ROWS } from '../src/features/dashboard/sectionArt.ts';
-import { SECTIONS } from '../src/features/dashboard/sections.ts';
+import { PAGES, PAGE_ART_COLS as SECTION_ART_COLS, PAGE_ART_ROWS as SECTION_ART_ROWS } from '../src/features/dashboard/pages.ts';
 
 const ALL: AsciiShape[] = [
   'heart', 'drop', 'capsule', 'ring', 'sphere', 'bars', 'cross', 'stack', 'coin', 'cube', 'moon',
-  'lungs', 'liver', 'kidneys', 'brain', 'bone', 'thyroid', 'pancreas',
+  'hourglass', 'target', 'vials', 'bottle', 'stairs',
 ];
 
-test('every section has a drawing, and no two neighbouring sections share one', () => {
-  assert.deepEqual(Object.keys(SECTION_ART).sort(), SECTIONS.map((s) => s.id).sort());
-  SECTIONS.slice(1).forEach((s, i) => assert.notEqual(SECTION_ART[s.id], SECTION_ART[SECTIONS[i].id], `${SECTIONS[i].id} and ${s.id} look the same`));
+test('every page has a drawing, and no two neighbouring pages share one', () => {
+  PAGES.forEach((p) => assert.ok(ALL.includes(p.art), `${p.id} has an unknown drawing`));
+  PAGES.slice(1).forEach((p, i) => assert.notEqual(p.art, PAGES[i].art, `${PAGES[i].id} and ${p.id} look the same`));
+});
+
+test('every page from Today to Progress has its own drawing', () => {
+  const own = PAGES.filter((p) => p.id !== 'dashboard' && p.id !== 'account').map((p) => p.art);
+  assert.equal(new Set(own).size, own.length);
 });
 
 test('every shape draws something, in the same way every time', () => {

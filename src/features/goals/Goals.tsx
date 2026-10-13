@@ -1,10 +1,12 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { saveGoals } from '../../db/profile.ts';
+import { saveGoals, type Profile } from '../../db/profile.ts';
 import { HabitsManager } from '../habits/HabitsManager.tsx';
 import { PhotoCheckIns } from '../photos/PhotoCheckIns.tsx';
 import { CycleSection } from '../cycle/Cycle.tsx';
 import { isFemale } from '../cycle/model.ts';
+import { DetailsCard } from '../profile/DetailsCard.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
+import { adviceFromGoals, calorieBreakdown } from './advice.ts';
 import {
   formFromProfile, newGoalFrom, summarizeGoal, validateGoalsForm, LIMITS, type GoalsErrors, type GoalsForm,
 } from './model.ts';
@@ -20,8 +22,9 @@ function Field(props: { id: string; label: string; error?: string; hint?: string
 }
 
 /** The form itself. It is keyed on the saved goal, so a fresh load or a save resets it to what is stored. */
-function GoalsFormCard({ initial, existingId, today, latestWeightKg, reload, notify }: {
+function GoalsFormCard({ initial, profile, existingId, today, latestWeightKg, reload, notify }: {
   initial: GoalsForm;
+  profile: Profile | null;
   existingId: string | null;
   today: string;
   latestWeightKg: number | null;
@@ -37,6 +40,7 @@ function GoalsFormCard({ initial, existingId, today, latestWeightKg, reload, not
   const summary = summarizeGoal(form);
   const preview = validateGoalsForm(form, today);
   const notes = preview.ok ? preview.notes : [];
+  const advice = adviceFromGoals(form, profile, latestWeightKg, today);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -91,6 +95,17 @@ function GoalsFormCard({ initial, existingId, today, latestWeightKg, reload, not
             value={form.protein_target} placeholder="165" onChange={(e) => set('protein_target', e.target.value)} />
         </Field>
       </div>
+      {advice ? (
+        <div className="notice" style={{ marginTop: 12 }} role="status">
+          <div>{calorieBreakdown(advice)}{advice.protein != null ? ` A common protein starting point for your weight and activity is ${advice.protein} g.` : ''}</div>
+          <div className="btn-row" style={{ marginTop: 10 }}>
+            <button type="button" className="btn" onClick={() => set('calorie_target', String(advice.calories.target))}>Use {advice.calories.target.toLocaleString('en-US')} kcal</button>
+            {advice.protein != null ? <button type="button" className="btn" onClick={() => set('protein_target', String(advice.protein))}>Use {advice.protein} g protein</button> : null}
+          </div>
+        </div>
+      ) : (
+        <div className="fld-hint" style={{ marginTop: 10 }}>Fill in your details above and a goal with two weights to see a calorie and protein suggestion.</div>
+      )}
 
       {notes.map((n) => <div key={n} className="notice notice-warn">{n}</div>)}
       {failure ? <div className="notice notice-bad" role="alert">Could not save: {failure}</div> : null}
@@ -137,8 +152,10 @@ export function Goals({ today, latestWeightKg, notify }: {
           You have not set a goal yet. Pick a starting weight, a goal weight and a date, and the dashboard measures your progress against them.
         </div>
       ) : null}
+      <DetailsCard key={`details:${profile?.id ?? 'none'}:${profile?.updated_at ?? ''}`} profile={profile} today={today} onSaved={reload} />
       <GoalsFormCard
         key={`${profile?.id ?? 'none'}:${profile?.updated_at ?? ''}`}
+        profile={profile}
         initial={formFromProfile(profile)}
         existingId={profile?.id ?? null}
         today={today}

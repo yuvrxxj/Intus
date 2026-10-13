@@ -41,7 +41,7 @@ This proves that a brand-new account sees none of another account's data. It tak
 
 1. Window A: open https://intus.fit and create an account with one email address. Finish or skip the first-run questions. Log today, add a habit, add a photo check-in, add a night of sleep, type in one lab result and add one supplement.
 2. Window B: open https://intus.fit and create a second account with a different email address.
-3. In window B, go through every section (Today, Progress, Sleep, Goals and habits, Bloodwork, Supplements, Screening, History). Each should be empty, apart from any habits that account's own first-run answers created. Nothing from window A should appear anywhere, including A's habit, photo, night of sleep, lab result and supplement.
+3. In window B, go through every page in the top bar (Dashboard, Today with its sleep, Goals and habits, Bloodwork, Supplements, Progress) and Account. Each should be empty, apart from any habits that account's own first-run answers created. Nothing from window A should appear anywhere, including A's habit, photo, night of sleep, lab result and supplement.
 4. In window B, add one entry of your own (for example log today). Go back to window A and refresh. Window A should show only its own entry.
 5. Sign both out. Delete the two test accounts under Authentication, Users in the Supabase dashboard.
 

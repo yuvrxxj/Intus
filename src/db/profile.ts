@@ -3,12 +3,14 @@ import type { Row } from './types.ts';
 
 export type Profile = Row<'profile'>;
 
-export interface ProfileValues {
-  age: number;
+/** What the "Your details" card saves: the facts the age, the ranges and the calorie suggestion are worked out from. */
+export interface DetailsValues {
   sex: 'male' | 'female';
-  family_colorectal_cancer: boolean;
-  family_prostate_cancer: boolean;
-  noise_or_blast_exposure: boolean;
+  date_of_birth: string;
+  /** worked out from the date on the day of saving; the app recomputes it from the date every time it reads it */
+  age: number;
+  height_cm: number;
+  activity_level: string;
 }
 
 /** What the Goals screen saves into the profile row. The weights and dates are required, the daily targets are not. */
@@ -28,7 +30,7 @@ export async function fetchProfile(): Promise<Profile | null> {
   return data;
 }
 
-export async function saveProfile(existingId: string | null, values: ProfileValues): Promise<void> {
+export async function saveDetails(existingId: string | null, values: DetailsValues): Promise<void> {
   const row = { ...values, updated_at: new Date().toISOString() };
   const { error } = existingId === null
     ? await supabase.from('profile').insert(row)

@@ -1,4 +1,4 @@
-import { normalizeSex } from '../features/screening/model.ts';
+import { normalizeSex } from './sex.ts';
 import { toNumberOrNull } from './numbers.ts';
 
 /*

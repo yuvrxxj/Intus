@@ -5,7 +5,7 @@ import type { Medication } from '../../db/medications.ts';
 import type { MarkerRow } from '../bloodwork/model.ts';
 import { formatDay, formatRange, formatValue, RANGE_LABEL } from '../bloodwork/format.ts';
 import { CRITICAL } from '../../lib/safety.ts';
-import { normalizeSex } from '../screening/model.ts';
+import { normalizeSex } from '../../lib/sex.ts';
 
 export interface DoctorRow {
   group: string;

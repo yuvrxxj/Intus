@@ -87,6 +87,7 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261012000400_cycle_and_conditions.sql` | Adds `cycle_days`, `profile_conditions` and the six reproductive hormone markers |
 | `20261012000500_strength.sql` | Adds `workouts` and `workout_sets`, saved by an id made on the device so a resend changes nothing |
 | `20261012000600_ai_reading.sql` | Adds `ai_settings` (off by default: the limits, provider, model and prices), `ai_usage` (one row per AI call, never any report text) and the three functions that enforce the limits |
+| `20261013000100_date_of_birth.sql` | Adds `profile.date_of_birth` (nullable, not before 1900), so a person's age is worked out from it and goes up on their birthday. The old `age` column stays for people who have not given a date |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries

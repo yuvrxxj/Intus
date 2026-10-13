@@ -1,6 +1,6 @@
 import type { Profile } from '../../db/profile.ts';
 import { DIRECTION_LABEL, type Programme } from '../../lib/programme.ts';
-import { normalizeSex } from '../screening/model.ts';
+import { normalizeSex } from '../../lib/sex.ts';
 
 /** The page title: the person's own name when they have given one. */
 export function titleFor(profile: Pick<Profile, 'name'> | null): string {

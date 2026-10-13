@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { confirmationMatches, confirmationPhrase, providerLabel } from '../src/features/account/model.ts';
-import { SECTIONS, sectionFromHash } from '../src/features/dashboard/sections.ts';
+import { NAV_PAGES, PAGES, pageFromHash } from '../src/features/dashboard/pages.ts';
 
 test('the email has to be typed back in full before an account can be deleted', () => {
   const email = 'Yuvraaj@Intus.fit';
@@ -30,10 +30,11 @@ test('the sign-in method reads the way a person would say it', () => {
   assert.equal(providerLabel(null), 'email and password');
 });
 
-test('the page sections are numbered 01, 02, ... in order, with the account section last', () => {
-  assert.deepEqual(SECTIONS.map((s) => s.n), SECTIONS.map((_, i) => String(i + 1).padStart(2, '0')));
-  assert.equal(new Set(SECTIONS.map((s) => s.id)).size, SECTIONS.length, 'ids are unique');
-  assert.equal(SECTIONS.at(-1)?.id, 'account');
-  assert.equal(sectionFromHash('#account'), 'account');
-  assert.equal(sectionFromHash('#nonsense'), null);
+test('the pages are numbered 01, 02, ... in order, with the account page last and outside the top bar\'s main list', () => {
+  assert.deepEqual(PAGES.map((p) => p.n), PAGES.map((_, i) => String(i + 1).padStart(2, '0')));
+  assert.equal(new Set(PAGES.map((p) => p.id)).size, PAGES.length, 'ids are unique');
+  assert.equal(PAGES.at(-1)?.id, 'account');
+  assert.deepEqual(NAV_PAGES.map((p) => p.id), ['dashboard', 'today', 'goals', 'bloodwork', 'supplements', 'progress']);
+  assert.equal(pageFromHash('#account'), 'account');
+  assert.equal(pageFromHash('#nonsense'), null);
 });

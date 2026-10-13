@@ -507,6 +507,7 @@ export type Database = {
           calorie_target: number | null;
           carb_target: number | null;
           cardio_notes: string | null;
+          date_of_birth: string | null;
           desired_day: string | null;
           diet: string | null;
           family_colorectal_cancer: boolean;
@@ -541,6 +542,7 @@ export type Database = {
           calorie_target?: number | null;
           carb_target?: number | null;
           cardio_notes?: string | null;
+          date_of_birth?: string | null;
           desired_day?: string | null;
           diet?: string | null;
           family_colorectal_cancer?: boolean;
@@ -575,6 +577,7 @@ export type Database = {
           calorie_target?: number | null;
           carb_target?: number | null;
           cardio_notes?: string | null;
+          date_of_birth?: string | null;
           desired_day?: string | null;
           diet?: string | null;
           family_colorectal_cancer?: boolean;
