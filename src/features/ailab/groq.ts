@@ -15,6 +15,10 @@ export interface Config {
   effort: Effort | null;
   /** schema where the model supports structured outputs, object (plain JSON mode) where it does not */
   mode: JsonMode;
+  /** who ran the model; the ledger lines written before Vertex was tried have none, which means Groq */
+  provider?: 'groq' | 'vertex';
+  /** Vertex only: the region, or `global` */
+  location?: string;
 }
 
 export const configName = (c: Config) => `${c.model}${c.effort ? ` (${c.effort})` : ''}`;

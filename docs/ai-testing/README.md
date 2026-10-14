@@ -9,7 +9,8 @@ A test-only environment for choosing which AI model should read a lab report and
 | Path | What it is |
 | --- | --- |
 | `scripts/groq-bench.ts` | Reads one redacted report with each Groq model setting and records tokens, seconds, list-price cost, the limits Groq reports, and how much of the on-device reader's results the model found |
-| `src/features/ailab/` | The pure logic (request, usage, cost, limits, scoring, ledger, preview) and the `/ai-lab` page |
+| `scripts/vertex-bench.ts` | The same bench for Google Vertex AI (Gemini): the whole report in one request, tokens, seconds, list-price cost, how much of the on-device reader's results the model found. See "Google Vertex AI" below |
+| `src/features/ailab/` | The pure logic (request, usage, cost, limits, scoring, ledger, preview; `groq.ts` and `vertex.ts` per provider) and the `/ai-lab` page |
 | `docs/ai-testing/ledger.jsonl` | One line of measurements per run. No report text, no values, no names |
 | `docs/ai-testing/models.json` | What Groq lists for each model, and the limits seen on this key |
 | `test-lab/local/` | One file per run with the rows a model read. These hold lines of a real report, so the folder is not in git |
@@ -73,6 +74,64 @@ One real 38-page Healthians report (942 lines after redaction, about 9,800 token
 - Each setting was tried once or twice. Two tuned variants were tried for the models that failed at the app's settings; this is not a full tuning study.
 - "Summarising" was read as what the app can show: extracting results into the Bloodwork screen. The app deliberately gives no narrative interpretation (no diagnosis, no advice), so no model was asked for one.
 - The model sees redacted text. The app's OpenRouter route is pinned to hosts that do not collect or train on prompts (`data_collection: deny`); the Groq request has no such field, and I did not check Groq's data-retention terms for this account. Settle that before any real report goes through it.
+
+## Google Vertex AI (Gemini)
+
+**Status, 14 Oct 2026: the bench is built, tested and working, and has not yet been run on the real report.** The redacted report text lives only in the container of the session that made it (it is not in git), so a new session has nothing to read. Nothing below is a result on a real report; the ledger has no Vertex line yet.
+
+The key is a service account's (`GOOGLE_SERVICE_ACCOUNT_JSON_B64`, plus `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`, set in the cloud environment). `scripts/vertex-bench.ts` signs a one-hour token with it in memory and never prints or writes either. It sends the app's own Gemini request (`buildGeminiRequest`: the same prompt, marker list, temperature 0 and response schema) to Vertex, and the app's own parser reads the reply, so a model that does well here is doing the app's job.
+
+Unlike the Groq key there is no 8,000 tokens a minute to stay under, so by default the whole report goes in **one request with the app's 16,384-token output cap**, which is how the app sends it (Groq could not run that design at all). `--chunk-chars 7000` sends it in the same five chunks as the Groq runs to compare like for like.
+
+### What the project can call
+
+| Model | Called at | Standard price per million tokens (in / out / cached in) |
+| --- | --- | --- |
+| gemini-2.5-flash-lite | us-central1 | $0.10 / $0.40 / $0.01 |
+| gemini-2.5-flash | us-central1 | $0.30 / $2.50 / $0.03 |
+| gemini-2.5-pro | us-central1 | $1.25 / $10.00 / $0.125 |
+| gemini-3.1-flash-lite | global | $0.25 / $1.50 / $0.025 |
+| gemini-3.5-flash-lite | global | $0.30 / $2.50 / $0.03 |
+| gemini-3-flash-preview | global | $0.50 / $3.00 / $0.05 (the Standard table prints no output price; $3.00 is what its Priority and Batch rows imply) |
+| gemini-3.5-flash | global | $1.50 / $9.00 / $0.15 |
+| gemini-3.8-flash | global | $1.50 / $7.50 / $0.15 (half price, $0.75 / $3.75, through 31 Dec 2026; costs here use the later price) |
+| gemini-3.1-pro-preview | global | $2.00 / $12.00 / $0.20 |
+
+Prices are from [Google's Vertex AI pricing page](https://cloud.google.com/vertex-ai/generative-ai/pricing), read on 14 Oct 2026, Standard tier, prompts up to 200,000 tokens. Output includes thinking. The 3.5 and later models cost 10% more when called through a region instead of `global`. `gemini-2.0-*` and `gemini-3-pro` are not available to this project; the 3.x models answer only on `global`.
+
+### Data terms, from [Google's Vertex data governance page](https://cloud.google.com/vertex-ai/generative-ai/docs/data-governance) (read 14 Oct 2026, the terms on this account not checked)
+
+- Google says it will not use the data to train or fine-tune any model without permission.
+- Gemini caches inputs and outputs by default for up to 24 hours, scoped to the project and never used for training; caching can be turned off per project.
+- Prompts may be logged for abuse monitoring unless the account asks for an exception, so "zero data retention" is not the default.
+- The `global` endpoint can serve a request from any region. A regional endpoint keeps it in that region, but then only the 2.5 models are reachable.
+
+This is a better answer than the one Groq's results left open, but it is still a decision for the owner before a real report goes through it.
+
+### What a first check on a made-up report showed
+
+A 22-result report written for the purpose (no real data) was sent to all nine models. It says nothing about which model reads a real report best; it shows how the settings behave:
+
+- **Thinking left at its default is expensive and can break the answer.** `gemini-2.5-flash` spent 10,000 thinking tokens and `gemini-3.5-flash` 5,900 on a 22-line report; `gemini-3-flash-preview` used all 16,384 output tokens, 15,700 of them thinking, and was cut off before it finished its answer. `gemini-3.8-flash` also hit the cap, with about 14,700 tokens of answer for a 19-result report, and cost $0.13. The app's cap counts thinking, so a long real report with default thinking is likely to be truncated. The same lesson as on Groq: reasoning is the wrong tool for extraction.
+- **With thinking set to `none` every model finished** (a budget of 0 or the `minimal` level, or the lowest the model allows: `gemini-2.5-pro` cannot switch it off and used its smallest budget, 78 tokens), in 1 to 23 seconds, except `gemini-3.1-pro-preview` at about 110 seconds.
+- `gemini-3.8-flash` and the Pro models have no `minimal` level (Vertex answers 400); `none` means `low` for them.
+- `gemini-2.5-pro` answered one request with 429 `RESOURCE_EXHAUSTED` on a shared quota and succeeded on the retry after 20 seconds.
+- Output the model puts out beyond what the report holds is not penalised, as with Groq. Some small models stopped early (`gemini-3.1-flash-lite` with `none` returned 1 of 19).
+
+### Run it
+
+```
+# the models and prices this lab knows
+node scripts/vertex-bench.ts --models
+
+# one report, one request each. Thinking off is the setting to compare; default shows what the model does left alone
+NODE_USE_ENV_PROXY=1 node scripts/vertex-bench.ts report.txt --plan gemini-2.5-flash:none,gemini-3.5-flash:none,gemini-2.5-flash:default
+
+# stop early if it costs more than expected (default $2 for one invocation)
+NODE_USE_ENV_PROXY=1 node scripts/vertex-bench.ts report.txt --plan gemini-3.1-pro-preview:none --max-cost 0.5
+```
+
+A plan item is `model`, then `:thinking` (`none`, `default`, `low`, `medium`, `high`), then `@location` (defaults to where the model can be reached). The flags are `--chunk-chars`, `--max-tokens`, `--repeats`, `--first N`, `--max-cost`, `--out`, `--ledger`, `--dry-run`. Runs go to the same ledger and `test-lab/local/` as Groq's, and show on `/ai-lab` with the Vertex price table.
 
 ## Run it
 
