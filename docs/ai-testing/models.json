@@ -1,5 +1,34 @@
 [
  {
+  "id": "allam-2-7b",
+  "contextWindow": 4096,
+  "maxCompletion": 4096,
+  "features": [
+   "json_mode"
+  ],
+  "pricePerMillion": null,
+  "tokensPerMinute": 6000,
+  "requestsPerDay": 7000
+ },
+ {
+  "id": "openai/gpt-oss-120b",
+  "contextWindow": 131072,
+  "maxCompletion": 65536,
+  "features": [
+   "tools",
+   "json_mode",
+   "structured_outputs",
+   "reasoning"
+  ],
+  "pricePerMillion": {
+   "prompt": 0.15,
+   "completion": 0.6,
+   "cachedPrompt": 0.075
+  },
+  "tokensPerMinute": 8000,
+  "requestsPerDay": 1000
+ },
+ {
   "id": "openai/gpt-oss-20b",
   "contextWindow": 131072,
   "maxCompletion": 65536,
@@ -13,6 +42,41 @@
    "prompt": 0.075,
    "completion": 0.3,
    "cachedPrompt": 0.0375
+  },
+  "tokensPerMinute": 8000,
+  "requestsPerDay": 1000
+ },
+ {
+  "id": "openai/gpt-oss-safeguard-20b",
+  "contextWindow": 131072,
+  "maxCompletion": 65536,
+  "features": [
+   "tools",
+   "json_mode",
+   "structured_outputs",
+   "reasoning"
+  ],
+  "pricePerMillion": {
+   "prompt": 0.075,
+   "completion": 0.3,
+   "cachedPrompt": 0.0375
+  },
+  "tokensPerMinute": 2000,
+  "requestsPerDay": 1000
+ },
+ {
+  "id": "qwen/qwen3.8-27b",
+  "contextWindow": 131072,
+  "maxCompletion": 16384,
+  "features": [
+   "tools",
+   "json_mode",
+   "reasoning"
+  ],
+  "pricePerMillion": {
+   "prompt": 0.7999999999999999,
+   "completion": 4,
+   "cachedPrompt": 0.39999999999999997
   },
   "tokensPerMinute": 8000,
   "requestsPerDay": 1000

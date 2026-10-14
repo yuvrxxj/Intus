@@ -16,9 +16,9 @@ export const PUBLISHED: Readonly<Record<string, Published>> = {
   'qwen/qwen3.8-27b': { rpm: 30, rpd: 1000, tpm: 8000, tpd: 200_000 },
 };
 
-/** Limits met in the runs that are not on the page or in the headers. Each is the message Groq sent, in short. */
+/** What was met in the runs that is in neither the headers nor the page. Each note is what Groq's answer said, in short. */
 export const OBSERVED: Readonly<Record<string, string>> = {
-  'qwen/qwen3.8-27b': 'Also capped at 1,000 output tokens a minute (a 429 naming OTPM). Not in the headers, so the only sign is the refusal.',
-  'openai/gpt-oss-safeguard-20b': 'A 3,400-token request is refused outright: its limit is 2,000 tokens a minute.',
-  'allam-2-7b': 'Context is 4,096 tokens, and it could not produce valid JSON for the reading prompt.',
+  'qwen/qwen3.8-27b': 'Also capped at 1,000 output tokens a minute. Not in the headers: the only sign is a 429 naming OTPM, which refuses a request whose expected output is over it and says to reduce max_tokens.',
+  'openai/gpt-oss-safeguard-20b': 'A chunk of a report (about 3,400 tokens) is refused outright: Groq counted 4,107 requested against a limit of 2,000 a minute.',
+  'allam-2-7b': 'Answered 400, failed to generate JSON, on the first chunk. Its context is 4,096 tokens, which leaves little room for the prompt and a reply. Not tried with smaller chunks.',
 };

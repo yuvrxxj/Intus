@@ -61,7 +61,7 @@ function Runs() {
   return (
     <div className="card sec">
       <div className="ct"><span className="dot dot-red" />Every run</div>
-      <div className="bw-sub">The same redacted report, the same prompt as the app, sent in chunks of up to {RUNS[0] ? num(RUNS[0].chunkChars) : '7,000'} characters because of the per-minute limit. "Found" is how many of the results the app's own on-device reader finds that the model found too, on the same line with the same number. Cost is at Groq's pay-as-you-go list price; this key's allowance is free.</div>
+      <div className="bw-sub">The same redacted report and the same prompt as the app, sent in chunks because of the per-minute token limit (each run says how big, and how many output tokens it was allowed). "Found" is how many of the results the app's own on-device reader finds that the model found too, on the same line with the same number. Cost is at Groq's pay-as-you-go list price; this key's allowance is free.</div>
       <div className="bt-wrap">
         <table className="bt al-table">
           <thead>
@@ -83,7 +83,7 @@ function RunRow({ run, outcome, failures }: { run: RunMetrics; outcome: keyof ty
   const why = Object.entries(failures).map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
   return (
     <tr>
-      <td data-label="Model and setting"><strong>{configName(run.config)}</strong><div className="fld-hint">{run.config.mode === 'schema' ? 'strict JSON schema' : 'JSON mode'}, {run.chunks}/{run.totalChunks} chunks</div></td>
+      <td data-label="Model and setting"><strong>{configName(run.config)}</strong><div className="fld-hint">{run.config.mode === 'schema' ? 'strict JSON schema' : 'JSON mode'}, {run.chunks}/{run.totalChunks} chunks of up to {num(run.chunkChars)} characters, up to {num(run.maxTokens)} tokens out</div></td>
       <td data-label="Outcome"><span className={`al-badge al-${outcome}`}>{OUTCOME_LABEL[outcome]}</span>{why && <div className="fld-hint">{why}</div>}</td>
       <td data-label="Time">{seconds(t.elapsedS)}<div className="fld-hint">{seconds(t.requestS)} in requests, {seconds(t.waitedS)} held back for limits</div></td>
       <td data-label="Tokens">{num(t.promptTokens)} / {num(t.completionTokens)}{t.cachedTokens > 0 && <div className="fld-hint">{num(t.cachedTokens)} cached</div>}</td>

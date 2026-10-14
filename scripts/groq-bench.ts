@@ -103,7 +103,7 @@ function holdBack(ctx: Context, model: string, need: number): number {
   return secondsToWait({ ...last.rate, tokensLeft: Math.min(last.rate.tokensPerMinute, last.rate.tokensLeft + refilled) }, need);
 }
 
-async function callChunk(ctx: Context, c: Config, chunk: string[], index: number, price: Price | null): Promise<{ record: CallRecord; rows: ParsedRow[]; dropped: number; returned: number }> {
+async function callChunk(ctx: Context, c: Config, chunk: string[], index: number, price: Price | null): Promise<{ record: CallRecord; rows: ParsedRow[]; dropped: number; returned: number; quota?: string }> {
   const text = chunk.join('\n');
   const body = JSON.stringify(buildGroqRequest(c, text, ctx.markers, ctx.maxTokens));
   const overhead = SYSTEM_PROMPT.length + ctx.markers.length * 40;
@@ -158,7 +158,8 @@ async function callChunk(ctx: Context, c: Config, chunk: string[], index: number
     if (res.status === 429) {
       record.limited++;
       record.failure = kind === 'unknown' ? 'rate_limited' : kind;
-      if (kind === 'tpd' || kind === 'rpd') throw new QuotaExhausted(`${c.model}: ${message}`);
+      // a daily limit does not clear by waiting: stop, and let the run be written with what it has
+      if (kind === 'tpd' || kind === 'rpd') return { ...fail(kind), quota: `${c.model}: ${record.error}` };
       const wait = Math.ceil(record.rate.retryAfterS ?? 20) + 1;
       console.log(`    rate limited, waiting ${wait}s`);
       await sleep(wait);
@@ -190,9 +191,14 @@ async function runOne(ctx: Context, c: Config): Promise<RunFile | null> {
   const rows: ParsedRow[] = [];
   let dropped = 0;
   let returned = 0;
+  let quota: string | null = null;
   for (let i = 0; i < ctx.chunks.length; i++) {
     const r = await callChunk(ctx, c, ctx.chunks[i], i, price);
     calls.push(r.record);
+    if (r.quota) {
+      quota = r.quota;
+      break;
+    }
     rows.push(...r.rows);
     dropped += r.dropped;
     returned += r.returned;
@@ -233,6 +239,7 @@ async function runOne(ctx: Context, c: Config): Promise<RunFile | null> {
   mkdirSync(dirname(ctx.ledger), { recursive: true });
   appendFileSync(ctx.ledger, `${JSON.stringify(metrics)}\n`);
   show(run);
+  if (quota) throw new QuotaExhausted(quota);
   return run;
 }
 

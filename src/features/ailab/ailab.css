@@ -19,4 +19,12 @@
 @media (max-width: 720px) {
   .al-wrap { padding: 24px 16px 72px; }
   .al-head h1 { font-size: 1.75rem; }
+  /* phones: one stacked block per row, like the Bloodwork table, instead of a table that scrolls sideways */
+  table.al-table { min-width: 0; table-layout: auto; }
+  .al-table thead { display: none; }
+  .al-table tbody, .al-table tr { display: block; }
+  .al-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .al-table td { display: block; border: none; padding: 0; background: none; min-width: 0; }
+  .al-table td:first-child { grid-column: 1 / -1; }
+  .al-table td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 }
