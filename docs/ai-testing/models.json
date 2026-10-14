@@ -1,0 +1,20 @@
+[
+ {
+  "id": "openai/gpt-oss-20b",
+  "contextWindow": 131072,
+  "maxCompletion": 65536,
+  "features": [
+   "tools",
+   "json_mode",
+   "structured_outputs",
+   "reasoning"
+  ],
+  "pricePerMillion": {
+   "prompt": 0.075,
+   "completion": 0.3,
+   "cachedPrompt": 0.0375
+  },
+  "tokensPerMinute": 8000,
+  "requestsPerDay": 1000
+ }
+]

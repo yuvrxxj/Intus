@@ -1,0 +1,22 @@
+.al-wrap { position: relative; z-index: 10; max-width: 1280px; margin: 0 auto; padding: 40px 20px 96px; }
+.al-head { margin-bottom: 24px; }
+.al-head h1 { font-size: 2.25rem; line-height: 1.1; letter-spacing: -0.02em; margin: 4px 0 10px; }
+.al-head p { max-width: 62ch; color: var(--ink, #1f1300); opacity: 0.8; }
+.al-kicker { font-family: 'JetBrains Mono Variable', ui-monospace, monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: #a31621; font-weight: 700; }
+.al-table td, .al-table th { vertical-align: top; }
+.al-table .fld-hint { margin-top: 2px; }
+.al-badge { display: inline-block; padding: 2px 8px; border: 1px solid currentColor; font-family: 'JetBrains Mono Variable', ui-monospace, monospace; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.al-complete { color: #12695f; }
+.al-partial { color: #8a5a14; }
+.al-failed { color: #a31621; }
+.al-trial { color: #6b625b; }
+.al-meter { height: 6px; margin-top: 6px; background: rgba(31, 19, 0, 0.1); }
+.al-meter span { display: block; height: 100%; background: #a31621; }
+.al-pick { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0; }
+.al-pick select { min-width: 280px; max-width: 100%; }
+.al-left { margin: 8px 0 0; padding-left: 18px; }
+.al-left li { margin: 4px 0; }
+@media (max-width: 720px) {
+  .al-wrap { padding: 24px 16px 72px; }
+  .al-head h1 { font-size: 1.75rem; }
+}

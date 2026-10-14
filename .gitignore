@@ -10,3 +10,6 @@ dist
 docs/product/lab-panels/*.csv
 !docs/product/lab-panels/*.template.csv
 public/ocr/
+
+# the AI lab: run files hold rows read from real reports, so they stay on the machine that made them
+test-lab/local/

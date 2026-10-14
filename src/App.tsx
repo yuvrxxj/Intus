@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { DotGround } from '@/components/dot-ground';
 import { SetNewPassword, SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
@@ -65,7 +65,22 @@ const PHONE = isPhone(readDeviceHints());
 // an error from Google or an email link goes to the sign-in screen, which shows it
 routeAuthErrorToSignIn();
 
+// The AI lab is a test page for choosing the model that reads lab reports. It exists only in a build made with
+// VITE_AI_LAB=1 (the "Intus AI testing" project). Anywhere else this is false, the branch is removed and the page's
+// code is not in the bundle, so the live site has no such address.
+const AI_LAB = import.meta.env.VITE_AI_LAB === '1';
+const AiLab = AI_LAB ? lazy(() => import('./features/ailab/AiLab.tsx')) : null;
+const onAiLabPath = () => window.location.pathname.replace(/\/+$/, '') === '/ai-lab';
+
 export function App() {
+  if (AiLab && onAiLabPath()) {
+    return (
+      <>
+        <DotGround />
+        <Suspense fallback={<Loading />}><AiLab /></Suspense>
+      </>
+    );
+  }
   return (
     <>
       <DotGround />
