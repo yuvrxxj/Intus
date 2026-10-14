@@ -85,5 +85,5 @@ test('a plan names a model, then the thinking setting, then the location, and de
 });
 
 test('an error kept for the ledger does not name the project', () => {
-  assert.equal(tidyVertexError('NOT_FOUND Publisher model `projects/intus-511011/locations/global/publishers/google/models/x` was not found'), 'NOT_FOUND Publisher model `projects/…/locations/global/publishers/google/models/x` was not found');
+  assert.equal(tidyVertexError('NOT_FOUND Publisher model `projects/example-project/locations/global/publishers/google/models/x` was not found'), 'NOT_FOUND Publisher model `projects/…/locations/global/publishers/google/models/x` was not found');
 });
