@@ -1,7 +1,7 @@
 // Google Vertex AI, for the AI lab: the request, what came back and what it cost. Pure: no network and no key, so Node tests
 // can run it. The request is the one the app already sends to Gemini (supabase/functions/read-report/prompt.ts), with the
 // thinking setting added, so a model that does well here is doing the same job the app would ask of it.
-import { buildGeminiRequest, type MarkerInfo } from '../../../supabase/functions/read-report/prompt.ts';
+import { buildGeminiRequest, RESPONSE_SCHEMA, type MarkerInfo } from '../../../supabase/functions/read-report/prompt.ts';
 import type { Config, Effort, Price, Usage } from './groq.ts';
 
 export type Thinking = Effort;
@@ -38,10 +38,25 @@ export interface VertexConfig extends Config {
   location: string;
 }
 
+/**
+ * The app's schema requires only name, value_text and line, so a model may leave out marker, unit and the printed range. On a
+ * whole report some do, for every row (seen on 14 Oct 2026: no marker on any of 119 rows). Requiring every field closes that.
+ */
+const ALL_FIELDS = ['name', 'marker', 'value_text', 'unit', 'ref_low', 'ref_high', 'line'];
+const allRequired = {
+  ...RESPONSE_SCHEMA,
+  properties: { rows: { ...RESPONSE_SCHEMA.properties.rows, items: { ...RESPONSE_SCHEMA.properties.rows.items, required: ALL_FIELDS } } },
+};
+
 export function buildVertexRequest(c: Config, text: string, markers: readonly MarkerInfo[], maxOutputTokens: number) {
   const request = buildGeminiRequest(text, markers, maxOutputTokens);
   const thinking = thinkingConfig(c.model, c.effort);
-  return thinking ? { ...request, generationConfig: { ...request.generationConfig, thinkingConfig: thinking } } : request;
+  const generationConfig = {
+    ...request.generationConfig,
+    ...(c.requireAll ? { responseSchema: allRequired } : {}),
+    ...(thinking ? { thinkingConfig: thinking } : {}),
+  };
+  return { ...request, generationConfig };
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);

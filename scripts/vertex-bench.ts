@@ -220,7 +220,7 @@ async function main() {
   const file = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
   const plan = flag('plan');
   if (!file || !plan) {
-    console.error('usage: node scripts/vertex-bench.ts report.txt --plan model:thinking@location,... [--repeats 1] [--chunk-chars 0] [--max-tokens 16384] [--first N] [--max-cost 2] [--out test-lab/local] [--ledger docs/ai-testing/ledger.jsonl] [--dry-run]\n       node scripts/vertex-bench.ts --models');
+    console.error('usage: node scripts/vertex-bench.ts report.txt --plan model:thinking@location,... [--repeats 1] [--chunk-chars 0] [--max-tokens 16384] [--first N] [--max-cost 2] [--require-all] [--out test-lab/local] [--ledger docs/ai-testing/ledger.jsonl] [--dry-run]\n       node scripts/vertex-bench.ts --models');
     process.exit(2);
   }
   const markersFile = JSON.parse(readFileSync(new URL('./ai-eval-markers.json', import.meta.url), 'utf8')) as MarkerInfo[];
@@ -233,7 +233,8 @@ async function main() {
   const chunkChars = requested > 0 ? requested : wholeChars;
   const everyChunk = chunkLines(lines, chunkChars);
   const first = Number(flag('first', '0'));
-  const configs = parseVertexPlan(plan);
+  // --require-all asks for every field of a row in the response schema, not only name, value and line
+  const configs = parseVertexPlan(plan).map((c) => (args.includes('--require-all') ? { ...c, requireAll: true } : c));
   console.log(`${lines.length} lines in ${everyChunk.length} request${everyChunk.length === 1 ? '' : 's'}. The on-device reader finds ${parsed.rows.length} results, ${parsed.rows.filter((r) => r.biomarkerId).length} for tracked markers.`);
   if (args.includes('--dry-run')) {
     for (const c of configs) console.log(`would run ${configName(c)} on Vertex ${c.location}`);

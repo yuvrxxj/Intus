@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { costOf } from '../src/features/ailab/groq.ts';
+import { configName, costOf } from '../src/features/ailab/groq.ts';
 import { buildVertexRequest, parseVertexPlan, readVertexUsage, thinkingConfig, tidyVertexError, vertexFinish, vertexHost, vertexPrice, vertexUrl, VERTEX_MODELS } from '../src/features/ailab/vertex.ts';
 import { parseGeminiResponse } from '../supabase/functions/read-report/prompt.ts';
 
@@ -39,6 +39,16 @@ test('the Vertex request is the app Gemini request, with thinking added only whe
   const thinking = buildVertexRequest({ model: 'gemini-3.5-flash', effort: 'low', mode: 'schema' }, 'x', markers, 100) as { generationConfig: Record<string, unknown> };
   assert.deepEqual(thinking.generationConfig.thinkingConfig, { thinkingLevel: 'low' });
   assert.equal(thinking.generationConfig.responseMimeType, 'application/json');
+});
+
+test('requiring every field changes only the schema: the app asks for name, value and line, the variant for all seven', () => {
+  type Schema = { properties: { rows: { items: { required: string[] } } } };
+  const app = buildVertexRequest({ model: 'gemini-2.5-flash', effort: 'none', mode: 'schema' }, 'x', markers, 100).generationConfig as { responseSchema: Schema; thinkingConfig: unknown };
+  assert.deepEqual(app.responseSchema.properties.rows.items.required, ['name', 'value_text', 'line']);
+  const strict = buildVertexRequest({ model: 'gemini-2.5-flash', effort: 'none', mode: 'schema', requireAll: true }, 'x', markers, 100).generationConfig as { responseSchema: Schema; thinkingConfig: unknown };
+  assert.deepEqual(strict.responseSchema.properties.rows.items.required, ['name', 'marker', 'value_text', 'unit', 'ref_low', 'ref_high', 'line']);
+  assert.deepEqual(strict.thinkingConfig, app.thinkingConfig);
+  assert.equal(configName({ model: 'm', effort: 'none', mode: 'schema', requireAll: true }), 'm (none) + all fields required');
 });
 
 test('usage adds thinking to the output and keeps it visible as reasoning; cached tokens are part of the prompt', () => {

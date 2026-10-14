@@ -19,9 +19,11 @@ export interface Config {
   provider?: 'groq' | 'vertex';
   /** Vertex only: the region, or `global` */
   location?: string;
+  /** Vertex only: every field of a row is required in the response schema, where the app's schema requires only name, value and line */
+  requireAll?: boolean;
 }
 
-export const configName = (c: Config) => `${c.model}${c.effort ? ` (${c.effort})` : ''}`;
+export const configName = (c: Config) => `${c.model}${c.effort ? ` (${c.effort})` : ''}${c.requireAll ? ' + all fields required' : ''}`;
 
 export function buildGroqRequest(c: Config, text: string, markers: readonly MarkerInfo[], maxTokens: number) {
   const { provider: _routing, ...request } = buildChatRequest(c.model, text, markers, maxTokens, c.mode);

@@ -10,6 +10,8 @@ A test-only environment for choosing which AI model should read a lab report and
 | --- | --- |
 | `scripts/groq-bench.ts` | Reads one redacted report with each Groq model setting and records tokens, seconds, list-price cost, the limits Groq reports, and how much of the on-device reader's results the model found |
 | `scripts/vertex-bench.ts` | The same bench for Google Vertex AI (Gemini): the whole report in one request, tokens, seconds, list-price cost, how much of the on-device reader's results the model found. See "Google Vertex AI" below |
+| `scripts/vertex-card.ts` | Prints the Vertex report card from the run files, including how closely the Bloodwork screen a model's rows would fill matches the one the app's own reader fills |
+| `docs/ai-testing/vertex-report-card.md` | The Vertex results: the answer, a grade per model, what it cost, what it showed, what it does not |
 | `src/features/ailab/` | The pure logic (request, usage, cost, limits, scoring, ledger, preview; `groq.ts` and `vertex.ts` per provider) and the `/ai-lab` page |
 | `docs/ai-testing/ledger.jsonl` | One line of measurements per run. No report text, no values, no names |
 | `docs/ai-testing/models.json` | What Groq lists for each model, and the limits seen on this key |
@@ -77,7 +79,7 @@ One real 38-page Healthians report (942 lines after redaction, about 9,800 token
 
 ## Google Vertex AI (Gemini)
 
-**Status, 14 Oct 2026: the bench is built, tested and working, and has not yet been run on the real report.** The redacted report text lives only in the container of the session that made it (it is not in git), so a new session has nothing to read. Nothing below is a result on a real report; the ledger has no Vertex line yet.
+**Result, 14 Oct 2026: use `gemini-3.5-flash-lite` with every field of a row required in the response schema.** 43 runs on the real report, $1.88 at list price. The full report card (every model graded, cost, time, the Bloodwork screen compared marker by marker) is in [vertex-report-card.md](vertex-report-card.md). In short: it reads the whole report in 10 to 17 seconds for $0.013 to $0.022 and filled the Bloodwork screen exactly in 6 of 7 runs; every Gemini model that thinks by default ran out of the app's 16,384 output tokens and returned nothing; and the app's Gemini schema lets a model leave out the marker or a printed range limit, which cost 3.5 Flash-Lite a wrong "in range" on two out-of-range results in 3 of 10 runs and its markers entirely in 1.
 
 The key is a service account's (`GOOGLE_SERVICE_ACCOUNT_JSON_B64`, plus `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`, set in the cloud environment). `scripts/vertex-bench.ts` signs a one-hour token with it in memory and never prints or writes either. It sends the app's own Gemini request (`buildGeminiRequest`: the same prompt, marker list, temperature 0 and response schema) to Vertex, and the app's own parser reads the reply, so a model that does well here is doing the app's job.
 
@@ -131,7 +133,7 @@ NODE_USE_ENV_PROXY=1 node scripts/vertex-bench.ts report.txt --plan gemini-2.5-f
 NODE_USE_ENV_PROXY=1 node scripts/vertex-bench.ts report.txt --plan gemini-3.1-pro-preview:none --max-cost 0.5
 ```
 
-A plan item is `model`, then `:thinking` (`none`, `default`, `low`, `medium`, `high`), then `@location` (defaults to where the model can be reached). The flags are `--chunk-chars`, `--max-tokens`, `--repeats`, `--first N`, `--max-cost`, `--out`, `--ledger`, `--dry-run`. Runs go to the same ledger and `test-lab/local/` as Groq's, and show on `/ai-lab` with the Vertex price table.
+A plan item is `model`, then `:thinking` (`none`, `default`, `low`, `medium`, `high`), then `@location` (defaults to where the model can be reached). The flags are `--require-all` (every field of a row required in the response schema), `--chunk-chars`, `--max-tokens`, `--repeats`, `--first N`, `--max-cost`, `--out`, `--ledger`, `--dry-run`. Runs go to the same ledger and `test-lab/local/` as Groq's, and show on `/ai-lab` with the Vertex price table.
 
 ## Run it
 
