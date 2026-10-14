@@ -86,17 +86,20 @@ interface Options {
   keyEnv: string;
   /** leave out `data_collection: deny`, to try hosts that may keep or train on prompts. Invented reports only. */
   allowTraining: boolean;
+  /** extra fields for the request body, for a host's own options such as `reasoning_effort`. Never the model, messages or privacy rule. */
+  extraBody: Record<string, unknown>;
 }
 
 const keyName = (o: Pick<Options, 'provider' | 'keyEnv'>) => o.keyEnv || (o.provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENROUTER_API_KEY');
 
 /** The request for one model. Chat requests carry the privacy rule from prompt.ts unless the run opted out of it. */
-export function evalRequest(o: Pick<Options, 'provider' | 'mode' | 'maxTokens' | 'allowTraining'>, model: string, text: string, markers: readonly MarkerInfo[]) {
-  if (o.provider === 'gemini') return buildGeminiRequest(text, markers, o.maxTokens);
+export function evalRequest(o: Pick<Options, 'provider' | 'mode' | 'maxTokens' | 'allowTraining'> & { extraBody?: Record<string, unknown> }, model: string, text: string, markers: readonly MarkerInfo[]) {
+  const extra = o.extraBody ?? {};
+  if (o.provider === 'gemini') return { ...buildGeminiRequest(text, markers, o.maxTokens), ...extra };
   const request = buildChatRequest(model, text, markers, o.maxTokens, o.mode);
-  if (!o.allowTraining) return request;
+  if (!o.allowTraining) return { ...request, ...extra };
   const { provider: _privacyRule, ...withoutIt } = request;
-  return withoutIt;
+  return { ...withoutIt, ...extra };
 }
 
 async function runModel(model: string, text: string, markers: MarkerInfo[], refs: MarkerRef[], device: ParsedRow[], o: Options) {
@@ -171,7 +174,7 @@ async function main() {
   const file = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
   const models = flag('models').split(',').map((m) => m.trim()).filter(Boolean);
   if (!file || models.length === 0) {
-    console.error('usage: node scripts/ai-eval.ts report.txt --models a,b [--provider openrouter|gemini] [--json-mode schema|object] [--price-in 0.25 --price-out 1.5]\n         [--base-url URL --key-env NAME] [--allow-training]\n       node scripts/ai-eval.ts --list-free');
+    console.error('usage: node scripts/ai-eval.ts report.txt --models a,b [--provider openrouter|gemini] [--json-mode schema|object] [--price-in 0.25 --price-out 1.5]\n         [--base-url URL --key-env NAME] [--allow-training] [--extra-body JSON]\n       node scripts/ai-eval.ts --list-free');
     process.exit(2);
   }
   const markersFile = JSON.parse(readFileSync(new URL('./ai-eval-markers.json', import.meta.url), 'utf8')) as MarkerInfo[];
@@ -182,8 +185,20 @@ async function main() {
     provider: flag('provider', 'openrouter') === 'gemini' ? 'gemini' : 'openrouter',
     models, base, mode: flag('json-mode', 'schema') === 'object' ? 'object' : 'schema',
     maxTokens: Number(flag('max-tokens', '16384')), priceIn: Number(flag('price-in', '0')), priceOut: Number(flag('price-out', '0')),
-    keyEnv: flag('key-env'), allowTraining: args.includes('--allow-training'),
+    keyEnv: flag('key-env'), allowTraining: args.includes('--allow-training'), extraBody: {},
   };
+  if (flag('extra-body')) {
+    try {
+      options.extraBody = JSON.parse(flag('extra-body')) as Record<string, unknown>;
+    } catch {
+      console.error('--extra-body must be a JSON object, for example \'{"reasoning_effort":"low"}\'.');
+      process.exit(2);
+    }
+    if (typeof options.extraBody !== 'object' || options.extraBody === null || Array.isArray(options.extraBody) || ['model', 'messages', 'provider'].some((k) => k in options.extraBody)) {
+      console.error('--extra-body is a JSON object that does not set model, messages or provider. The privacy rule is not changed from here.');
+      process.exit(2);
+    }
+  }
   if (options.provider === 'openrouter' && base !== DEFAULT_BASE && !options.allowTraining) {
     console.error('Only OpenRouter can be told to refuse hosts that keep or train on prompts. For another host, pass --allow-training and use an invented report.');
     process.exit(2);

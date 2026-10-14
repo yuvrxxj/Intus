@@ -49,3 +49,11 @@ test('the sample report says it is invented, and the on-device reader finds most
   const rows = parseReport(text.split('\n'), refs).rows.filter((r) => r.biomarkerId !== null);
   assert.ok(rows.length >= 28, `found ${rows.length}`);
 });
+
+test('extra body fields are added to the request, and cannot replace the privacy rule', () => {
+  const asked = evalRequest({ ...RUN, allowTraining: false, extraBody: { reasoning_effort: 'low' } }, 'vendor/model', 'report text', MARKERS) as Record<string, unknown>;
+  assert.equal(asked.reasoning_effort, 'low');
+  assert.deepEqual(asked.provider, { data_collection: 'deny', require_parameters: true });
+  const gemini = evalRequest({ ...RUN, provider: 'gemini', allowTraining: true, extraBody: { x: 1 } }, 'm', 'text', MARKERS) as Record<string, unknown>;
+  assert.equal(gemini.x, 1);
+});
