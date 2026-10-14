@@ -1,0 +1,64 @@
+INVENTED REPORT FOR TESTING - not a real person, not a real lab. Every value below was made up.
+SAMPLE DIAGNOSTICS LABORATORY    Page 1 of 3
+Patient: [removed]    Age/Sex: 34 Y / Male    Patient ID: [removed]
+Sample Collected On: 12/03/2026 08:10    Reported On: 13/03/2026 15:42
+SUMMARY OF RESULTS OUTSIDE THE REFERENCE RANGE
+LDL Cholesterol, Direct       131   H   mg/dL    < 100
+Triglycerides                 165   H   mg/dL    < 150
+Vitamin D, 25-Hydroxy          18   L   ng/mL    30 - 100
+Cholesterol, Total            212   H   mg/dL    < 200
+HAEMATOLOGY
+Haemoglobin (Hb)             14.6        g/dL     13.0 - 17.0
+Total Leucocyte Count (TLC)   6.8        10^3/uL  4.0 - 10.0
+Platelet Count                251        10^3/uL  150 - 410
+Mean Corpuscular Hemoglobin (MCH)   29.4   pg     27 - 32
+GLUCOSE AND DIABETES
+Glucose, Fasting               92        mg/dL    70 - 100
+Glucose, Post Prandial        131        mg/dL    70 - 140
+Glycated Haemoglobin (HbA1c)  5.3   %    Non-diabetic: 4.0 - 5.6
+LIPID PROFILE
+Cholesterol, Total            212   H   mg/dL    < 200
+HDL Cholesterol                48        mg/dL    > 40
+LDL Cholesterol, Direct       131   H   mg/dL    < 100
+LDL/HDL Ratio                 2.7                 < 3.5
+Non-HDL Cholesterol           164        mg/dL    < 130
+Triglycerides                 165   H   mg/dL    < 150
+LIVER FUNCTION
+SGPT (ALT)                     31        U/L      < 41
+SGOT (AST)                     27        U/L      < 40
+Gamma GT (GGT)                 22        U/L      < 60
+Albumin                       4.6        g/dL     3.5 - 5.2
+KIDNEY FUNCTION
+Creatinine                    0.94       mg/dL    0.70 - 1.30
+eGFR                          104        mL/min/1.73m2   > 90
+Blood Urea                     28        mg/dL    17 - 43
+Uric Acid                     5.4        mg/dL    3.5 - 7.2
+ELECTROLYTES
+Sodium                        140        mmol/L   136 - 145
+Potassium                     4.3        mmol/L   3.5 - 5.1
+Calcium, Total                9.5        mg/dL    8.6 - 10.2
+THYROID PROFILE
+TSH, Ultrasensitive           2.85       uIU/mL   0.55 - 4.78
+Free T3 (FT3)                 3.1        pg/mL    2.3 - 4.2
+Free T4 (FT4)                 1.21       ng/dL    0.89 - 1.76
+IRON STUDIES
+Iron, Serum                    88        ug/dL    65 - 175
+Total Iron Binding Capacity   320        ug/dL    250 - 450
+Transferrin Saturation         27        %        20 - 50
+Ferritin                       96        ng/mL    30 - 400
+VITAMINS
+Vitamin D, 25-Hydroxy          18   L    ng/mL    30 - 100
+Vitamin B12                   412        pg/mL    211 - 911
+HORMONES
+Testosterone, Total           512        ng/dL    264 - 916
+Cortisol, Morning            14.2        ug/dL    6.2 - 19.4
+INFLAMMATION
+hs-CRP                        0.6        mg/L     < 3.0
+URINE EXAMINATION
+Protein                      Negative
+Glucose                      Negative
+Specific Gravity             1.015                1.005 - 1.030
+RISK CATEGORIES
+Cardiac risk based on lipids: Intermediate
+Thyroid function: Normal
+Interpretation: results should be read with clinical findings. This report is invented.
