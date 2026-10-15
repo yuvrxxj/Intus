@@ -50,3 +50,25 @@ python3 scripts/brand_assets.py
 npm i --no-save playwright-core && pip install pillow
 node scripts/brand_rasters.mjs
 ```
+
+## App icons
+
+Option B is a vector, so every size is rendered from the same path and nothing is redrawn by hand or by an image model. `scripts/brand_app_icons.mjs` writes the phone app icons and two high definition masters:
+
+| File | Use |
+| --- | --- |
+| `mobile/assets/icon.png` | iOS icon, 1024 px, paper mark on full-bleed red. RGB with no alpha channel, because Apple rejects one. No rounded corners, iOS rounds them. |
+| `mobile/assets/android-icon-foreground.png` | Android adaptive icon, paper mark on transparent, inside the 66 of 108 unit safe circle |
+| `mobile/assets/android-icon-background.png` | Android adaptive icon, solid red `#A31621` |
+| `mobile/assets/android-icon-monochrome.png` | Android themed icon, one-colour mark on transparent (Android tints it) |
+| `mobile/assets/splash-icon.png` | Splash image, red mark on transparent |
+| `mobile/assets/favicon.png` | 48 px web favicon for Expo, from `public/favicon.svg` |
+| `docs/brand/app-icons/intus-app-icon-2048.png` | The iOS icon at 2048 px, for stores, decks and design tools |
+| `docs/brand/app-icons/intus-mark-red-2048.png` | The red mark on transparent at 2048 px |
+
+```
+npm i --no-save playwright-core && pip install pillow
+node scripts/brand_app_icons.mjs
+```
+
+If a larger raster is needed, change the size in the script. `docs/brand/logos/intus-b-slash*.svg` stays the master.
