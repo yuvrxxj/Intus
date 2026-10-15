@@ -63,7 +63,6 @@ export const TABLE_KIND: Record<PersonalTable, MarkerKind | 'bySource' | null> =
   workouts: 'daily',
   workout_sets: 'daily',
   biomarker_readings: 'periodic',
-  screening_history: 'periodic',
   photo_log: 'periodic',
   body_composition: 'periodic',
   profile: null,

@@ -26,7 +26,6 @@ test('sleep, heart and cycle rows take their kind from their source; blood and s
   assert.equal(kindOfRow('cardio_metrics', 'health_connect'), 'active');
   assert.equal(kindOfRow('cycle_days'), 'daily');
   assert.equal(kindOfRow('biomarker_readings'), 'periodic');
-  assert.equal(kindOfRow('screening_history'), 'periodic');
   assert.equal(kindOfRow('daily_logs'), 'daily');
   assert.equal(kindOfRow('habits'), null);
 });

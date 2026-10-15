@@ -1,6 +1,9 @@
 -- One-off, not a migration: carries the original owner's hardcoded habits into the new habits table and copies
 -- their old daily_logs columns (cigs, lift, core, cardio, steps) into the new daily_logs.habits column.
 --
+-- DONE, kept for the record: 20261015000100_cleanup_after_per_user_change.sql drops app_owner and the old daily_logs
+-- columns this script reads, so it can no longer be run against the live project.
+--
 -- Safe to run more than once. It only adds what is missing: a habit that already exists by name is left alone, and
 -- a day that already has a value for a habit keeps it. Run it after 20261005000400_habits.sql, and run it again
 -- right after the new app is deployed, to pick up days the old app logged in the meantime.

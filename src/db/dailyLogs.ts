@@ -6,9 +6,9 @@ export type DailyLog = Row<'daily_logs'>;
 export type DailyLogInsert = Insert<'daily_logs'>;
 
 /** The columns the supplement before/after comparison reads, so it does not pull whole rows. */
-export type EffectLog = Pick<DailyLog, 'log_date' | 'weight' | 'mood' | 'steps' | 'total_cals' | 'protein' | 'water_ml' | 'active_kcal' | 'habits'>;
+export type EffectLog = Pick<DailyLog, 'log_date' | 'weight' | 'mood' | 'total_cals' | 'protein' | 'water_ml' | 'active_kcal' | 'habits'>;
 
-const EFFECT_COLUMNS = 'log_date,weight,mood,steps,total_cals,protein,water_ml,active_kcal,habits';
+const EFFECT_COLUMNS = 'log_date,weight,mood,total_cals,protein,water_ml,active_kcal,habits';
 
 /** Oldest first, from a date up to now. Paged, because a long comparison can pass the API's silent 1000-row cap. */
 export function fetchLogsSince(fromDate: string): Promise<EffectLog[]> {

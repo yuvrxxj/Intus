@@ -34,11 +34,10 @@ again. Do not add new files to it.
 
 | Kind of table | Tables | Rule |
 | --- | --- | --- |
-| Personal | `biomarker_readings`, `cycle_days`, `daily_logs`, `habits`, `medications`, `profile`, `profile_conditions`, `screening_history`, `sleep_sessions`, `workouts`, `workout_sets`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
-| Reference | `biomarkers`, `screening_rules` | Everyone signed in can read them. Nobody can change them through the API; they are edited by migration |
+| Personal | `biomarker_readings`, `cycle_days`, `daily_logs`, `habits`, `medications`, `profile`, `profile_conditions`, `sleep_sessions`, `workouts`, `workout_sets`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
+| Reference | `biomarkers` | Everyone signed in can read it. Nobody can change it through the API; it is edited by migration |
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Files | the `lab-reports` Storage bucket | The same rules for uploaded lab report PDFs: own folder only, `<uuid>.pdf`, at most 10 MiB each and 200 per person, no update policy. `delete_my_account()` refuses while any remain, and the app removes them first |
-| Internal | `app_owner` | Unreachable through the API. Only used to hand existing rows to the first owner |
 | Internal | `ai_settings` | Unreachable through the API: row level security with no policy. Edited in the Supabase dashboard |
 | Internal | `ai_usage` | A person can read their own rows. Only the Edge Function writes them |
 
@@ -52,7 +51,7 @@ so the function does it with its owner's rights. It takes no arguments and only 
 read from their login token; it refuses a caller with no token, and the signed-out role cannot run it.
 
 Deleting that row removes everything that hangs off it, because every table with a `user_id` references `auth.users`
-with `on delete cascade`, as do `app_owner` and Supabase's own identities, sessions and refresh tokens. The database
+with `on delete cascade`, as do Supabase's own identities, sessions and refresh tokens. The database
 tests fail if a new table with a `user_id` column does not cascade, since that would make deletion fail for everyone.
 
 **Files in Supabase Storage are not covered by the cascade, and SQL cannot remove them.** Deleting a row from
@@ -88,15 +87,16 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261012000500_strength.sql` | Adds `workouts` and `workout_sets`, saved by an id made on the device so a resend changes nothing |
 | `20261012000600_ai_reading.sql` | Adds `ai_settings` (off by default: the limits, provider, model and prices), `ai_usage` (one row per AI call, never any report text) and the three functions that enforce the limits |
 | `20261013000100_date_of_birth.sql` | Adds `profile.date_of_birth` (nullable, not before 1900), so a person's age is worked out from it and goes up on their birthday. The old `age` column stays for people who have not given a date |
+| `20261015000100_cleanup_after_per_user_change.sql` | Housekeeping after the 5 Oct change (INT-67). First writes the one old `daily_logs.cardio` word the seed could not map (`stairs`) into the Cardio habit. Then drops `screening_history` and `screening_rules`, the profile columns `family_colorectal_cancer`, `family_prostate_cancer` and `noise_or_blast_exposure`, `medications.paracetamol_mg_per_dose`, the old `daily_logs` columns `lift`, `core`, `cardio`, `cigs` and `steps`, `private.is_owner()`, `app_owner`, and the `backup_20261005` schema (a copy of all 16 tables from before the per-person change) |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
-workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carries
-the original owner's old hardcoded habits (cigarettes, lift, core, cardio, steps) into the new table and copies
-their old `daily_logs` columns into the new `habits` column. It is safe to run more than once, and only adds what
-is missing.
+workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carried
+the original owner's old hardcoded habits (cigarettes, lift, core, cardio, steps) into the new table and copied
+their old `daily_logs` columns into the new `habits` column. It has done its job and can no longer be run against the
+live project, because it reads `app_owner` and the old columns, which the cleanup migration drops.
 
-To undo the per-user change, put the owner-only policies back by re-running `20261001000200_owner_lockdown.sql`.
-The `user_id` columns can stay, since the owner-only rule ignores them.
+The per-user change can no longer be undone: the cleanup migration dropped the owner check, `app_owner` and the
+pre-change copy of the data.
 
 ## AI reading of lab reports
 
@@ -192,7 +192,7 @@ come after the app is on the App Store.
 - **Personal tables** have a `user_id` filled in automatically from the signed-in person. The policy `own_rows`
   lets a person read and write only rows whose `user_id` is theirs, and refuses to write a row for anyone else or
   hand one over.
-- **Shared reference tables** (`biomarkers`, `screening_rules`) can be read by any signed-in person and cannot
+- **The shared reference table** (`biomarkers`) can be read by any signed-in person and cannot
   be changed through the API at all.
 - **Signed out** gets nothing, in every table.
 - **Deleting an account** removes that person's rows and no one else's.
