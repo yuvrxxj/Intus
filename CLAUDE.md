@@ -33,7 +33,8 @@ not only when asked. Before you finish, check both, and say in your last message
 ## iOS app
 
 - The iPhone app is `mobile/` (Expo, React Native), in this same repository. Do not start a second repo. Its Linear
-  project is "Intus.iOS" (https://linear.app/intus/project/intusios-3a51eb1a9ad3); its Miro board is "Intus.iOS".
+  project is "Intus.iOS" (https://linear.app/intus/project/intusios-3a51eb1a9ad3); its Miro board is "Intus.iOS"
+  (https://miro.com/app/board/uXjVEZLWcBQ=/).
 - It imports the web's plain TypeScript rules (`src/lib`, the pure `model.ts`-style files) rather than copying them.
   CI has no root `node_modules`, so after committing, check the app the way CI does: `bash scripts/ios-ci-check.sh`.
 - Unattended builds use the kit in `docs/ios/` (read `docs/ios/README.md`). It runs only when the launcher sets

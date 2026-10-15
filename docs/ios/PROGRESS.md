@@ -6,7 +6,7 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 
 | Rung | What | Linear | State | Notes |
 | --- | --- | --- | --- | --- |
-| R0 | Read, baseline, Simulator build, Miro board | INT-138 | not started | |
+| R0 | Read, baseline, Simulator build, Miro board | INT-138 | not started | Miro board exists (https://miro.com/app/board/uXjVEZLWcBQ=/) with frames 1 to 3; do not create another |
 | R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | not started | |
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | not started | |
 | R3 | Account: sign out, delete, download | INT-135 | not started | |

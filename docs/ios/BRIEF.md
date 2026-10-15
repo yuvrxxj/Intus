@@ -58,13 +58,13 @@ Issues, in the order you will meet them:
 | R3 | INT-135 | Sign out, delete account, download my data |
 | R4 | INT-83 | Sleep screen and Apple Health |
 | R5 | INT-134 | Bloodwork |
-| any | INT-138 | The Miro board "Intus.iOS" |
+| any | INT-138 | The Miro board "Intus.iOS" (frames 1 to 3 done; frame 4, screenshots, is yours) |
 | morning | INT-136 | Install on the real iPhone (the founder does this; do not start it) |
 | later | INT-137 | TestFlight (not tonight) |
 
 Move an issue to **In Progress** when you start its rung and to **Done** when the rung is done, with a comment: what changed, the commit, the pull request link, the screenshot paths. Search before you create any new issue; nest a new one under INT-97 and put it in the Intus.iOS project. Never delete anything in Linear.
 
-**Miro:** create one new board named **Intus.iOS** (the founder asked for it; this is the one exception to the single-board rule in `CLAUDE.md`, which this run updates). Do not edit the existing "Intus" board. Frames, in order: (1) the design system carried over from the web, (2) how each web element maps to an Apple HIG component, (3) the screen map and the sign-in to Today flow, (4) Simulator screenshots as each rung lands. Follow the Miro tools' own canvas guidance (`canvas_get_canvas_composer_skill`) before drawing. Never share the board or change its permissions.
+**Miro:** the board **Intus.iOS** already exists: https://miro.com/app/board/uXjVEZLWcBQ=/ . Do not create another (search for it by name first; if a resume finds it, use it). It is the one exception to the single-board rule that applied to the web app's "Intus" board, which you must not edit. Frames 1 to 3 are done: (1) the design system carried over from the web, (2) how each web element maps to an Apple HIG component, (3) the screen map and the sign-in to Today flow. What is left for you: (4) Simulator screenshots as each rung lands, added to a new frame "04 Simulator screenshots", and keep frame 3 true if the tabs or flow change. Read a frame back before you edit it (`canvas_search`, then `canvas_read_as_svg`), follow the Miro tools' own canvas guidance (`canvas_get_canvas_composer_skill`), and keep the existing look. Never share the board or change its permissions.
 
 ## 4. Design system: carry the web over, in Apple's language
 
@@ -126,7 +126,7 @@ Work top to bottom. For each rung, run the loop in section 7. Update `docs/ios/P
 2. `repo-search` the shared-code list in section 5. Write the verified list to `docs/ios/SHARED.md`.
 3. Install dependencies (`npm ci`, then `cd mobile && npm ci`). Run the baseline: `npm run build`, `npm test`, `npm run test:db`, `cd mobile && npm run typecheck`, via `build-qa`. If the baseline is red, record exactly what and carry on only if the failure is in something you are not touching.
 4. Build the unchanged app in the Simulator (`cd mobile && npx expo run:ios`) and take a screenshot to `docs/ios/screens/00-baseline.png`. If this fails, nothing else can be verified: spend up to 90 minutes fixing the environment, then record the blocker and do everything that does not need the Simulator (types, models, unit tests) so the morning is not wasted.
-5. Create the Miro board "Intus.iOS" and its first three frames (INT-138). Link it from the Linear project (a resource link on the project).
+5. Open the Miro board "Intus.iOS" (INT-138; it exists, with frames 1 to 3), check the frames are there, and make sure the Linear project Intus.iOS has the board as a resource link.
 6. Install Maestro for UI checks if it installs cleanly in ten minutes (`brew tap mobile-dev-inc/tap && brew install maestro`, which needs Java 17 or newer). If not, verify by screenshot and note the manual steps in `MORNING.md`.
 
 ### R1: foundation (INT-132, INT-89)

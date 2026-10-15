@@ -28,9 +28,13 @@ Start the Xcode download first.
 
 ## Start it
 
+The repo is `yuvrxxj/Intus.web` (it was `Intus`; GitHub redirects the old name, but point your clone at the new one).
+
 ```
-git clone https://github.com/yuvrxxj/Intus.web.git ~/dev/Intus.web      # skip if you already have it
-cd ~/dev/Intus.web && git pull
+mkdir -p ~/dev
+git clone https://github.com/yuvrxxj/Intus.web.git ~/dev/Intus.web
+# already have a clone from before the rename? use it, and run once: git -C ~/dev/Intus remote set-url origin https://github.com/yuvrxxj/Intus.web.git
+cd ~/dev/Intus.web && git checkout main && git pull
 git worktree add ../Intus.ios -b ios/overnight origin/main
 cd ../Intus.ios
 ./scripts/ios-preflight.sh        # red lines tell you what to fix; the last check proves the guard in a real session
