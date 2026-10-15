@@ -1,5 +1,5 @@
-import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
-import type { ReadingInput } from '../../db/biomarkerReadings.ts';
+import type { Biomarker, BiomarkerReading } from '../../db/rows.ts';
+import type { ReadingInput } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
 

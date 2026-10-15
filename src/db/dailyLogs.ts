@@ -1,12 +1,9 @@
 import { supabase } from './client.ts';
 import { fetchAll } from './paging.ts';
-import type { Insert, Row } from './types.ts';
+import type { DailyLog, DailyLogInsert, EffectLog } from './rows.ts';
 
-export type DailyLog = Row<'daily_logs'>;
-export type DailyLogInsert = Insert<'daily_logs'>;
-
-/** The columns the supplement before/after comparison reads, so it does not pull whole rows. */
-export type EffectLog = Pick<DailyLog, 'log_date' | 'weight' | 'mood' | 'total_cals' | 'protein' | 'water_ml' | 'active_kcal' | 'habits'>;
+// The types live in rows.ts so the shared rules can reach them without this file's client.
+export type { DailyLog, DailyLogInsert, EffectLog };
 
 const EFFECT_COLUMNS = 'log_date,weight,mood,total_cals,protein,water_ml,active_kcal,habits';
 

@@ -1,4 +1,4 @@
-import type { DetailsValues, Profile } from '../../db/profile.ts';
+import type { DetailsValues, Profile } from '../../db/rows.ts';
 import { ageOn } from '../../lib/age.ts';
 import { ACTIVITY } from '../../lib/nutrition.ts';
 import { normalizeSex, type Sex } from '../../lib/sex.ts';

@@ -1,5 +1,5 @@
-import type { HabitInput } from '../../db/habits.ts';
-import type { Profile } from '../../db/profile.ts';
+import type { HabitInput } from '../../db/rows.ts';
+import type { Profile } from '../../db/rows.ts';
 import { ageOn } from '../../lib/age.ts';
 import { dayNumber, isoDay } from '../../lib/dates.ts';
 import { ACTIVITY, calorieSuggestion, paceOf, proteinSuggestion, type Activity, type Advice } from '../../lib/nutrition.ts';

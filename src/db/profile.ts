@@ -1,27 +1,7 @@
 import { supabase } from './client.ts';
-import type { Row } from './types.ts';
+import type { DetailsValues, GoalValues, Profile } from './rows.ts';
 
-export type Profile = Row<'profile'>;
-
-/** What the "Your details" card saves: the facts the age, the ranges and the calorie suggestion are worked out from. */
-export interface DetailsValues {
-  sex: 'male' | 'female';
-  date_of_birth: string;
-  /** worked out from the date on the day of saving; the app recomputes it from the date every time it reads it */
-  age: number;
-  height_cm: number;
-  activity_level: string;
-}
-
-/** What the Goals screen saves into the profile row. The weights and dates are required, the daily targets are not. */
-export interface GoalValues {
-  start_weight: number;
-  goal_weight: number;
-  start_date: string;
-  goal_date: string;
-  calorie_target: number | null;
-  protein_target: number | null;
-}
+export type { DetailsValues, GoalValues, Profile };
 
 /** The signed-in person's own profile (the database only returns their rows), or null before it has been filled in. */
 export async function fetchProfile(): Promise<Profile | null> {

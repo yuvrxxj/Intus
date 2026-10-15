@@ -1,4 +1,4 @@
-import type { Habit } from '../../db/habits.ts';
+import type { Habit } from '../../db/rows.ts';
 import { dayNumber, isoDay } from '../../lib/dates.ts';
 import { betterOf, describeGoal, goalOf, isOnTrack, parseEntries, type Entries } from './model.ts';
 
