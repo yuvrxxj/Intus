@@ -40,12 +40,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      app_owner: {
-        Row: { created_at: string; user_id: string };
-        Insert: { created_at?: string; user_id: string };
-        Update: { created_at?: string; user_id?: string };
-        Relationships: [];
-      };
       biomarker_readings: {
         Row: {
           biomarker_id: string;
@@ -252,20 +246,15 @@ export type Database = {
         Row: {
           active_kcal: number | null;
           carbs: number | null;
-          cardio: string | null;
-          cigs: number | null;
-          core: string | null;
           fat: number | null;
           habits: Json;
           id: string;
-          lift: string | null;
           log_date: string;
           mood: number | null;
           mood_notes: string | null;
           protein: number | null;
           rings: Json | null;
           saved_at: string | null;
-          steps: number | null;
           supplements: Json | null;
           total_cals: number | null;
           user_id: string;
@@ -275,20 +264,15 @@ export type Database = {
         Insert: {
           active_kcal?: number | null;
           carbs?: number | null;
-          cardio?: string | null;
-          cigs?: number | null;
-          core?: string | null;
           fat?: number | null;
           habits?: Json;
           id?: string;
-          lift?: string | null;
           log_date: string;
           mood?: number | null;
           mood_notes?: string | null;
           protein?: number | null;
           rings?: Json | null;
           saved_at?: string | null;
-          steps?: number | null;
           supplements?: Json | null;
           total_cals?: number | null;
           user_id?: string;
@@ -298,20 +282,15 @@ export type Database = {
         Update: {
           active_kcal?: number | null;
           carbs?: number | null;
-          cardio?: string | null;
-          cigs?: number | null;
-          core?: string | null;
           fat?: number | null;
           habits?: Json;
           id?: string;
-          lift?: string | null;
           log_date?: string;
           mood?: number | null;
           mood_notes?: string | null;
           protein?: number | null;
           rings?: Json | null;
           saved_at?: string | null;
-          steps?: number | null;
           supplements?: Json | null;
           total_cals?: number | null;
           user_id?: string;
@@ -449,7 +428,6 @@ export type Database = {
           id: string;
           name: string;
           notes: string | null;
-          paracetamol_mg_per_dose: number | null;
           start_date: string | null;
           user_id: string;
         };
@@ -464,7 +442,6 @@ export type Database = {
           id?: string;
           name: string;
           notes?: string | null;
-          paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
           user_id?: string;
         };
@@ -479,7 +456,6 @@ export type Database = {
           id?: string;
           name?: string;
           notes?: string | null;
-          paracetamol_mg_per_dose?: number | null;
           start_date?: string | null;
           user_id?: string;
         };
@@ -510,8 +486,6 @@ export type Database = {
           date_of_birth: string | null;
           desired_day: string | null;
           diet: string | null;
-          family_colorectal_cancer: boolean;
-          family_prostate_cancer: boolean;
           fat_target: number | null;
           goal_date: string | null;
           goal_weight: number | null;
@@ -519,7 +493,6 @@ export type Database = {
           id: string;
           initials: string | null;
           name: string | null;
-          noise_or_blast_exposure: boolean;
           onboarded: boolean | null;
           protein_target: number | null;
           sex: string | null;
@@ -545,8 +518,6 @@ export type Database = {
           date_of_birth?: string | null;
           desired_day?: string | null;
           diet?: string | null;
-          family_colorectal_cancer?: boolean;
-          family_prostate_cancer?: boolean;
           fat_target?: number | null;
           goal_date?: string | null;
           goal_weight?: number | null;
@@ -554,7 +525,6 @@ export type Database = {
           id?: string;
           initials?: string | null;
           name?: string | null;
-          noise_or_blast_exposure?: boolean;
           onboarded?: boolean | null;
           protein_target?: number | null;
           sex?: string | null;
@@ -580,8 +550,6 @@ export type Database = {
           date_of_birth?: string | null;
           desired_day?: string | null;
           diet?: string | null;
-          family_colorectal_cancer?: boolean;
-          family_prostate_cancer?: boolean;
           fat_target?: number | null;
           goal_date?: string | null;
           goal_weight?: number | null;
@@ -589,7 +557,6 @@ export type Database = {
           id?: string;
           initials?: string | null;
           name?: string | null;
-          noise_or_blast_exposure?: boolean;
           onboarded?: boolean | null;
           protein_target?: number | null;
           sex?: string | null;
@@ -602,56 +569,6 @@ export type Database = {
           user_id?: string;
           water_target?: number | null;
           workout_days_per_week?: number | null;
-        };
-        Relationships: [];
-      };
-      screening_history: {
-        Row: { created_at: string; done_date: string; id: string; notes: string | null; screening_code: string; user_id: string };
-        Insert: { created_at?: string; done_date: string; id?: string; notes?: string | null; screening_code: string; user_id?: string };
-        Update: { created_at?: string; done_date?: string; id?: string; notes?: string | null; screening_code?: string; user_id?: string };
-        Relationships: [
-          {
-            foreignKeyName: 'screening_history_screening_code_fkey';
-            columns: ['screening_code'];
-            isOneToOne: false;
-            referencedRelation: 'screening_rules';
-            referencedColumns: ['code'];
-          },
-        ];
-      };
-      screening_rules: {
-        Row: {
-          code: string;
-          interval_years: number | null;
-          label: string;
-          max_age: number | null;
-          min_age: number | null;
-          rationale: string | null;
-          requires_flag: string | null;
-          sex: string | null;
-          sort_order: number;
-        };
-        Insert: {
-          code: string;
-          interval_years?: number | null;
-          label: string;
-          max_age?: number | null;
-          min_age?: number | null;
-          rationale?: string | null;
-          requires_flag?: string | null;
-          sex?: string | null;
-          sort_order?: number;
-        };
-        Update: {
-          code?: string;
-          interval_years?: number | null;
-          label?: string;
-          max_age?: number | null;
-          min_age?: number | null;
-          rationale?: string | null;
-          requires_flag?: string | null;
-          sex?: string | null;
-          sort_order?: number;
         };
         Relationships: [];
       };

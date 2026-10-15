@@ -15,7 +15,7 @@ const full = (over: Partial<OnboardingForm> = {}): OnboardingForm => ({
 });
 const profile = (over: Partial<Profile> = {}): Profile => ({
   id: 'p', user_id: 'u', activity_level: null, cardio_notes: null, desired_day: null, diet: null, typical_day: null, workout_days_per_week: null,
-  age: null, date_of_birth: null, sex: null, family_colorectal_cancer: false, family_prostate_cancer: false, noise_or_blast_exposure: false,
+  age: null, date_of_birth: null, sex: null,
   bf_goal: null, bf_start: null, blood_type: null, calorie_target: null, carb_target: null, fat_target: null, goal_date: null,
   goal_weight: null, height_cm: null, initials: null, name: null, onboarded: false, protein_target: null, sleep_goal: null,
   start_date: null, start_weight: null, step_target: null, updated_at: null, water_target: null, ...over,

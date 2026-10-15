@@ -10,8 +10,8 @@ const GAIN = programmeFromProfile({ start_weight: 70, goal_weight: 76, start_dat
 const STEADY = programmeFromProfile({ start_weight: 80, goal_weight: 80, start_date: '2026-10-01', goal_date: '2026-12-24' })!;
 
 const log = (log_date: string, over: Partial<DailyLog> = {}): DailyLog => ({
-  id: log_date, user_id: 'u', log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null, core: null,
-  cardio: null, cigs: 0, mood: null, mood_notes: null, supplements: null, saved_at: null, steps: null, water_ml: 0,
+  id: log_date, user_id: 'u', log_date, weight: null, total_cals: null, protein: null, carbs: null, fat: null,
+  mood: null, mood_notes: null, supplements: null, saved_at: null, water_ml: 0,
   active_kcal: null, rings: null, habits: {}, ...over,
 });
 

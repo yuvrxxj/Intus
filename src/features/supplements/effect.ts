@@ -45,7 +45,6 @@ export interface MetricDef {
 export const METRICS: readonly MetricDef[] = [
   { id: 'weight', label: 'Weight', unit: 'kg', read: (l) => l.weight },
   { id: 'mood', label: 'Mood', unit: '', read: (l) => l.mood },
-  { id: 'steps', label: 'Steps', unit: 'steps', read: (l) => l.steps },
   { id: 'calories', label: 'Calories eaten', unit: 'kcal', read: (l) => l.total_cals },
   { id: 'protein', label: 'Protein', unit: 'g', read: (l) => l.protein },
   { id: 'water', label: 'Water', unit: 'ml', read: (l) => l.water_ml },

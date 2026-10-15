@@ -4,7 +4,7 @@ import { calorieRows, habitRows, moodRows, weightRows } from '../src/features/pr
 import type { EffectLog } from '../src/db/dailyLogs.ts';
 
 const log = (log_date: string, over: Partial<EffectLog> = {}): EffectLog => ({
-  log_date, weight: null, mood: null, steps: null, total_cals: null, protein: null, water_ml: null, active_kcal: null, habits: {}, ...over,
+  log_date, weight: null, mood: null, total_cals: null, protein: null, water_ml: null, active_kcal: null, habits: {}, ...over,
 });
 const LOGS = [
   log('2026-10-01', { weight: 82, total_cals: 2100, mood: 3, habits: { cig: { value: 5 } } }),

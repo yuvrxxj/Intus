@@ -12,11 +12,11 @@ import type { Biomarker, BiomarkerReading } from '../src/db/queries.ts';
 // Invented rows shaped like the live tables. They exercise the logic and say nothing about any real supplement.
 const supplement = (over: Partial<Medication> & Pick<Medication, 'id' | 'name'>): Medication => ({
   active: true, created_at: '2026-01-01T00:00:00Z', days_of_week: [0, 1, 2, 3, 4, 5, 6], dosage: null, doses_per_day: 1,
-  end_date: null, frequency: null, notes: null, paracetamol_mg_per_dose: null, start_date: null, user_id: 'u', ...over,
+  end_date: null, frequency: null, notes: null, start_date: null, user_id: 'u', ...over,
 });
 const log = (log_date: string, over: Partial<DailyLog> = {}): DailyLog => ({
-  active_kcal: null, carbs: null, cardio: null, cigs: null, core: null, fat: null, habits: {}, id: log_date, lift: null,
-  log_date, mood: null, mood_notes: null, protein: null, rings: null, saved_at: null, steps: null, supplements: null,
+  active_kcal: null, carbs: null, fat: null, habits: {}, id: log_date,
+  log_date, mood: null, mood_notes: null, protein: null, rings: null, saved_at: null, supplements: null,
   total_cals: null, user_id: 'u', water_ml: null, weight: null, ...over,
 });
 const marker = (over: Partial<Biomarker> & Pick<Biomarker, 'id' | 'code'>): Biomarker => ({
@@ -117,14 +117,14 @@ test('metricEffects: ramp-up days, days after the end date and days outside the 
 
 test('metricEffects: missing and unreadable values are skipped rather than read as zero, numeric strings count', () => {
   const logs: DailyLog[] = [];
-  for (let off = -28; off <= -1; off++) logs.push(log(day(off), { steps: off % 2 === 0 ? 8000 : null, mood: off % 3 === 0 ? ('abc' as unknown as number) : 3 }));
-  for (let off = 8; off <= 40; off++) logs.push(log(day(off), { steps: String(9000 + wobble(off) * 10) as unknown as number, mood: 3 }));
+  for (let off = -28; off <= -1; off++) logs.push(log(day(off), { total_cals: off % 2 === 0 ? 8000 : null, mood: off % 3 === 0 ? ('abc' as unknown as number) : 3 }));
+  for (let off = 8; off <= 40; off++) logs.push(log(day(off), { total_cals: String(9000 + wobble(off) * 10) as unknown as number, mood: 3 }));
   const effects = metricEffects({ start_date: START, end_date: null }, logs, day(100));
-  const steps = effects.find((e) => e.id === 'steps');
+  const calories = effects.find((e) => e.id === 'calories');
   const mood = effects.find((e) => e.id === 'mood');
-  assert.equal(steps?.before.n, 14);
-  assert.equal(steps?.before.mean, 8000);
-  assert.equal(steps?.after.n, 33);
+  assert.equal(calories?.before.n, 14);
+  assert.equal(calories?.before.mean, 8000);
+  assert.equal(calories?.after.n, 33);
   assert.equal(mood?.before.n, 19); // 28 days less the 9 (offsets -27, -24 ... -3) whose mood was not a number
   assert.equal(mood?.before.mean, 3);
   // nothing was logged for weight, so it does not appear at all
@@ -205,11 +205,11 @@ test('effectReport: no start date, not started yet, and ready', () => {
 
   const going = supplement({ id: 'g', name: 'G', start_date: START });
   const logs = [];
-  for (let off = -28; off <= 30; off++) logs.push(log(day(off), { steps: off < 0 ? 6000 + wobble(off + 50) * 100 : 9000 + wobble(off) * 100 }));
+  for (let off = -28; off <= 30; off++) logs.push(log(day(off), { total_cals: off < 0 ? 6000 + wobble(off + 50) * 100 : 9000 + wobble(off) * 100 }));
   const report = effectReport(going, [going], logs, [], [], today);
   assert.equal(report.status, 'ready');
   assert.equal(report.earliestVerdict, day(17));
-  assert.equal(report.metrics.find((m) => m.id === 'steps')?.verdict, 'higher');
+  assert.equal(report.metrics.find((m) => m.id === 'calories')?.verdict, 'higher');
 });
 
 test('metricEffects: habits, yes or no as a share of days, a missing entry is not a no, archived habits still count', () => {

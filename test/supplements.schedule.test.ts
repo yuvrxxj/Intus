@@ -7,7 +7,7 @@ import {
 
 const item = (over: Partial<Medication> & Pick<Medication, 'name'>): Medication => ({
   id: over.name, user_id: 'u', active: true, created_at: '2026-01-01T00:00:00Z', days_of_week: [0, 1, 2, 3, 4, 5, 6], dosage: null,
-  doses_per_day: null, end_date: null, frequency: null, notes: null, paracetamol_mg_per_dose: null, start_date: null, ...over,
+  doses_per_day: null, end_date: null, frequency: null, notes: null, start_date: null, ...over,
 });
 
 test('the weekday of a date, Sunday as 0, including dates before 1970 and across leap days', () => {

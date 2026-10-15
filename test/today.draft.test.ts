@@ -5,8 +5,8 @@ import type { DailyLog } from '../src/db/dailyLogs.ts';
 import type { Habit } from '../src/db/habits.ts';
 
 const log = (over: Partial<DailyLog> = {}): DailyLog => ({
-  id: 'x', user_id: 'u', log_date: '2026-10-01', weight: null, total_cals: null, protein: null, carbs: null, fat: null, lift: null,
-  core: null, cardio: null, cigs: null, mood: null, mood_notes: null, supplements: null, saved_at: null, steps: null,
+  id: 'x', user_id: 'u', log_date: '2026-10-01', weight: null, total_cals: null, protein: null, carbs: null, fat: null,
+  mood: null, mood_notes: null, supplements: null, saved_at: null,
   water_ml: 0, active_kcal: null, rings: null, habits: {}, ...over,
 });
 const habit = (over: Partial<Habit> & Pick<Habit, 'id' | 'name' | 'kind'>): Habit => ({
