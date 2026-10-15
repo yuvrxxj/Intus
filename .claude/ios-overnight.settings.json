@@ -1,0 +1,54 @@
+{
+  "$comment": "Loaded only by scripts/ios-overnight.sh (claude --settings), never by an ordinary session. The hooks are the enforcement that still holds in bypassPermissions mode; the deny rules are a second layer that holds even if a hook cannot run. See docs/ios/README.md.",
+  "env": {
+    "INTUS_IOS_OVERNIGHT": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(gh pr merge*)",
+      "Bash(supabase *)",
+      "Bash(psql *)",
+      "Bash(vercel *)",
+      "Bash(eas *)",
+      "Read(~/intus-ios-test.env)",
+      "mcp__Supabase__apply_migration",
+      "mcp__Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__github__merge_pull_request",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.mjs\"",
+            "timeout": 15,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/keep-going.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
