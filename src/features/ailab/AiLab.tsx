@@ -9,6 +9,7 @@ import { money, parseLedger, seconds, summarise, usedInLastDay } from './ledger.
 import { OBSERVED, PUBLISHED } from './limits.ts';
 import { previewRows } from './preview.ts';
 import type { ModelFacts, RunFile, RunMetrics } from './types.ts';
+import { VERTEX_MODELS } from './vertex.ts';
 import './ailab.css';
 
 const RUNS = parseLedger(ledgerText);
@@ -20,6 +21,8 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const OUTCOME_LABEL = { complete: 'Whole report', partial: 'Part of it', failed: 'Failed', trial: 'First chunk only' } as const;
 const num = (n: number) => n.toLocaleString('en-GB');
 const pct = (x: number) => `${Math.round(x * 100)}%`;
+/** Runs before Vertex was tried have no provider, which means Groq. */
+const where = (c: RunMetrics['config']) => (c.provider === 'vertex' ? `Vertex ${c.location ?? ''}, response schema` : `Groq, ${c.mode === 'schema' ? 'strict JSON schema' : 'JSON mode'}`);
 
 function Models() {
   const now = Date.now();
@@ -56,12 +59,35 @@ function Models() {
   );
 }
 
+function VertexModels() {
+  return (
+    <div className="card sec">
+      <div className="ct"><span className="dot dot-red" />Google Vertex AI models on this project</div>
+      <div className="bw-sub">Vertex has no 8,000 tokens a minute to stay under, so a report goes in one request, as the app sends it. Prices are Google's Standard pay-as-you-go list prices per million tokens, read on 14 Oct 2026; thinking is billed as output. The newest models answer only on the global endpoint, which is not pinned to a region.</div>
+      <div className="bt-wrap">
+        <table className="bt al-table">
+          <thead><tr><th>Model</th><th>Called at</th><th>Price per million (in / out / cached in)</th></tr></thead>
+          <tbody>
+            {VERTEX_MODELS.map((m) => (
+              <tr key={m.id}>
+                <td data-label="Model"><strong>{m.id}</strong>{m.note && <div className="fld-hint">{m.note}</div>}</td>
+                <td data-label="Called at">{m.location}</td>
+                <td data-label="Price">${m.prompt.toFixed(3)} / ${m.completion.toFixed(3)} / ${m.cachedPrompt.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function Runs() {
   const rows = useMemo(() => RUNS.map((r) => ({ run: r, summary: summarise(r) })), []);
   return (
     <div className="card sec">
       <div className="ct"><span className="dot dot-red" />Every run</div>
-      <div className="bw-sub">The same redacted report and the same prompt as the app, sent in chunks because of the per-minute token limit (each run says how big, and how many output tokens it was allowed). "Found" is how many of the results the app's own on-device reader finds that the model found too, on the same line with the same number. Cost is at Groq's pay-as-you-go list price; this key's allowance is free.</div>
+      <div className="bw-sub">The same redacted report and the same prompt as the app. Groq runs are sent in chunks because of the per-minute token limit; Vertex runs send the whole report in one request unless the run says otherwise (each run says how big, and how many output tokens it was allowed). "Found" is how many of the results the app's own on-device reader finds that the model found too, on the same line with the same number. Cost is at each provider's pay-as-you-go list price; Groq's allowance on this key is free, Vertex is charged to the Google Cloud project.</div>
       <div className="bt-wrap">
         <table className="bt al-table">
           <thead>
@@ -83,7 +109,7 @@ function RunRow({ run, outcome, failures }: { run: RunMetrics; outcome: keyof ty
   const why = Object.entries(failures).map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
   return (
     <tr>
-      <td data-label="Model and setting"><strong>{configName(run.config)}</strong><div className="fld-hint">{run.config.mode === 'schema' ? 'strict JSON schema' : 'JSON mode'}, {run.chunks}/{run.totalChunks} chunks of up to {num(run.chunkChars)} characters, up to {num(run.maxTokens)} tokens out</div></td>
+      <td data-label="Model and setting"><strong>{configName(run.config)}</strong><div className="fld-hint">{where(run.config)}, {run.chunks}/{run.totalChunks} {run.totalChunks === 1 ? 'request' : 'chunks'} of up to {num(run.chunkChars)} characters, up to {num(run.maxTokens)} tokens out</div></td>
       <td data-label="Outcome"><span className={`al-badge al-${outcome}`}>{OUTCOME_LABEL[outcome]}</span>{why && <div className="fld-hint">{why}</div>}</td>
       <td data-label="Time">{seconds(t.elapsedS)}<div className="fld-hint">{seconds(t.requestS)} in requests, {seconds(t.waitedS)} held back for limits</div></td>
       <td data-label="Tokens">{num(t.promptTokens)} / {num(t.completionTokens)}{t.cachedTokens > 0 && <div className="fld-hint">{num(t.cachedTokens)} cached</div>}</td>
@@ -183,6 +209,7 @@ export default function AiLab() {
         <p>Choosing which AI model should read a lab report and fill the Bloodwork screen. This is not the live site. No database is read or written here, nothing on this page can be saved to an account, and none of it ships.</p>
       </header>
       <Models />
+      <VertexModels />
       <Runs />
       <Preview />
     </main>
