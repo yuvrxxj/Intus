@@ -165,11 +165,19 @@ Three ways in, all free:
   Cloud OAuth client (free) whose redirect URI is `https://zfyeqfnretrrmtevczrc.supabase.co/auth/v1/callback`.
 - Apple is not offered: Sign in with Apple needs a paid Apple Developer account.
 
-Emails (confirm your address, reset your password) need a sender. Supabase's built-in one only delivers to
-members of your own Supabase organisation, a few an hour. A free option is Gmail over SMTP with an app password
-(Authentication, Emails, SMTP Settings: host `smtp.gmail.com`, port 465, the Gmail address as user and sender,
-the 16-character app password). Until a sender is set up, keep **Confirm email** off so new accounts get in
-straight away, and reset forgotten passwords from the dashboard (Authentication, Users).
+Emails (confirm your address, reset your password) go out through Resend over SMTP, because Supabase's built-in
+sender only delivers to members of your own Supabase organisation, a few an hour. In Authentication, Emails, SMTP
+Settings: host `smtp.resend.com`, port 465, username `resend`, the password a Resend API key that can only send,
+sender `hello@mail.intus.fit`, sender name Intus. **Confirm email** is on, and the email rate limit
+(Authentication, Rate Limits) is raised to 80 an hour. Resend's free plan allows 100 emails a day. A new sending
+domain has no reputation yet, so a confirmation email can land in a junk folder (it did in iCloud Mail on day one).
+
+DNS for intus.fit has three sets of records, and all of them have to stay. The root carries the iCloud+ custom
+email domain for yuvraaj@intus.fit: two MX records, an SPF record, the `sig1._domainkey` DKIM record and Apple's
+`apple-domain` verification record. `_dmarc` is `v=DMARC1; p=none; rua=mailto:yuvraaj@intus.fit;`, so the reports
+arrive in that mailbox. Resend's DKIM, SPF and return-path records sit under `mail.intus.fit`, off the root, so they
+never clash with the iCloud ones. Deleting the root MX records stops all inbound mail, including the contact
+address in the footers.
 
 Under Authentication, URL Configuration, the Site URL must be the production address, `https://intus.fit`, and the
 redirect URLs must include it (`https://intus.fit/**`), `http://localhost:5173/**`, and the preview pattern
