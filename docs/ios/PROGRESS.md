@@ -1,13 +1,13 @@
 # Progress: overnight iPhone build
 
-Next action: R0 in progress. Baseline (`npm ci`, build, test, test:db, mobile typecheck) running via build-qa; `docs/ios/SHARED.md` being written from a repo-search.
+Next action: R1 shell is committed and pushed (ios/overnight); CI-faithful typecheck passes. Next: Release Simulator build for `01-shell.png` (the Debug dev-client prompt cannot be tapped), root build/test/test:db, open the draft PR; then R1 closes and R2 (INT-133) starts.
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
 | Rung | What | Linear | State | Notes |
 | --- | --- | --- | --- | --- |
-| R0 | Read, baseline, Simulator build, Miro board | INT-138 | in progress | Miro board exists (https://miro.com/app/board/uXjVEZLWcBQ=/) with frames 1 to 3; do not create another |
-| R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | not started | |
+| R0 | Read, baseline, Simulator build, Miro board | INT-138 | done except baseline screenshot (see log) | Miro board exists (https://miro.com/app/board/uXjVEZLWcBQ=/) with frames 1 to 3; do not create another |
+| R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | in progress | Shell committed and pushed; Simulator proof pending |
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | not started | |
 | R3 | Account: sign out, delete, download | INT-135 | not started | |
 | R4 | Sleep and Apple Health | INT-83 | not started | |
@@ -41,6 +41,8 @@ None yet.
 ## Log
 
 Newest first. One entry per rung start, rung finish, and surprise.
+
+- R1 shell written, committed and pushed to ios/overnight: `mobile/src/app/_layout.tsx` (fonts, splash held until loaded), `(tabs)/_layout.tsx` (NativeTabs with SF Symbols), five tab screens (Today, Habits, Bloodwork, Supplements are placeholders that say so; More hosts the existing sign-in and Apple Health sync). `mobile/tsconfig.json` allows `.ts` imports; `mobile/src/shared.ts` imports all 32 shared modules. Surprise: `bash scripts/ios-ci-check.sh` failed on a clean `npm ci` (ERESOLVE: optional peer react-dom@19.3.1 wants react ^19.3.1). Fixed by pinning `react-dom@19.2.3` in `mobile/package.json`; the check now prints ok. Still UNVERIFIED at runtime: NativeTabs props (typecheck passes) and Metro bundling the `.ts` shared imports (needs the Simulator build). Note: the guard reads `2>&1` after `git push` as the branch name, so push with no redirect.
 
 - 2026-10-16 R0 start. Env: Xcode 27.0, Node 24.17.0, INTUS_IOS_OVERNIGHT=1. No node_modules yet in root or `mobile/`.
 - R0 step 5 done: Miro board "Intus.iOS" has frames 01, 02, 03 (92 items). Linear project Intus.iOS already links the board and the kit PR (#43). INT-138 is In Progress.
