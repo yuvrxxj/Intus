@@ -1,18 +1,30 @@
 {
   "name": "intus-mobile",
   "version": "0.1.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@kingstinct/react-native-healthkit": "^16.1.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.117.3",
     "expo": "~57.0.27",
     "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.22",
     "expo-dev-client": "~57.0.19",
+    "expo-font": "~57.0.4",
+    "expo-haptics": "~57.0.3",
+    "expo-linking": "~57.0.13",
+    "expo-router": "~57.0.28",
     "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
+    "expo-symbols": "~57.0.3",
     "react": "19.2.3",
     "react-native": "0.86.3",
-    "react-native-nitro-modules": "^0.37.1"
+    "react-native-nitro-modules": "^0.37.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

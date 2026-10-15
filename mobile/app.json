@@ -43,8 +43,20 @@
             "deploymentTarget": "16.4"
           }
         }
+      ],
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#E5ECE9",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain"
+        }
       ]
     ],
-    "scheme": "intus"
+    "scheme": "intus",
+    "backgroundColor": "#E5ECE9"
   }
 }

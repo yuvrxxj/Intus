@@ -2,9 +2,9 @@ import type { Session } from '@supabase/supabase-js';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { askToRead, available } from './src/healthkit';
-import { supabase } from './src/supabase';
-import { lastSync, syncNow, type SyncResult } from './src/sync/run';
+import { askToRead, available } from '../healthkit';
+import { supabase } from '../supabase';
+import { lastSync, syncNow, type SyncResult } from '../sync/run';
 
 // The thin sync companion: sign in, allow Apple Health, and see what was synced. Everything else stays on the web
 // app until the screens are built. Colours and type follow the web design tokens (src/styles/index.css).
@@ -131,7 +131,7 @@ function Sync({ session }: { session: Session }) {
   );
 }
 
-export default function App() {
+export default function AppleHealthSync() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
