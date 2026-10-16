@@ -17,6 +17,9 @@ Verified 2026-10-16 by a read-only search of `src/`. Paths are under `src/`. "Ru
 | `lib/programme.ts` | yes | ext | dates, numbers |
 | `features/today/draft.ts` | yes | chain | type `db/dailyLogs`, `db/habits`; `habits/model` |
 | `features/habits/model.ts` | yes | chain | type `db/habits`, `db/types`; numbers |
+| `features/today/mood.ts` | yes | none | none |
+| `features/auth/credentials.ts` | yes | none | none |
+| `util/dates.ts` | yes | none | none |
 | `features/habits/streaks.ts` | yes | chain | type `db/habits`; dates; `./model` |
 | `features/supplements/course.ts` | yes | chain | type `db/medications`; dates |
 | `features/supplements/schedule.ts` | yes | chain | type `db/medications`; dates, numbers, course |

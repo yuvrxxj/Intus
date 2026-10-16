@@ -13,6 +13,9 @@ export * as sex from '../../src/lib/sex.ts';
 export * as trends from '../../src/lib/trends.ts';
 
 export * as todayDraft from '../../src/features/today/draft.ts';
+export * as todayMood from '../../src/features/today/mood.ts';
+export * as authCredentials from '../../src/features/auth/credentials.ts';
+export * as utilDates from '../../src/util/dates.ts';
 export * as habitsModel from '../../src/features/habits/model.ts';
 export * as habitsStreaks from '../../src/features/habits/streaks.ts';
 export * as supplementsCourse from '../../src/features/supplements/course.ts';

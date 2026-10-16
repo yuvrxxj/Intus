@@ -1,14 +1,14 @@
 # Progress: overnight iPhone build
 
-Next action: R1 shell is committed and pushed (ios/overnight); CI-faithful typecheck passes. Next: Release Simulator build for `01-shell.png` (the Debug dev-client prompt cannot be tapped), root build/test/test:db, open the draft PR; then R1 closes and R2 (INT-133) starts.
+Next action: R2 is built and verified in the Simulator (sign-in, Today, habits, supplements, outbox). Next: R3 account screen (INT-135), then R4 sleep (INT-83), R5 bloodwork (INT-134). Run the app with the steps under "Running the app on this Mac" below.
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
 | Rung | What | Linear | State | Notes |
 | --- | --- | --- | --- | --- |
 | R0 | Read, baseline, Simulator build, Miro board | INT-138 | done except baseline screenshot (see log) | Miro board exists (https://miro.com/app/board/uXjVEZLWcBQ=/) with frames 1 to 3; do not create another |
-| R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | in progress | Shell committed and pushed; Simulator proof pending |
-| R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | not started | |
+| R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | done | Simulator proof: `docs/ios/screens/01-shell.png` |
+| R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | done | Proof: `02-signin.png`, `03-today.png`, `04-habits.png`; rows read back over REST as the test user |
 | R3 | Account: sign out, delete, download | INT-135 | not started | |
 | R4 | Sleep and Apple Health | INT-83 | not started | |
 | R5 | Bloodwork | INT-134 | not started | |
@@ -71,3 +71,24 @@ Newest first. One entry per rung start, rung finish, and surprise.
 - R0 step 4 SURPRISE: the Debug build succeeded and installed (`fit.intus.app`), but `expo run:ios` then died on `osascript ... System Events` (exit 1): macOS automation permission, no sudo, so it cannot be fixed here. Metro runs on 8081 (started by build-qa). Launching the dev client shows the system prompt "Open in Intus?" for the dev-client deep link, and nothing can tap it (no Maestro, no Accessibility). My first screenshot showed only that prompt, so I deleted it: it is not a baseline. Options: (a) build `--configuration Release` so the JS bundle is embedded and no Metro or prompt is needed, which is the likeliest path for every later screenshot too; (b) find a non-UI way to accept the prompt. The build-qa agent is still working on this; I will not run a second build until it reports.
 - R1 plan detail (advisor point 4): `mobile/App.tsx` (170 lines) holds the sign-in card, a `Sync` component (Apple Health connect and sync, `askToRead`, `syncNow`, `lastSync`) and a session listener. When the entry moves to expo-router, keep `SignIn` and `Sync` as components under `mobile/src/` (the session listener becomes a context in `_layout.tsx`), so R2 and R4 can reuse them. `mobile/src/sync/mapping.ts` has no `../src` imports, so there is no existing evidence on Metro and `.ts` extensions; the first shared import is the test.
 - Note: the stop hook fired after a dry-run `git push origin HEAD:main`, which the guard refused as designed. Only `git push -u origin ios/overnight` is allowed.
+
+## Running the app on this Mac
+
+Found on 17 Oct (iOS 27 Simulator, Xcode 27.1). None of this was in the earlier notes.
+
+- A Release build fails: Expo's prebuilt Release frameworks were built with Swift 6.3.1 and Xcode 27.1 has 6.4 (`failed to build module 'ExpoModulesCore'; this SDK is not supported by the compiler`). The Debug build works after bumping Expo to 57.0.30 (ExpoModulesCore 57.0.23, ExpoModulesJSI 57.1.2). So screenshots come from Debug plus Metro, not an embedded bundle.
+- The iOS 27 SDK crashes an app that does not adopt the UIScene lifecycle (`NoSceneLifecycleAdoption`, SIGTRAP at launch). `mobile/app.json` sets `expo-build-properties` `ios.enableSceneSupport: true`, which needs Expo 57.0.23 or newer. The earlier baseline build never showed the app for this reason.
+- Metro needs the repo root to resolve the shared rules: `mobile/metro.config.js`.
+- Steps: `cd mobile && npx expo prebuild --platform ios --no-install && (cd ios && pod install)`, then `npx expo run:ios --device <simulator id> --no-bundler` (its final `osascript` step fails with exit 1; the build and install are fine), then `npx expo start --dev-client` and open `exp+intus://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081`. The system prompt "Open in Intus?" is tapped with Maestro (`maestro test` on a flow with `tapOn: "Open"`); Maestro needs a JDK on PATH (`/opt/homebrew/opt/openjdk/bin`).
+- Maestro flows are in `mobile/.maestro/`. `signin.yaml` takes the account with `-e EMAIL=... -e PASSWORD=...`. Maestro writes the typed values into `~/.maestro/tests`; delete that folder afterwards.
+- The Simulator keyboard shows a first-use "Type English and Hindi" tip that swallows the first typed text; tap Continue on it once.
+
+## R2 notes
+
+- Writes: `mobile/src/data/outbox.ts` (queue per user in AsyncStorage, newest entry per day wins, an entry leaves the queue only after the send works, tested in `test/mobile.outbox.test.ts`). Today shows "Not sent yet" and the server's own error while an entry is queued. A queued entry is read back in place of the server row after a relaunch.
+- Numeric fields are capped by `maxLength` so a value cannot overflow the integer columns and jam the queue (seen once in testing: `210021002100`).
+- Number pads have no return key, so `Screen` shows its own Done bar above the keyboard (the system `InputAccessoryView` did not render on this SDK).
+- Large titles are plain text inside the scroll view, not a native large title; native large titles inside NativeTabs are still unverified.
+- Streaks: `mobile/src/today/streaks.ts`, tested in `test/mobile.today.test.ts`.
+- The test account had no habits or supplements, so three habits (Lift, Cigarettes, Steps) and two supplements (Vitamin D, Magnesium twice a day) were added through the normal API as the test user.
+- Sign out is a button on More for now; R3 replaces that screen.
