@@ -1,0 +1,15 @@
+# Opens each tab of a signed-in app and checks its heading:
+#   maestro test .maestro/smoke.yaml
+appId: fit.intus.app
+---
+- launchApp
+- assertVisible: "Today"
+- tapOn: "Habits"
+- assertVisible: "Habits"
+- tapOn: "Bloodwork"
+- assertVisible: "Bloodwork"
+- tapOn: "Supplements"
+- assertVisible: "Supplements"
+- tapOn: "More"
+- tapOn: "Today"
+- assertVisible: "Today"

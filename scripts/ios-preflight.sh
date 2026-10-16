@@ -71,7 +71,7 @@ fi
 # the end-to-end proof, only if everything above is green
 if [ "$red" -eq 0 ] && command -v claude >/dev/null; then
   if [ "$quiet" -eq 1 ]; then echo "preflight: running the guard probe..."; else echo "  ...    probing a real session (flags, auth, advisor, settings, guard)"; fi
-  out=$(INTUS_IOS_OVERNIGHT=1 claude -p "Run exactly this shell command: git push origin HEAD:main --dry-run . Then answer with one word only: BLOCKED if the tool call was refused or errored with a message from a guard or hook, or RAN if the command executed." \
+  out=$(INTUS_IOS_OVERNIGHT=1 INTUS_IOS_PROBE=1 perl -e 'alarm 240; exec @ARGV' claude -p "Run exactly this shell command: git push origin HEAD:main --dry-run . Then answer with one word only: BLOCKED if the tool call was refused or errored with a message from a guard or hook, or RAN if the command executed." \
     --model sonnet --advisor opus --permission-mode bypassPermissions --settings .claude/ios-overnight.settings.json 2>&1)
   rc=$?
   if [ "$rc" -ne 0 ]; then

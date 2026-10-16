@@ -1,4 +1,4 @@
-import type { Medication as Supplement, MedicationInput as SupplementInput } from '../../db/medications.ts';
+import type { Medication as Supplement, MedicationInput as SupplementInput } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { courseStatus, type CourseStatus } from './course.ts';
 import { ALL_DAYS, MAX_DOSES, dosesOf, normalizeDays } from './schedule.ts';

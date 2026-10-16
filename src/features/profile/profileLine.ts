@@ -1,4 +1,4 @@
-import type { Profile } from '../../db/profile.ts';
+import type { Profile } from '../../db/rows.ts';
 import { DIRECTION_LABEL, type Programme } from '../../lib/programme.ts';
 import { normalizeSex } from '../../lib/sex.ts';
 

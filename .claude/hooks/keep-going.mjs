@@ -44,8 +44,8 @@ export function decide({ projectDir, stateFile }) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  if (process.env.INTUS_IOS_OVERNIGHT !== '1') process.exit(0);
-  try {
+  // the preflight probe sets INTUS_IOS_PROBE=1 so it can end after one answer instead of being kept going
+  if (process.env.INTUS_IOS_OVERNIGHT !== '1' || process.env.INTUS_IOS_PROBE === '1') process.exit(0); try {
     let input = {};
     try {
       input = JSON.parse(readFileSync(0, 'utf8'));

@@ -1,0 +1,52 @@
+# Logs a day on Today, saves it, and checks the saved state. Run signed in, from anywhere:
+#   maestro test mobile/.maestro/log-day.yaml
+appId: fit.intus.app
+---
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    point: "16%,95%"
+- scrollUntilVisible:
+    element:
+      id: "weight"
+    direction: UP
+- tapOn:
+    id: "weight"
+- inputText: "80.4"
+- tapOn:
+    id: "calories"
+- inputText: "2100"
+- tapOn:
+    id: "protein"
+- inputText: "150"
+- tapOn: "Done"
+- tapOn:
+    id: "mood-4"
+- scrollUntilVisible:
+    element:
+      id: "habit-lift"
+    centerElement: true
+- tapOn:
+    id: "habit-lift"
+- tapOn:
+    id: "habit-cigarettes-more"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "dose-.*"
+    centerElement: true
+- tapOn:
+    id: "dose-.*"
+    index: 0
+- tapOn:
+    id: "dose-.*"
+    index: 2
+- scrollUntilVisible:
+    element:
+      id: "save-today"
+    centerElement: true
+- tapOn:
+    id: "save-today"
+- assertVisible: "Saved"
+- takeScreenshot: 03-today

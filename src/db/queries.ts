@@ -1,15 +1,8 @@
 import { supabase } from './client.ts';
 import { fetchAll } from './paging.ts';
-import type { Row } from './types.ts';
+import type { Biomarker, BiomarkerReading, BloodworkData, DailyLog } from './rows.ts';
 
-export type Biomarker = Row<'biomarkers'>;
-export type BiomarkerReading = Row<'biomarker_readings'>;
-export type DailyLog = Row<'daily_logs'>;
-
-export interface BloodworkData {
-  biomarkers: Biomarker[];
-  readings: BiomarkerReading[];
-}
+export type { Biomarker, BiomarkerReading, BloodworkData, DailyLog };
 
 export async function fetchBloodwork(): Promise<BloodworkData> {
   const [biomarkers, readings] = await Promise.all([

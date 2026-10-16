@@ -1,4 +1,4 @@
-import type { Medication } from '../../db/medications.ts';
+import type { Medication } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
 import { courseStatus } from './course.ts';
