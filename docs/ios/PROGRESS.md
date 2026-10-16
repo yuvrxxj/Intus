@@ -16,6 +16,14 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 
 States: not started, in progress, done, blocked (say why).
 
+Check: `docs/ios/screens/` exists but is empty; three agents still running, no verdicts. Nothing else to do without touching files the Simulator build reads.
+
+Still waiting (all three agents running; a background watcher fires when `docs/ios/screens/01-shell.png` exists). Order on report: Release screenshot, root checks, open draft PR, close R1, start R2.
+
+R2 prep: repo-search running to map the R2 scope (BRIEF.md R2 section, shared rules, data access); read-only, no mobile edits until the Simulator build reports.
+
+Stop-hook resume: two build-qa agents running (Release Simulator build for `01-shell.png`; root build, test, test:db and `ios-ci-check.sh`). Waiting on both verdicts. Then open the draft PR from ios/overnight and close R1.
+
 ## R1 plan (draft, before advisor)
 
 1. After the Simulator baseline build finishes: `npx expo install expo-router react-native-safe-area-context react-native-screens expo-linking expo-constants expo-font expo-splash-screen expo-symbols @react-native-async-storage/async-storage @expo-google-fonts/inter @expo-google-fonts/jetbrains-mono`. Set `"main": "expo-router/entry"`, add `scheme`, routes in `mobile/src/app/`.
