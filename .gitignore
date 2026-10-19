@@ -14,3 +14,6 @@ public/ocr/
 # iOS overnight run sentinels (docs/ios/README.md): a committed DONE would stop the next run before it starts
 docs/ios/DONE
 docs/ios/STOP
+
+# drawn pictures and post text for X (docs/social/README.md); unapproved drafts must not reach the public repository
+social-out/

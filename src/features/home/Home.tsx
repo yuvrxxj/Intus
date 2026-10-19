@@ -10,7 +10,8 @@ import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { takeDeletionNotice } from '../account/localData.ts';
 import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
-import { HOME_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
+import { PRICING } from './pricing.ts';
+import { HOME_PATH, PRICING_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
 
 const NAV = [
   ['about', 'About'],
@@ -32,16 +33,6 @@ const WHY = [
   ['03', 'Ranges come first', 'A lab result is set against the stored reference range for that marker, so what is out of range stands out.'],
   ['04', 'Honest about what it cannot show', 'The supplement comparison looks at two periods side by side. It cannot show that a supplement works, and it never colours a change good or bad.'],
 ] as const;
-
-/** The pricing copy lives here so it is easy to replace once the pricing decision is made. */
-const PRICING = {
-  headline: 'Free during early access.',
-  points: [
-    'Everything in the app today: the daily log, goals and habits, sleep, bloodwork, supplements and progress.',
-    'No card needed. Make an account and start.',
-    'Paid plans arrive with the phone apps. The price will be published before anything is charged.',
-  ],
-} as const;
 
 function Section({ id, n, title, intro, art, children }: { id: string; n: string; title: string; intro?: ReactNode; art?: AsciiShape; children: ReactNode }) {
   return (
@@ -157,6 +148,7 @@ export function Home() {
               <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
                 Create account <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
+              <div className="mt-4"><Link to={PRICING_PATH} className="text-sm text-primary underline">Read the pricing page</Link></div>
             </div>
             <ul className="grid gap-3">
               {PRICING.points.map((point) => (
@@ -190,6 +182,7 @@ export function Home() {
           <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
           <span className="flex flex-wrap gap-x-4 gap-y-2">
             <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
+            <a href="/pricing" className="hover:text-ink">Pricing</a>
             <a href="/privacy" className="hover:text-ink">Privacy</a>
             <a href="/terms" className="hover:text-ink">Terms</a>
             <a href="https://x.com/getintus" rel="noopener noreferrer" className="hover:text-ink">@getintus on X</a>

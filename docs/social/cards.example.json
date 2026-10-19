@@ -1,0 +1,33 @@
+[
+  {
+    "id": "before-after-10-days",
+    "type": "number",
+    "kicker": "Supplements",
+    "value": "10",
+    "label": "logged days in each period before it says anything",
+    "note": "It never colours a change good or bad, and it says it cannot show that a supplement works.",
+    "post": "The supplement before and after view in Intus stays quiet until you have logged 10 days in each period. It never colours a change good or bad, and it says plainly that it cannot show a supplement works.",
+    "alt": "A large red number 10 on a pale green-grey dotted background, with the words logged days in each period before it says anything.",
+    "facts": ["F7"]
+  },
+  {
+    "id": "your-data",
+    "type": "list",
+    "kicker": "Your data",
+    "headline": "Your data stays yours.",
+    "items": ["Download everything as one file", "Print your latest results for a doctor", "Delete your account from the Account page"],
+    "post": "Download everything you have logged as one file. Print your latest results for your doctor. Delete your account from the Account page. Your health, in plain numbers.",
+    "alt": "A card headed Your data stays yours with three lines: download everything as one file, print your latest results for a doctor, delete your account from the Account page.",
+    "facts": ["F11", "F1"]
+  },
+  {
+    "id": "sets-never-lost",
+    "type": "statement",
+    "kicker": "Strength",
+    "headline": "Every set is saved on your device first.",
+    "sub": "A closed tab or a lost connection never loses a set. Anything not sent yet says so.",
+    "post": "Every strength set is saved on your device first and then sent. A closed tab or a lost connection never loses a set, and anything not sent yet is marked \"not sent yet\".",
+    "alt": "A card that reads: Every set is saved on your device first. A closed tab or a lost connection never loses a set. Anything not sent yet says so.",
+    "facts": ["F12"]
+  }
+]

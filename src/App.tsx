@@ -4,6 +4,7 @@ import { SetNewPassword, SignIn } from './features/auth/SignIn.tsx';
 import { useSession } from './features/auth/useSession.ts';
 import { Dashboard } from './features/dashboard/Dashboard.tsx';
 import { Home } from './features/home/Home.tsx';
+import { Pricing } from './features/home/Pricing.tsx';
 import { HOME_PATH, initialModeFor } from './features/home/route.ts';
 import { navigate, routeAuthErrorToSignIn, useRoute } from './features/home/useRoute.ts';
 import { ComingSoon } from './features/mobile/ComingSoon.tsx';
@@ -34,8 +35,9 @@ function WebApp() {
   useEffect(() => {
     if (session.status === 'signed_in' && route === 'signin') navigate(HOME_PATH, true);
   }, [session.status, route]);
-  // the privacy policy and terms are readable by anyone, signed in or not
+  // the privacy policy, terms and pricing are readable by anyone, signed in or not
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
+  if (route === 'pricing') return <Pricing />;
   return (
     <>
       {session.status === 'loading' && <Loading />}
@@ -56,6 +58,7 @@ function WebApp() {
 function PhoneSite() {
   const route = useRoute();
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
+  if (route === 'pricing') return <Pricing />;
   return route === 'home' ? <Home /> : <ComingSoon />;
 }
 
