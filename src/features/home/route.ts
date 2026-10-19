@@ -1,12 +1,13 @@
 import type { AuthMode } from '../auth/credentials.ts';
 
 /** The public addresses. Anything else is treated as the homepage. */
-export type Route = 'home' | 'signin' | 'privacy' | 'terms';
+export type Route = 'home' | 'signin' | 'privacy' | 'terms' | 'pricing';
 
 export const HOME_PATH = '/';
 export const SIGN_IN_PATH = '/signin';
 export const PRIVACY_PATH = '/privacy';
 export const TERMS_PATH = '/terms';
+export const PRICING_PATH = '/pricing';
 export const SIGN_UP_URL = `${SIGN_IN_PATH}?mode=signup`;
 
 export function routeFor(pathname: string): Route {
@@ -14,6 +15,7 @@ export function routeFor(pathname: string): Route {
   if (clean === SIGN_IN_PATH) return 'signin';
   if (clean === PRIVACY_PATH) return 'privacy';
   if (clean === TERMS_PATH) return 'terms';
+  if (clean === PRICING_PATH) return 'pricing';
   return 'home';
 }
 

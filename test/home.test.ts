@@ -23,3 +23,10 @@ test('the privacy policy and terms have their own addresses', () => {
   assert.equal(routeFor('/terms/'), 'terms');
   assert.equal(routeFor('/privacy-policy'), 'home');
 });
+
+test('the pricing page has its own address', () => {
+  assert.equal(routeFor('/pricing'), 'pricing');
+  assert.equal(routeFor('/pricing/'), 'pricing');
+  assert.equal(routeFor('/pricing-plans'), 'home');
+  assert.equal(routeFor('/pricing/extra'), 'home');
+});
