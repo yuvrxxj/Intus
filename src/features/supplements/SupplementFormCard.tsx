@@ -5,6 +5,7 @@ import {
   EMPTY_SUPPLEMENT_FORM, formFromSupplement, validateSupplementForm, type SupplementForm, type SupplementFormErrors,
 } from './model.ts';
 import { ALL_DAYS, DAY_LONG, DAY_SHORT, MAX_DOSES, WEEKDAYS, WEEKEND, describeSchedule } from './schedule.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Props {
   editing: Supplement | null;
@@ -86,10 +87,10 @@ export function SupplementFormCard({ editing, onDone, onCancel }: Props) {
           {errors.days && form.days.length === 0 ? <div className="fld-err" role="alert">{errors.days}</div> : summary ? <div className="fld-hint">{summary}. Only the days you pick show on your Today checklist.</div> : null}
         </div>
         <Field id="sup-start" label="Started" error={errors.start_date} hint="Leave blank if unknown. A blank start counts as already taking it.">
-          <input id="sup-start" type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} />
+          <DatePicker id="sup-start" allowClear value={form.start_date} onChange={(v) => set('start_date', v)} />
         </Field>
         <Field id="sup-end" label="Ended" error={errors.end_date} hint="Leave blank while you are still taking it.">
-          <input id="sup-end" type="date" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} />
+          <DatePicker id="sup-end" allowClear value={form.end_date} onChange={(v) => set('end_date', v)} />
         </Field>
         <Field id="sup-notes" label="Notes" error={errors.notes} wide>
           <textarea id="sup-notes" value={form.notes} placeholder="Brand, why you take it, anything to remember" onChange={(e) => set('notes', e.target.value)} />

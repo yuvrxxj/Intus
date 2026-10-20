@@ -4,6 +4,7 @@ import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
 import { emptyReadingForm, validateReadingForm, type ReadingForm, type ReadingFormErrors } from './entry.ts';
 import { formatRange } from './format.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Props {
   biomarkers: readonly Biomarker[];
@@ -98,7 +99,7 @@ export function LabEntryForm({ biomarkers, readings, today, onDone, onCancel }: 
             <input id="lab-value" type="text" inputMode="decimal" autoComplete="off" value={form.value} placeholder="4.2" onChange={(e) => set('value', e.target.value)} />
           </Field>
           <Field id="lab-date" label="Date of the test" error={errors.measured_at} hint="The day the sample was taken, not the day the report came back.">
-            <input id="lab-date" type="date" max={today} value={form.measured_at} onChange={(e) => set('measured_at', e.target.value)} />
+            <DatePicker id="lab-date" max={today} value={form.measured_at} onChange={(v) => set('measured_at', v)} />
           </Field>
           <Field id="lab-ref-low" label="Range on the report: low" error={errors.ref_low} hint="Optional. The reference range printed next to the result. It is used instead of the usual range, because the lab chose it for you.">
             <input id="lab-ref-low" type="text" inputMode="decimal" autoComplete="off" value={form.ref_low} placeholder="3.5" onChange={(e) => set('ref_low', e.target.value)} />

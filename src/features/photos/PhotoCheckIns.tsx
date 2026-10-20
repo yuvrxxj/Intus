@@ -9,6 +9,7 @@ import {
   type CheckIn, type CheckInErrors, type CheckInForm, type Pose,
 } from './model.ts';
 import { usePhotoCheckIns } from './usePhotoCheckIns.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 function Field(props: { id: string; label: string; error?: string; hint?: string; children: ReactNode }) {
   return (
@@ -123,7 +124,7 @@ function AddPhoto({ today, latestWeightKg, remaining, notify, onSaved }: {
 
       <div className="form-grid">
         <Field id="photo-date" label="Date" error={errors.date}>
-          <input id="photo-date" type="date" value={form.date} max={today} onChange={(e) => set('date', e.target.value)} />
+          <DatePicker id="photo-date" max={today} value={form.date} onChange={(v) => set('date', v)} />
         </Field>
         <Field id="photo-pose" label="Angle" error={errors.pose}>
           <select id="photo-pose" value={form.pose} onChange={(e) => set('pose', e.target.value)}>

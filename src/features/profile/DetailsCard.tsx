@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { saveDetails, type Profile } from '../../db/profile.ts';
 import { ACTIVITY } from '../../lib/nutrition.ts';
 import { formFromDetails, validateDetails, type DetailsErrors, type DetailsForm } from './details.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 /**
  * Sex, date of birth, height and how active you are: the four facts a person's age, their lab reference ranges and the
@@ -65,7 +66,7 @@ export function DetailsCard({ profile, today, onSaved }: { profile: Profile | nu
       <div className="form-grid" style={{ marginTop: 12 }}>
         <div className="fld">
           <label htmlFor="pf-dob">Date of birth</label>
-          <input id="pf-dob" type="date" autoComplete="bday" min="1900-01-01" max={today} value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} />
+          <DatePicker id="pf-dob" min="1900-01-01" max={today} value={form.date_of_birth} onChange={(v) => setForm({ ...form, date_of_birth: v })} />
           {errors.date_of_birth && <div className="fld-err" role="alert">{errors.date_of_birth}</div>}
         </div>
         <div className="fld">

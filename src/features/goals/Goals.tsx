@@ -10,6 +10,7 @@ import { adviceFromGoals, calorieBreakdown } from './advice.ts';
 import {
   formFromProfile, newGoalFrom, summarizeGoal, validateGoalsForm, LIMITS, type GoalsErrors, type GoalsForm,
 } from './model.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 function Field(props: { id: string; label: string; error?: string; hint?: string; children: ReactNode }) {
   return (
@@ -77,10 +78,10 @@ function GoalsFormCard({ initial, profile, existingId, today, latestWeightKg, re
             value={form.goal_weight} placeholder="75" onChange={(e) => set('goal_weight', e.target.value)} />
         </Field>
         <Field id="goal-start-date" label="Start date" error={errors.start_date}>
-          <input id="goal-start-date" type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} />
+          <DatePicker id="goal-start-date" value={form.start_date} onChange={(v) => set('start_date', v)} />
         </Field>
         <Field id="goal-goal-date" label="Goal date" error={errors.goal_date} hint="The day you want to reach your goal weight.">
-          <input id="goal-goal-date" type="date" value={form.goal_date} onChange={(e) => set('goal_date', e.target.value)} />
+          <DatePicker id="goal-goal-date" value={form.goal_date} onChange={(v) => set('goal_date', v)} />
         </Field>
       </div>
 
