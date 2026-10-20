@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { activeHabits } from '../../../../src/features/habits/model.ts';
-import { dosesDue } from '../../../../src/features/supplements/schedule.ts';
-import { MOODS } from '../../../../src/features/today/mood.ts';
-import { DoseRows } from '../../ui/DoseRows';
-import { HabitRows } from '../../ui/HabitRows';
-import { Field, Group, Notice, PrimaryButton, Row, Screen } from '../../ui/kit';
-import { useToday } from '../../today/TodayContext';
-import { streaksFor } from '../../today/streaks';
-import { colors, fonts, radius } from '../../theme/tokens';
+import { activeHabits } from '../../../../../src/features/habits/model.ts';
+import { dosesDue } from '../../../../../src/features/supplements/schedule.ts';
+import { MOODS } from '../../../../../src/features/today/mood.ts';
+import { DoseRows } from '../../../ui/DoseRows';
+import { HabitRows } from '../../../ui/HabitRows';
+import { Field, Group, Notice, PrimaryButton, Row, Screen } from '../../../ui/kit';
+import { useToday } from '../../../today/TodayContext';
+import { saveLabel } from '../../../today/summary';
+import { streaksFor } from '../../../today/streaks';
+import { colors, fonts, radius } from '../../../theme/tokens';
 
 export default function Today() {
   const t = useToday();
@@ -18,7 +19,7 @@ export default function Today() {
   const d = t.draft;
 
   return (
-    <Screen title="Today" onRefresh={t.reload} refreshing={t.loading}>
+    <Screen onRefresh={t.reload} refreshing={t.loading}>
       {t.loadError ? (
         <Notice tone="ochre" text={`Today's saved entry could not be read, so saving is off to protect it. ${t.loadError} Pull down to try again.`} />
       ) : null}
@@ -68,7 +69,7 @@ export default function Today() {
         </Group>
       ) : null}
 
-      <PrimaryButton testID="save-today" title={t.dirty || t.unsent ? 'Save today' : 'Saved'} onPress={t.save} busy={t.saving} disabled={!!t.loadError || t.loading || (!t.dirty && !t.unsent)} />
+      <PrimaryButton testID="save-today" title={saveLabel(t.draft, t.dirty, t.unsent)} onPress={t.save} busy={t.saving} disabled={!!t.loadError || t.loading || (!t.dirty && !t.unsent)} />
     </Screen>
   );
 }

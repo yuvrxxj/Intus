@@ -23,14 +23,12 @@ function DoneBar() {
   );
 }
 
-/** A tab's scrolling page: a large title, the paper background, pull to refresh, and room under the tab bar. */
+/** A scrolling page under the system large title: the paper background, pull to refresh, and room under the tab bar. */
 export function Screen({
-  title,
   children,
   onRefresh,
   refreshing = false,
 }: {
-  title: string;
   children: ReactNode;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -45,9 +43,6 @@ export function Screen({
         keyboardShouldPersistTaps="handled"
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink3} /> : undefined}
       >
-        <Text accessibilityRole="header" style={s.largeTitle}>
-          {title}
-        </Text>
         {children}
       </ScrollView>
       <DoneBar />
@@ -128,7 +123,6 @@ export function Notice({ text, tone = 'ink' }: { text: string; tone?: 'ink' | 'o
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   screenContent: { paddingHorizontal: 16, paddingBottom: 120, gap: 20 },
-  largeTitle: { fontFamily: fonts.semibold, fontSize: 34, letterSpacing: -0.8, color: colors.ink, paddingTop: 8 },
   group: { gap: 6 },
   groupLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 0.8, color: colors.ink3, textTransform: 'uppercase', paddingHorizontal: 16 },
   groupBody: { backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.line, overflow: 'hidden' },

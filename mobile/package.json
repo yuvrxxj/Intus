@@ -7,6 +7,7 @@
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@kingstinct/react-native-healthkit": "^16.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-masked-view/masked-view": "0.3.2",
     "@supabase/supabase-js": "^2.117.3",
     "expo": "~57.0.30",
     "expo-build-properties": "~57.0.22",

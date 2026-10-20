@@ -1,12 +1,36 @@
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Habit } from '../../../src/db/rows.ts';
 import { MAX_COUNT, describeGoal, fractionOfGoal, toneOf, type Entries, type HabitEntry } from '../../../src/features/habits/model.ts';
-import { colors, fonts } from '../theme/tokens';
+import { colors, fonts, radius } from '../theme/tokens';
 import { Row } from './kit';
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const toneColor = (tone: ReturnType<typeof toneOf>) => (tone === 'good' ? colors.green : tone === 'ok' ? colors.ochre : colors.ink);
+
+/** Two buttons, Yes and No. Neither is lit until the person answers, and pressing the lit one again clears the answer. */
+function YesNo({ name, slug, value, good, onChange }: { name: string; slug: string; value: boolean | null; good: boolean; onChange: (value: boolean | null) => void }) {
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel={name} style={s.yesno}>
+      {([true, false] as const).map((answer) => {
+        const on = value === answer;
+        return (
+          <Pressable
+            key={String(answer)}
+            accessibilityRole="radio"
+            accessibilityLabel={`${name}: ${answer ? 'yes' : 'no'}`}
+            accessibilityState={{ selected: on }}
+            testID={`habit-${slug}-${answer ? 'yes' : 'no'}`}
+            onPress={() => onChange(on ? null : answer)}
+            style={[s.choice, on && (good ? s.choiceGood : s.choiceNeutral)]}
+          >
+            <Text style={[s.choiceText, on && { color: '#FFFFFF' }]}>{answer ? 'Yes' : 'No'}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 /** One habit's check-in: a switch for yes or no, a stepper for a count, a number field for an amount. */
 export function HabitRow({
@@ -43,12 +67,12 @@ export function HabitRow({
       </View>
 
       {habit.kind === 'yesno' ? (
-        <Switch
-          accessibilityLabel={habit.name}
-          testID={`habit-${slug(habit.name)}`}
-          onValueChange={(v) => onChange({ value: v })}
-          trackColor={{ true: colors.green }}
-          value={entry?.value === true}
+        <YesNo
+          name={habit.name}
+          slug={slug(habit.name)}
+          value={typeof entry?.value === 'boolean' ? entry.value : null}
+          good={tone === 'good'}
+          onChange={(v) => onChange(v === null ? null : { value: v })}
         />
       ) : habit.kind === 'count' ? (
         <View style={s.stepper}>
@@ -133,6 +157,11 @@ const s = StyleSheet.create({
   hint: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink3 },
   bar: { height: 4, borderRadius: 2, backgroundColor: colors.surface3, marginTop: 6, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
+  yesno: { flexDirection: 'row', gap: 6 },
+  choice: { minWidth: 56, minHeight: 44, borderRadius: radius.control, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  choiceGood: { backgroundColor: colors.green },
+  choiceNeutral: { backgroundColor: colors.ink2 },
+  choiceText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   step: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontFamily: fonts.medium, fontSize: 22, color: colors.ink, marginTop: -2 },

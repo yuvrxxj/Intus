@@ -6,7 +6,7 @@ appId: fit.intus.app
     text: "Not Now"
     optional: true
 - tapOn:
-    point: "16%,95%"
+    point: "32%,95%"
 - scrollUntilVisible:
     element:
       id: "weight"
@@ -25,10 +25,10 @@ appId: fit.intus.app
     id: "mood-4"
 - scrollUntilVisible:
     element:
-      id: "habit-lift"
+      id: "habit-lift-yes"
     centerElement: true
 - tapOn:
-    id: "habit-lift"
+    id: "habit-lift-yes"
 - tapOn:
     id: "habit-cigarettes-more"
 - waitForAnimationToEnd

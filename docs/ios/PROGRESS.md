@@ -1,6 +1,6 @@
 # Progress: overnight iPhone build
 
-Next action: R2 is built and verified in the Simulator (sign-in, Today, habits, supplements, outbox). Next: R3 account screen (INT-135), then R4 sleep (INT-83), R5 bloodwork (INT-134). Run the app with the steps under "Running the app on this Mac" below.
+Next action: R2 and its follow-ups are done (Home tab, Yes/No habits, large titles, Apple Health map). Next: R3 account screen (INT-135), then R4 sleep (INT-83), R5 bloodwork (INT-134). Run the app with the steps under "Running the app on this Mac" below.
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
@@ -44,7 +44,10 @@ Done to cut the `tsc` chain to `db/client.ts` (advisor point 1: CI has no root `
 
 ## Decisions made on the founder's behalf
 
-None yet.
+- 20 Oct: a Home tab (the statue bust from the web, breathing, with the light sweep, a greeting and one line about today) is the first tab and the app opens on it. The system tab bar should carry five tabs at most, so Supplements moved under More (Today still lists the doses due). Tabs are now Home, Today, Habits, Bloodwork, More.
+- 20 Oct: every tab is a native stack with the system large title. Home is the route group `(home)` because it owns `/`.
+- 20 Oct: a yes or no habit is two buttons, Yes and No, neither lit until answered (pressing the lit one clears it). It was a switch, which could not tell "no" from "not answered".
+- 20 Oct: the Apple Health field map is `docs/ios/APPLE_HEALTH.md`. The permission sheet was not widened; that is the founder's call.
 
 ## Log
 
@@ -92,3 +95,7 @@ Found on 17 Oct (iOS 27 Simulator, Xcode 27.1). None of this was in the earlier 
 - Streaks: `mobile/src/today/streaks.ts`, tested in `test/mobile.today.test.ts`.
 - The test account had no habits or supplements, so three habits (Lift, Cigarettes, Steps) and two supplements (Vitamin D, Magnesium twice a day) were added through the normal API as the test user.
 - Sign out is a button on More for now; R3 replaces that screen.
+
+## Running it: DeviceHub, not Simulator
+
+Xcode 27 has no Simulator.app. The window is `/Applications/Xcode.app/Contents/Applications/DeviceHub.app`. `open -a Simulator` does nothing, and the device still boots headless, which is why the app ran without a window on 17 Oct.

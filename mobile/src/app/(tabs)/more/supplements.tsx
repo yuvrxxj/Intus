@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { Text } from 'react-native';
-import { describeSchedule, dosesDue, dosesOf, normalizeDays, skippedToday } from '../../../../src/features/supplements/schedule.ts';
-import { DoseRows } from '../../ui/DoseRows';
-import { Group, Notice, PrimaryButton, Row, Screen } from '../../ui/kit';
-import { useToday } from '../../today/TodayContext';
-import { colors, fonts } from '../../theme/tokens';
+import { describeSchedule, dosesDue, dosesOf, normalizeDays, skippedToday } from '../../../../../src/features/supplements/schedule.ts';
+import { DoseRows } from '../../../ui/DoseRows';
+import { Group, Notice, PrimaryButton, Row, Screen } from '../../../ui/kit';
+import { useToday } from '../../../today/TodayContext';
+import { saveLabel } from '../../../today/summary';
+import { colors, fonts } from '../../../theme/tokens';
 
 export default function Supplements() {
   const t = useToday();
@@ -13,7 +14,7 @@ export default function Supplements() {
   const taken = doses.filter((d) => t.draft.supplements[d.key] === true).length;
 
   return (
-    <Screen title="Supplements" onRefresh={t.reload} refreshing={t.loading}>
+    <Screen onRefresh={t.reload} refreshing={t.loading}>
       {t.loadError ? <Notice tone="ochre" text={`Today's saved entry could not be read, so saving is off. ${t.loadError}`} /> : null}
       {t.unsent ? <Notice tone="ochre" text="Not sent yet. Saved on your phone; it will go when you are back online." /> : null}
       {doses.length === 0 ? (
@@ -23,7 +24,7 @@ export default function Supplements() {
           <Group label={`${taken} of ${doses.length} taken`}>
             <DoseRows doses={doses} taken={t.draft.supplements} onChange={t.setSupplement} />
           </Group>
-          <PrimaryButton testID="save-today" title={t.dirty || t.unsent ? 'Save today' : 'Saved'} onPress={t.save} busy={t.saving} disabled={!!t.loadError || t.loading || (!t.dirty && !t.unsent)} />
+          <PrimaryButton testID="save-today" title={saveLabel(t.draft, t.dirty, t.unsent)} onPress={t.save} busy={t.saving} disabled={!!t.loadError || t.loading || (!t.dirty && !t.unsent)} />
         </>
       )}
       {skipped.length > 0 ? (
