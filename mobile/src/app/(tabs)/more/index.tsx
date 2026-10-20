@@ -9,6 +9,7 @@ export default function More() {
       <Group>
         <NavRow first symbol="pills" title="Supplements" note="What is due today" href="/more/supplements" />
         <NavRow symbol="heart.text.square" title="Apple Health" note="Sleep and heart readings" href="/more/health" />
+        <NavRow symbol="person.crop.circle" title="Account" note="Sign out, download your data, delete" href="/more/account" />
       </Group>
       <Text style={s.disclaimer}>Not medical advice. Ranges are flagged, never diagnosed.</Text>
     </Screen>

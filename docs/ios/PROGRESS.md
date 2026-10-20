@@ -1,6 +1,6 @@
 # Progress: overnight iPhone build
 
-Next action: R2 and its follow-ups are done (Home tab, Yes/No habits, large titles, Apple Health map). Next: R3 account screen (INT-135), then R4 sleep (INT-83), R5 bloodwork (INT-134). Run the app with the steps under "Running the app on this Mac" below.
+Next action: R3 is done except the end-to-end delete (needs INTUS_TEST_EMAIL_2). Next: R4 sleep and Apple Health (INT-83), then R5 bloodwork (INT-134), then R6.
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
@@ -9,7 +9,7 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 | R0 | Read, baseline, Simulator build, Miro board | INT-138 | done except baseline screenshot (see log) | Miro board exists (https://miro.com/app/board/uXjVEZLWcBQ=/) with frames 1 to 3; do not create another |
 | R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | done | Simulator proof: `docs/ios/screens/01-shell.png` |
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | done | Proof: `02-signin.png`, `03-today.png`, `04-habits.png`; rows read back over REST as the test user |
-| R3 | Account: sign out, delete, download | INT-135 | not started | |
+| R3 | Account: sign out, delete, download | INT-135 | done, delete not run end to end | Sign out, download my data (checked: 2 daily logs, 3 habits, 2 medications, no user ids), privacy and terms links, delete up to the confirm button (disabled until the email is typed). The final delete was not pressed: no second test account exists yet (`INTUS_TEST_EMAIL_2`). Screenshot `06-account-data-legal.png` is cropped so the test email is not in it |
 | R4 | Sleep and Apple Health | INT-83 | not started | |
 | R5 | Bloodwork | INT-134 | not started | |
 | R6 | Polish and proof | | not started | |
@@ -94,7 +94,7 @@ Found on 17 Oct (iOS 27 Simulator, Xcode 27.1). None of this was in the earlier 
 - Large titles are plain text inside the scroll view, not a native large title; native large titles inside NativeTabs are still unverified.
 - Streaks: `mobile/src/today/streaks.ts`, tested in `test/mobile.today.test.ts`.
 - The test account had no habits or supplements, so three habits (Lift, Cigarettes, Steps) and two supplements (Vitamin D, Magnesium twice a day) were added through the normal API as the test user.
-- Sign out is a button on More for now; R3 replaces that screen.
+- Sign out now lives on More, Account (R3).
 
 ## Running it: DeviceHub, not Simulator
 

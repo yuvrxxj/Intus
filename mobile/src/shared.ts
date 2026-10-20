@@ -38,3 +38,6 @@ export * as profileDetails from '../../src/features/profile/details.ts';
 export * as profileLine from '../../src/features/profile/profileLine.ts';
 export * as onboardingModel from '../../src/features/onboarding/model.ts';
 export * as goalsModel from '../../src/features/goals/model.ts';
+export * as accountModel from '../../src/features/account/model.ts';
+export * as exportModel from '../../src/features/export/model.ts';
+export * as photosRemoveAll from '../../src/features/photos/removeAll.ts';

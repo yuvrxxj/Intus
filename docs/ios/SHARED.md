@@ -18,6 +18,9 @@ Verified 2026-10-16 by a read-only search of `src/`. Paths are under `src/`. "Ru
 | `features/today/draft.ts` | yes | chain | type `db/dailyLogs`, `db/habits`; `habits/model` |
 | `features/habits/model.ts` | yes | chain | type `db/habits`, `db/types`; numbers |
 | `features/today/mood.ts` | yes | none | none |
+| `features/account/model.ts` | yes | none | none |
+| `features/export/model.ts` | yes | none | none (the brief listed it as not shareable; it has no imports) |
+| `features/photos/removeAll.ts` | yes | none | none |
 | `features/auth/credentials.ts` | yes | none | none |
 | `util/dates.ts` | yes | none | none |
 | `features/habits/streaks.ts` | yes | chain | type `db/habits`; dates; `./model` |

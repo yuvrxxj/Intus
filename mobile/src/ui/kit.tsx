@@ -33,8 +33,9 @@ export function Screen({
   onRefresh?: () => void;
   refreshing?: boolean;
 }) {
+  // the scroll view stays the screen's first child, so the system large title can follow it as it scrolls
   return (
-    <View style={s.screen}>
+    <>
       <ScrollView
         style={s.screen}
         contentContainerStyle={s.screenContent}
@@ -46,7 +47,7 @@ export function Screen({
         {children}
       </ScrollView>
       <DoneBar />
-    </View>
+    </>
   );
 }
 
@@ -106,9 +107,9 @@ export function PrimaryButton({ title, onPress, disabled, busy, testID }: { titl
   );
 }
 
-export function TextButton({ title, onPress, tone = 'red' }: { title: string; onPress: () => void; tone?: 'red' | 'ink' }) {
+export function TextButton({ title, onPress, tone = 'red', testID }: { title: string; onPress: () => void; tone?: 'red' | 'ink'; testID?: string }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} hitSlop={8} style={s.textButton}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} testID={testID} onPress={onPress} hitSlop={8} style={s.textButton}>
       <Text style={[s.textButtonText, tone === 'ink' && { color: colors.ink3 }]}>{title}</Text>
     </Pressable>
   );
@@ -122,7 +123,7 @@ export function Notice({ text, tone = 'ink' }: { text: string; tone?: 'ink' | 'o
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
-  screenContent: { paddingHorizontal: 16, paddingBottom: 120, gap: 20 },
+  screenContent: { paddingHorizontal: 16, paddingBottom: 120, paddingTop: 8, gap: 20 },
   group: { gap: 6 },
   groupLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 0.8, color: colors.ink3, textTransform: 'uppercase', paddingHorizontal: 16 },
   groupBody: { backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.line, overflow: 'hidden' },
