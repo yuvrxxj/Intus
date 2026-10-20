@@ -65,4 +65,4 @@ The app does the daily loop, bloodwork, sleep and the account. Still to do befor
 
 ## Linear and Miro
 
-Linear (project Intus.iOS): INT-132, INT-89, INT-133 and INT-134 Done; INT-135 and INT-83 In Progress with comments saying what is left; new issues INT-145 (Home, Done), INT-146 (Yes/No habits, Done), INT-147 (Apple Health scope, Todo). Miro board "Intus.iOS": frame "04 Simulator screenshots" holds the first four shots; later screens are in `docs/ios/screens/` and still to be added to the frame.
+Linear (project Intus.iOS): INT-132, INT-89, INT-133 and INT-134 Done; INT-135 and INT-83 In Progress with comments saying what is left; new issues INT-145 (Home, Done), INT-146 (Yes/No habits, Done), INT-147 (Apple Health scope, Todo). Miro board "Intus.iOS": frame "04 Simulator screenshots" holds the first four shots (taken before the Yes/No habits and the Home tab, so Today and Habits there are the older look); frame "05 More screens, 21 Oct" has Home, Sleep, Bloodwork and Apple Health. The rest are in `docs/ios/screens/`.
