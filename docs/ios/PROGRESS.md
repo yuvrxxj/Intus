@@ -1,6 +1,6 @@
 # Progress: overnight iPhone build
 
-Next action: R3 is done except the end-to-end delete (needs INTUS_TEST_EMAIL_2). Next: R4 sleep and Apple Health (INT-83), then R5 bloodwork (INT-134), then R6.
+Next action: R4 is done and R3 only lacks the end-to-end delete (needs INTUS_TEST_EMAIL_2). Next: R5 bloodwork (INT-134), then R6 polish.
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
@@ -10,7 +10,7 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 | R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | done | Simulator proof: `docs/ios/screens/01-shell.png` |
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | done | Proof: `02-signin.png`, `03-today.png`, `04-habits.png`; rows read back over REST as the test user |
 | R3 | Account: sign out, delete, download | INT-135 | done, delete not run end to end | Sign out, download my data (checked: 2 daily logs, 3 habits, 2 medications, no user ids), privacy and terms links, delete up to the confirm button (disabled until the email is typed). The final delete was not pressed: no second test account exists yet (`INTUS_TEST_EMAIL_2`). Screenshot `06-account-data-legal.png` is cropped so the test email is not in it |
-| R4 | Sleep and Apple Health | INT-83 | in progress | Sleep screen, manual entry and the Apple Health connect flow work in the Simulator; a real Health sample is best effort (see the log) |
+| R4 | Sleep and Apple Health | INT-83 | done | Sleep screen with nights, 28 day summary, age band and add a night; Apple Health connect flow through both Apple sheets; a resting heart rate typed into the Simulator's Health app synced into `cardio_metrics` (resting_hr 58, source healthkit). Sleep samples from Health were not tried: the Add Data sheet for sleep needs date and time pickers, and one sample type proves the path |
 | R5 | Bloodwork | INT-134 | not started | |
 | R6 | Polish and proof | | not started | |
 
@@ -107,3 +107,4 @@ Xcode 27 has no Simulator.app. The window is `/Applications/Xcode.app/Contents/A
 - The outbox is now one generic queue per kind of entry (`daily_logs`, `sleep`), same rules as before and the same tests.
 - Apple Health (More, Apple Health): the permission sheet opens. iOS 27 adds a second step, "how much data to share" (past 30 days, or all). The first sync reads 90 days, so pick all. With an empty Health store the sync says nothing came back and explains why.
 - The last sync record is now per account and is cleared when an account is deleted.
+- Apple Health in the Simulator (iOS 27, 17 to 21 Oct): the first launch of Health has onboarding screens (Continue, Next, notifications OK). Browse, Heart, Resting Heart Rate, then the plus button at the top right opens Add Data; type the number and tap the tick at the top right. Back in Intus, Sync now reads it. Apple's permission has two steps: pick the three topics and Continue, then choose how much history (pick all, because the first sync reads 90 days) and Allow.
