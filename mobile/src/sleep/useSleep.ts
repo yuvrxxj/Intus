@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { ageBand, type AgeBand } from '../../../src/features/sleep/ageBand.ts';
@@ -74,9 +75,15 @@ export function useSleep(): SleepState {
     }
   }, [userId]);
 
+  // every time the screen comes back into view, so a result added on a screen above it shows at once
+  useFocusEffect(
+    useCallback(() => {
+      void reload();
+    }, [reload]),
+  );
+
   useEffect(() => {
     live.current = true;
-    void reload();
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'active') void reload();
     });

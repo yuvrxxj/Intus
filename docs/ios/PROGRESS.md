@@ -1,6 +1,6 @@
 # Progress: overnight iPhone build
 
-Next action: R4 is done and R3 only lacks the end-to-end delete (needs INTUS_TEST_EMAIL_2). Next: R5 bloodwork (INT-134), then R6 polish.
+Next action: R5 is done. R3 lacks the end-to-end delete (needs INTUS_TEST_EMAIL_2) and R4 lacks a sleep sample from Health. Next: R6 polish (empty, loading, error and offline states, Dynamic Type, VoiceOver, one Maestro smoke flow, MORNING.md).
 
 The agent keeps this file current. A resume after a usage limit starts here, so the line above always says what to do next.
 
@@ -11,7 +11,7 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | done | Proof: `02-signin.png`, `03-today.png`, `04-habits.png`; rows read back over REST as the test user |
 | R3 | Account: sign out, delete, download | INT-135 | done, delete not run end to end | Sign out, download my data (checked: 2 daily logs, 3 habits, 2 medications, no user ids), privacy and terms links, delete up to the confirm button (disabled until the email is typed). The final delete was not pressed: no second test account exists yet (`INTUS_TEST_EMAIL_2`). Screenshot `06-account-data-legal.png` is cropped so the test email is not in it |
 | R4 | Sleep and Apple Health | INT-83 | done | Sleep screen with nights, 28 day summary, age band and add a night; Apple Health connect flow through both Apple sheets; a resting heart rate typed into the Simulator's Health app synced into `cardio_metrics` (resting_hr 58, source healthkit). Sleep samples from Health were not tried: the Add Data sheet for sleep needs date and time pickers, and one sample type proves the path |
-| R5 | Bloodwork | INT-134 | not started | |
+| R5 | Bloodwork | INT-134 | done | Results by marker with the web's own `buildBloodworkView`: printed range first, never another sex's default, critical banner, change since the previous result, marker info as a sheet, manual entry with the web's checks. Proof: `09` to `11` screenshots; a hemoglobin result typed in the app read back over REST |
 | R6 | Polish and proof | | not started | |
 
 States: not started, in progress, done, blocked (say why).
@@ -108,3 +108,10 @@ Xcode 27 has no Simulator.app. The window is `/Applications/Xcode.app/Contents/A
 - Apple Health (More, Apple Health): the permission sheet opens. iOS 27 adds a second step, "how much data to share" (past 30 days, or all). The first sync reads 90 days, so pick all. With an empty Health store the sync says nothing came back and explains why.
 - The last sync record is now per account and is cleared when an account is deleted.
 - Apple Health in the Simulator (iOS 27, 17 to 21 Oct): the first launch of Health has onboarding screens (Continue, Next, notifications OK). Browse, Heart, Resting Heart Rate, then the plus button at the top right opens Add Data; type the number and tap the tick at the top right. Back in Intus, Sync now reads it. Apple's permission has two steps: pick the three topics and Continue, then choose how much history (pick all, because the first sync reads 90 days) and Allow.
+
+## R5 notes
+
+- Nothing about ranges or critical limits is re-implemented: `buildBloodworkView`, `validateReadingForm`, `rangeSourceLabel`, `MARKER_INFO` and the formatters are the web's files, imported. The only new glue is `mobile/src/bloodwork/pending.ts` (a result typed here and not yet sent is shaped like a stored row so it is checked like any other), tested in `test/mobile.bloodwork.test.ts` against the shared safety and range code.
+- A result is queued, then sent with an upsert on a client id, as for sleep. It shows "Not sent yet" until it goes.
+- The test account was given 8 results through the API for the demonstration: ALT, glucose, testosterone (a default range for men, and the test profile is male), ferritin with a printed range, and potassium with a critical result. It also has one hemoglobin typed in the app.
+- Not done: PDF upload, on-device reading, charts and the print view (out of scope for tonight).
