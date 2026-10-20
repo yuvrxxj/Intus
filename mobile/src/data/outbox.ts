@@ -8,48 +8,47 @@ export interface KeyValueStore {
   removeItem(key: string): Promise<void>;
 }
 
-/** A day's entry that has been typed but not yet confirmed saved. The draft is kept so Today can show it again. */
-export interface PendingLog {
-  date: string;
-  draft: TodayDraft;
-  record: DailyLogInsert;
+// ── a queue per kind of entry ────────────────────────────────────────────────────────────────────
+
+/** Anything queued says when it was queued, so a send can tell whether the entry changed while it was in flight. */
+export interface Queued {
   queuedAt: string;
 }
 
-const keyFor = (userId: string) => `intus.outbox.daily_logs.${userId}`;
+const keyFor = (bucket: string, userId: string) => `intus.outbox.${bucket}.${userId}`;
 
-async function read(store: KeyValueStore, userId: string): Promise<Record<string, PendingLog>> {
-  const raw = await store.getItem(keyFor(userId));
+async function read<T>(store: KeyValueStore, bucket: string, userId: string): Promise<Record<string, T>> {
+  const raw = await store.getItem(keyFor(bucket, userId));
   if (raw === null) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return parsed as Record<string, PendingLog>;
+    return parsed as Record<string, T>;
   } catch {
     return {};
   }
 }
 
-async function write(store: KeyValueStore, userId: string, pending: Record<string, PendingLog>): Promise<void> {
-  if (Object.keys(pending).length === 0) await store.removeItem(keyFor(userId));
-  else await store.setItem(keyFor(userId), JSON.stringify(pending));
+async function write<T>(store: KeyValueStore, bucket: string, userId: string, entries: Record<string, T>): Promise<void> {
+  if (Object.keys(entries).length === 0) await store.removeItem(keyFor(bucket, userId));
+  else await store.setItem(keyFor(bucket, userId), JSON.stringify(entries));
 }
 
-/** Oldest first. */
-export async function pendingLogs(store: KeyValueStore, userId: string): Promise<PendingLog[]> {
-  const all = await read(store, userId);
-  return Object.values(all).sort((a, b) => a.date.localeCompare(b.date));
+/** Every queued entry in a bucket, in key order. */
+export async function queuedIn<T>(store: KeyValueStore, bucket: string, userId: string): Promise<T[]> {
+  const all = await read<T>(store, bucket, userId);
+  return Object.keys(all).sort().map((k) => all[k]);
 }
 
-export async function pendingFor(store: KeyValueStore, userId: string, date: string): Promise<PendingLog | null> {
-  return (await read(store, userId))[date] ?? null;
+export async function queuedEntry<T>(store: KeyValueStore, bucket: string, userId: string, key: string): Promise<T | null> {
+  return (await read<T>(store, bucket, userId))[key] ?? null;
 }
 
-/** A record carries the whole day, so a newer one for the same date replaces the older. */
-export async function queueLog(store: KeyValueStore, userId: string, entry: PendingLog): Promise<void> {
-  const all = await read(store, userId);
-  all[entry.date] = entry;
-  await write(store, userId, all);
+/** A newer entry under the same key replaces the older. */
+export async function queueIn<T>(store: KeyValueStore, bucket: string, userId: string, key: string, entry: T): Promise<void> {
+  const all = await read<T>(store, bucket, userId);
+  all[key] = entry;
+  await write(store, bucket, userId, all);
 }
 
 export interface FlushResult {
@@ -60,27 +59,49 @@ export interface FlushResult {
 }
 
 /**
- * Sends each queued day, oldest first, and drops it from the queue only once the send succeeds. A day that was
- * re-queued while its send was in flight stays queued: only the entry that was sent is removed.
+ * Sends each queued entry, in key order, and drops it from the queue only once the send succeeds. An entry that was
+ * queued again while its send was in flight stays queued: only the entry that was sent is removed.
  */
-export async function flushLogs(
+export async function flushBucket<T extends Queued>(
   store: KeyValueStore,
+  bucket: string,
   userId: string,
-  send: (record: DailyLogInsert) => Promise<void>,
+  send: (entry: T) => Promise<void>,
 ): Promise<FlushResult> {
   const result: FlushResult = { sent: 0, failed: 0, error: null };
-  for (const entry of await pendingLogs(store, userId)) {
+  const first = await read<T>(store, bucket, userId);
+  for (const key of Object.keys(first).sort()) {
+    const entry = first[key];
     try {
-      await send(entry.record);
+      await send(entry);
     } catch (e) {
       result.failed++;
       result.error ??= e instanceof Error ? e.message : String(e);
       continue;
     }
-    const latest = await read(store, userId);
-    if (latest[entry.date]?.queuedAt === entry.queuedAt) delete latest[entry.date];
-    await write(store, userId, latest);
+    const latest = await read<T>(store, bucket, userId);
+    if (latest[key]?.queuedAt === entry.queuedAt) delete latest[key];
+    await write(store, bucket, userId, latest);
     result.sent++;
   }
   return result;
 }
+
+// ── the daily log's queue, keyed by date ─────────────────────────────────────────────────────────
+
+/** A day's entry that has been typed but not yet confirmed saved. The draft is kept so Today can show it again. */
+export interface PendingLog extends Queued {
+  date: string;
+  draft: TodayDraft;
+  record: DailyLogInsert;
+}
+
+const LOGS = 'daily_logs';
+
+/** Oldest first. */
+export const pendingLogs = (store: KeyValueStore, userId: string) => queuedIn<PendingLog>(store, LOGS, userId);
+export const pendingFor = (store: KeyValueStore, userId: string, date: string) => queuedEntry<PendingLog>(store, LOGS, userId, date);
+/** A record carries the whole day, so a newer one for the same date replaces the older. */
+export const queueLog = (store: KeyValueStore, userId: string, entry: PendingLog) => queueIn(store, LOGS, userId, entry.date, entry);
+export const flushLogs = (store: KeyValueStore, userId: string, send: (record: DailyLogInsert) => Promise<void>) =>
+  flushBucket<PendingLog>(store, LOGS, userId, (entry) => send(entry.record));

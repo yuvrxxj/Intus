@@ -10,7 +10,7 @@ The agent keeps this file current. A resume after a usage limit starts here, so 
 | R1 | Foundation: shared rules, tokens, fonts, native navigation | INT-132, INT-89 | done | Simulator proof: `docs/ios/screens/01-shell.png` |
 | R2 | Daily loop: sign-in, Today, habits, supplements | INT-133 | done | Proof: `02-signin.png`, `03-today.png`, `04-habits.png`; rows read back over REST as the test user |
 | R3 | Account: sign out, delete, download | INT-135 | done, delete not run end to end | Sign out, download my data (checked: 2 daily logs, 3 habits, 2 medications, no user ids), privacy and terms links, delete up to the confirm button (disabled until the email is typed). The final delete was not pressed: no second test account exists yet (`INTUS_TEST_EMAIL_2`). Screenshot `06-account-data-legal.png` is cropped so the test email is not in it |
-| R4 | Sleep and Apple Health | INT-83 | not started | |
+| R4 | Sleep and Apple Health | INT-83 | in progress | Sleep screen, manual entry and the Apple Health connect flow work in the Simulator; a real Health sample is best effort (see the log) |
 | R5 | Bloodwork | INT-134 | not started | |
 | R6 | Polish and proof | | not started | |
 
@@ -99,3 +99,11 @@ Found on 17 Oct (iOS 27 Simulator, Xcode 27.1). None of this was in the earlier 
 ## Running it: DeviceHub, not Simulator
 
 Xcode 27 has no Simulator.app. The window is `/Applications/Xcode.app/Contents/Applications/DeviceHub.app`. `open -a Simulator` does nothing, and the device still boots headless, which is why the app ran without a window on 17 Oct.
+
+## R4 notes
+
+- Sleep (More, Sleep): nights from `sleep_sessions` through the shared `buildNights`, the 28 day summary only after five nights (`summary.ts`), the age band from the profile's date of birth, and a note on each night against the band. Verified against nights added through the app (REST read back: `source_kind manual`, `tz_id Asia/Kolkata`, offsets 330) plus six seeded through the API as the test user.
+- Manual entry (Add a night): wake date by stepper, two clock times, optional minutes and note. The web's `validateSleepForm` does the checking; the phone only turns a date and two clock times into its form (`mobile/src/sleep/entry.ts`, tested). A night is queued with a client id and sent with an upsert on `id`, so a retry cannot make two rows.
+- The outbox is now one generic queue per kind of entry (`daily_logs`, `sleep`), same rules as before and the same tests.
+- Apple Health (More, Apple Health): the permission sheet opens. iOS 27 adds a second step, "how much data to share" (past 30 days, or all). The first sync reads 90 days, so pick all. With an empty Health store the sync says nothing came back and explains why.
+- The last sync record is now per account and is cleared when an account is deleted.

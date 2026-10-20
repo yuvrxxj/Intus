@@ -40,6 +40,7 @@ export function Screen({
         style={s.screen}
         contentContainerStyle={s.screenContent}
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink3} /> : undefined}
