@@ -1,0 +1,19 @@
+# Signs in to an app that is already open. The account comes from the command line, never from this file:
+#   maestro test -e EMAIL=... -e PASSWORD=... .maestro/signin.yaml
+appId: fit.intus.app
+---
+- tapOn:
+    text: "Continue"
+    optional: true
+- assertVisible: "Sign in to log your day."
+- tapOn: "Email"
+- tapOn:
+    text: "Continue"
+    optional: true
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 20000

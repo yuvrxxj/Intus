@@ -1,4 +1,4 @@
-import type { Biomarker, BiomarkerReading } from '../../db/queries.ts';
+import type { Biomarker, BiomarkerReading } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import { toNumber } from '../../lib/numbers.ts';
 import {

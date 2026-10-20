@@ -1,4 +1,4 @@
-import type { Habit, HabitInput } from '../../db/habits.ts';
+import type { Habit, HabitInput } from '../../db/rows.ts';
 import type { Json } from '../../db/types.ts';
 import { toNumberOrNull } from '../../lib/numbers.ts';
 

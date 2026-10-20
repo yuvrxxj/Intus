@@ -1,10 +1,8 @@
 import { supabase } from './client.ts';
 import { fetchAll } from './paging.ts';
-import type { Insert, Row } from './types.ts';
+import type { Habit, HabitInput } from './rows.ts';
 
-export type Habit = Row<'habits'>;
-/** What a person fills in. The id, owner, creation time and order are set by the database or by the caller. */
-export type HabitInput = Pick<Insert<'habits'>, 'name' | 'kind' | 'unit' | 'goal' | 'better'>;
+export type { Habit, HabitInput };
 
 /** Every habit the signed-in person has made, archived ones included, in the order they were added. */
 export function fetchHabits(): Promise<Habit[]> {

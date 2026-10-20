@@ -40,11 +40,24 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "16.4",
+            "enableSceneSupport": true
           }
+        }
+      ],
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#E5ECE9",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain"
         }
       ]
     ],
-    "scheme": "intus"
+    "scheme": "intus",
+    "backgroundColor": "#E5ECE9"
   }
 }

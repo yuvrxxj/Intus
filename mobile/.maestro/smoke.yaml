@@ -1,0 +1,28 @@
+# Opens each tab of a signed-in app and checks a heading or a control on it:
+#   maestro test mobile/.maestro/smoke.yaml
+# Sign in first with signin.yaml. No account details are in this file. The tab bar is tapped by position, because the
+# words Today and Habits also appear on the pages themselves.
+appId: fit.intus.app
+---
+- launchApp
+- tapOn:
+    point: "17%,95%"
+- assertVisible: "Log today"
+- tapOn:
+    point: "32%,95%"
+- assertVisible:
+    id: "weight"
+- tapOn:
+    point: "48%,95%"
+- assertVisible: ".*on track today"
+- tapOn:
+    point: "66%,95%"
+- assertVisible:
+    id: "bw-add"
+- tapOn:
+    point: "83%,95%"
+- assertVisible: "Supplements"
+- tapOn:
+    id: "nav-sleep"
+- assertVisible:
+    id: "sleep-add"

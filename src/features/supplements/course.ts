@@ -1,4 +1,4 @@
-import type { Medication } from '../../db/medications.ts';
+import type { Medication } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 
 /** Judged by the dates, never by the generated `active` column, which says "active" for a course that has not started. */

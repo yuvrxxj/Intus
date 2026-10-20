@@ -1,5 +1,5 @@
-import type { DailyLog, DailyLogInsert } from '../../db/dailyLogs.ts';
-import type { Habit } from '../../db/habits.ts';
+import type { DailyLog, DailyLogInsert } from '../../db/rows.ts';
+import type { Habit } from '../../db/rows.ts';
 import { parseEntries, serializeEntries, withUntouchedCounts, type Entries } from '../habits/model.ts';
 
 export interface TodayDraft {

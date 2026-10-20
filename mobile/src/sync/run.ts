@@ -6,7 +6,18 @@ import { cardioRows, sleepRows, syncWindowStart } from './mapping';
 /** The first sync reads this far back; later ones re-read a few days so late-arriving watch data is caught. */
 export const FIRST_SYNC_DAYS = 90;
 export const RESYNC_DAYS = 3;
-const LAST_SYNC_KEY = 'intus.lastSync';
+const LAST_SYNC_PREFIX = 'intus.lastSync';
+
+/** The record of the last sync is the person's own: another account on the same phone starts with a full first sync. */
+async function syncKey(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  return `${LAST_SYNC_PREFIX}.${data.session?.user.id ?? 'nobody'}`;
+}
+
+/** Forgets the last sync for whoever is signed in. Called when the account is deleted. */
+export async function forgetLastSync(): Promise<void> {
+  await SecureStore.deleteItemAsync(await syncKey());
+}
 
 export interface SyncResult {
   at: string;
@@ -16,7 +27,7 @@ export interface SyncResult {
 }
 
 export async function lastSync(): Promise<SyncResult | null> {
-  const raw = await SecureStore.getItemAsync(LAST_SYNC_KEY);
+  const raw = await SecureStore.getItemAsync(await syncKey());
   try {
     return raw ? (JSON.parse(raw) as SyncResult) : null;
   } catch {
@@ -42,6 +53,6 @@ export async function syncNow(now = new Date()): Promise<SyncResult> {
     if (error) throw new Error(`Heart readings could not be saved: ${error.message}`);
   }
   const result: SyncResult = { at: now.toISOString(), nights: nights.rows.length, heartDays: heart.length, skipped: nights.skipped };
-  await SecureStore.setItemAsync(LAST_SYNC_KEY, JSON.stringify(result));
+  await SecureStore.setItemAsync(await syncKey(), JSON.stringify(result));
   return result;
 }

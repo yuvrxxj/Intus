@@ -1,9 +1,7 @@
 import { supabase } from './client.ts';
-import type { Insert } from './types.ts';
+import type { ReadingInput } from './rows.ts';
 
-/** What a person types in. The id, owner and creation time are set by the database. */
-export type ReadingInput = Required<Pick<Insert<'biomarker_readings'>, 'biomarker_id' | 'measured_at' | 'value' | 'source'>> &
-  Pick<Insert<'biomarker_readings'>, 'notes' | 'ref_low' | 'ref_high'>;
+export type { ReadingInput };
 
 export async function addReading(input: ReadingInput): Promise<void> {
   const { error } = await supabase.from('biomarker_readings').insert(input);

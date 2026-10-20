@@ -1,4 +1,4 @@
-import type { GoalValues } from '../../db/profile.ts';
+import type { GoalValues } from '../../db/rows.ts';
 import { dayNumber } from '../../lib/dates.ts';
 import type { GoalFields } from '../../lib/programme.ts';
 import { directionOf } from '../../lib/programme.ts';
