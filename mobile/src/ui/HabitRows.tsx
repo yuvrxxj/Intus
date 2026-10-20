@@ -1,8 +1,8 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import type { Habit } from '../../../src/db/rows.ts';
 import { MAX_COUNT, describeGoal, fractionOfGoal, toneOf, type Entries, type HabitEntry } from '../../../src/features/habits/model.ts';
 import { colors, fonts, radius } from '../theme/tokens';
-import { Row } from './kit';
+import { Row, STACK_AT_FONT_SCALE } from './kit';
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -51,10 +51,12 @@ export function HabitRow({
   const fraction = fractionOfGoal(habit, entry);
   const number = typeof entry?.value === 'number' ? entry.value : 0;
   const unit = habit.unit ?? '';
+  // at the largest text sizes the name and the control no longer fit side by side, so the control drops below
+  const stacked = useWindowDimensions().fontScale >= STACK_AT_FONT_SCALE;
 
   return (
-    <Row first={first} style={s.row}>
-      <View style={s.text}>
+    <Row first={first} style={[s.row, stacked && s.rowStacked]}>
+      <View style={[s.text, stacked && s.textStacked]}>
         <Text style={s.name}>{habit.name}</Text>
         <Text style={s.hint}>
           {[goal, streak && streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} in a row` : null].filter(Boolean).join('  ·  ')}
@@ -152,7 +154,9 @@ export function HabitRows({
 
 const s = StyleSheet.create({
   row: { justifyContent: 'space-between', paddingVertical: 12 },
+  rowStacked: { flexDirection: 'column', alignItems: 'flex-start', gap: 8 },
   text: { flex: 1, gap: 2 },
+  textStacked: { flex: 0, alignSelf: 'stretch' },
   name: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   hint: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink3 },
   bar: { height: 4, borderRadius: 2, backgroundColor: colors.surface3, marginTop: 6, overflow: 'hidden' },

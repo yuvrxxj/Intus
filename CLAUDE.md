@@ -35,6 +35,9 @@ not only when asked. Before you finish, check both, and say in your last message
 - The iPhone app is `mobile/` (Expo, React Native), in this same repository. Do not start a second repo. Its Linear
   project is "Intus.iOS" (https://linear.app/intus/project/intusios-3a51eb1a9ad3); its Miro board is "Intus.iOS"
   (https://miro.com/app/board/uXjVEZLWcBQ=/).
+- Run it in the Simulator: build the Debug configuration (`cd mobile && npx expo run:ios --no-bundler`), start Metro
+  (`npx expo start --dev-client`) and open it from DeviceHub (Xcode 27 has no Simulator.app). The notes on what broke
+  and why are in `mobile/README.md` and `docs/ios/PROGRESS.md`. The Apple Health field map is `docs/ios/APPLE_HEALTH.md`.
 - It imports the web's plain TypeScript rules (`src/lib`, the pure `model.ts`-style files) rather than copying them.
   CI has no root `node_modules`, so after committing, check the app the way CI does: `bash scripts/ios-ci-check.sh`.
 - Unattended builds use the kit in `docs/ios/` (read `docs/ios/README.md`). It runs only when the launcher sets

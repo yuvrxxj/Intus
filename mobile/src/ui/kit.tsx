@@ -1,4 +1,4 @@
-import { Keyboard, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { Keyboard, Pressable, useWindowDimensions, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 import { colors, fonts, radius } from '../theme/tokens';
 
@@ -68,24 +68,30 @@ export function Row({ children, first, style }: { children: ReactNode; first?: b
   return <View style={[s.row, !first && s.rowDivider, style]}>{children}</View>;
 }
 
+/** At the largest text sizes a label, a number and a unit no longer fit on one line, so the row stacks. */
+export const STACK_AT_FONT_SCALE = 1.5;
+
 export function Field({
   label,
   unit,
   first,
   ...input
 }: { label: string; unit?: string; first?: boolean } & Omit<TextInputProps, 'style'>) {
+  const stacked = useWindowDimensions().fontScale >= STACK_AT_FONT_SCALE;
   return (
-    <Row first={first} style={s.fieldRow}>
+    <Row first={first} style={stacked ? s.fieldStacked : s.fieldRow}>
       <Text style={s.fieldLabel}>{label}</Text>
-      <TextInput
-        accessibilityLabel={unit ? `${label}, ${unit}` : label}
-        placeholderTextColor={colors.ink3}
-        selectTextOnFocus
-        style={s.fieldInput}
-        textAlign="right"
-        {...input}
-      />
-      {unit ? <Text style={s.fieldUnit}>{unit}</Text> : null}
+      <View style={stacked ? s.fieldEntryStacked : s.fieldEntry}>
+        <TextInput
+          accessibilityLabel={unit ? `${label}, ${unit}` : label}
+          placeholderTextColor={colors.ink3}
+          selectTextOnFocus
+          style={s.fieldInput}
+          textAlign={stacked ? 'left' : 'right'}
+          {...input}
+        />
+        {unit ? <Text style={s.fieldUnit}>{unit}</Text> : null}
+      </View>
     </Row>
   );
 }
@@ -132,8 +138,11 @@ const s = StyleSheet.create({
   row: { minHeight: 48, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   fieldRow: { justifyContent: 'space-between' },
+  fieldStacked: { flexDirection: 'column', alignItems: 'stretch', gap: 2 },
+  fieldEntry: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  fieldEntryStacked: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   fieldLabel: { fontFamily: fonts.body, fontSize: 17, color: colors.ink, flexShrink: 0 },
-  fieldInput: { flex: 1, minHeight: 44, fontFamily: fonts.mono, fontSize: 17, color: colors.ink, paddingVertical: 0 },
+  fieldInput: { flex: 1, minWidth: 80, minHeight: 44, fontFamily: fonts.mono, fontSize: 17, color: colors.ink, paddingVertical: 0 },
   fieldUnit: { fontFamily: fonts.mono, fontSize: 13, color: colors.ink3, minWidth: 30 },
   primary: { minHeight: 50, borderRadius: radius.card, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   primaryOff: { opacity: 0.4 },
