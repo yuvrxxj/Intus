@@ -9,6 +9,20 @@
 // It sends the request the app's Edge Function sends (supabase/functions/read-report/prompt.ts), so a model that scores
 // well here behaves the same in the app. OpenRouter requests carry `data_collection: deny`: a model with no host that
 // promises not to keep or train on prompts fails with "no endpoints" and is reported as unusable, which is the answer.
+//
+// Trying hosts that are free because they may keep or train on prompts (OpenRouter's `:free` models, any other free
+// tier) takes `--allow-training`, which leaves that rule out. Use it with scripts/ai-eval-sample-report.txt, an invented
+// report, and never with a real one. Any other host that speaks the chat-completions format works with `--base-url`
+// and `--key-env`, and needs `--allow-training`, because only OpenRouter can be told to refuse hosts that keep prompts:
+//
+//   OPENROUTER_API_KEY=... node scripts/ai-eval.ts scripts/ai-eval-sample-report.txt --allow-training --json-mode object \
+//     --models google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free
+//   GROQ_API_KEY=... node scripts/ai-eval.ts scripts/ai-eval-sample-report.txt --allow-training --max-tokens 4096 \
+//     --base-url https://api.groq.com/openai/v1 --key-env GROQ_API_KEY --models openai/gpt-oss-120b,openai/gpt-oss-20b
+//   (Groq's base limits are 8K tokens a minute, so keep --max-tokens small and the report short.)
+//   CLOUDFLARE_API_KEY=... node scripts/ai-eval.ts scripts/ai-eval-sample-report.txt --allow-training --json-mode object \
+//     --base-url https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1 --key-env CLOUDFLARE_API_KEY \
+//     --models @cf/openai/gpt-oss-120b
 // The report is read the way the on-device reader reads it, and a model is scored on how many of those results it
 // reproduces, how many extra it finds that the report really prints, and how many it gets wrong or invents.
 // Only marker names and numbers are printed, never lines of the report.
@@ -68,14 +82,32 @@ interface Options {
   maxTokens: number;
   priceIn: number;
   priceOut: number;
+  /** the environment variable that holds the key; the provider's usual one when empty */
+  keyEnv: string;
+  /** leave out `data_collection: deny`, to try hosts that may keep or train on prompts. Invented reports only. */
+  allowTraining: boolean;
+  /** extra fields for the request body, for a host's own options such as `reasoning_effort`. Never the model, messages or privacy rule. */
+  extraBody: Record<string, unknown>;
+}
+
+const keyName = (o: Pick<Options, 'provider' | 'keyEnv'>) => o.keyEnv || (o.provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENROUTER_API_KEY');
+
+/** The request for one model. Chat requests carry the privacy rule from prompt.ts unless the run opted out of it. */
+export function evalRequest(o: Pick<Options, 'provider' | 'mode' | 'maxTokens' | 'allowTraining'> & { extraBody?: Record<string, unknown> }, model: string, text: string, markers: readonly MarkerInfo[]) {
+  const extra = o.extraBody ?? {};
+  if (o.provider === 'gemini') return { ...buildGeminiRequest(text, markers, o.maxTokens), ...extra };
+  const request = buildChatRequest(model, text, markers, o.maxTokens, o.mode);
+  if (!o.allowTraining) return { ...request, ...extra };
+  const { provider: _privacyRule, ...withoutIt } = request;
+  return { ...withoutIt, ...extra };
 }
 
 async function runModel(model: string, text: string, markers: MarkerInfo[], refs: MarkerRef[], device: ParsedRow[], o: Options) {
   const started = Date.now();
-  const key = process.env[o.provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENROUTER_API_KEY'];
-  if (!key) return { model, error: `set ${o.provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENROUTER_API_KEY'}` };
+  const key = process.env[keyName(o)];
+  if (!key) return { model, error: `set ${keyName(o)}` };
   const sentLines = text.split('\n');
-  const request = o.provider === 'gemini' ? buildGeminiRequest(text, markers, o.maxTokens) : buildChatRequest(model, text, markers, o.maxTokens, o.mode);
+  const request = evalRequest(o, model, text, markers);
   const res = await fetch(
     o.provider === 'gemini' ? `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` : `${o.base}/chat/completions`,
     {
@@ -142,7 +174,7 @@ async function main() {
   const file = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
   const models = flag('models').split(',').map((m) => m.trim()).filter(Boolean);
   if (!file || models.length === 0) {
-    console.error('usage: node scripts/ai-eval.ts report.txt --models a,b [--provider openrouter|gemini] [--json-mode schema|object] [--price-in 0.25 --price-out 1.5]\n       node scripts/ai-eval.ts --list-free');
+    console.error('usage: node scripts/ai-eval.ts report.txt --models a,b [--provider openrouter|gemini] [--json-mode schema|object] [--price-in 0.25 --price-out 1.5]\n         [--base-url URL --key-env NAME] [--allow-training] [--extra-body JSON]\n       node scripts/ai-eval.ts --list-free');
     process.exit(2);
   }
   const markersFile = JSON.parse(readFileSync(new URL('./ai-eval-markers.json', import.meta.url), 'utf8')) as MarkerInfo[];
@@ -153,7 +185,30 @@ async function main() {
     provider: flag('provider', 'openrouter') === 'gemini' ? 'gemini' : 'openrouter',
     models, base, mode: flag('json-mode', 'schema') === 'object' ? 'object' : 'schema',
     maxTokens: Number(flag('max-tokens', '16384')), priceIn: Number(flag('price-in', '0')), priceOut: Number(flag('price-out', '0')),
+    keyEnv: flag('key-env'), allowTraining: args.includes('--allow-training'), extraBody: {},
   };
+  if (flag('extra-body')) {
+    try {
+      options.extraBody = JSON.parse(flag('extra-body')) as Record<string, unknown>;
+    } catch {
+      console.error('--extra-body must be a JSON object, for example \'{"reasoning_effort":"low"}\'.');
+      process.exit(2);
+    }
+    if (typeof options.extraBody !== 'object' || options.extraBody === null || Array.isArray(options.extraBody) || ['model', 'messages', 'provider'].some((k) => k in options.extraBody)) {
+      console.error('--extra-body is a JSON object that does not set model, messages or provider. The privacy rule is not changed from here.');
+      process.exit(2);
+    }
+  }
+  if (options.provider === 'openrouter' && base !== DEFAULT_BASE && !options.allowTraining) {
+    console.error('Only OpenRouter can be told to refuse hosts that keep or train on prompts. For another host, pass --allow-training and use an invented report.');
+    process.exit(2);
+  }
+  // A report that may be kept or trained on must be one nobody owns: the sample file says so on its first line.
+  if (options.allowTraining && !/invented report for testing/i.test(text.split('\n').slice(0, 3).join(' '))) {
+    console.error('--allow-training is only for invented reports, which say "INVENTED REPORT FOR TESTING" at the top (see scripts/ai-eval-sample-report.txt). This file does not, so nothing was sent.');
+    process.exit(2);
+  }
+  if (options.allowTraining) console.log('TRAINING ALLOWED: the privacy rule is left out, so these hosts may keep or train on the invented report below. Not what the app does.');
   console.log(`${text.split('\n').length} lines, about ${Math.round(text.length / 3.5)} tokens. The on-device reader finds ${device.length} results, ${device.filter((r) => r.biomarkerId).length} for tracked markers.`);
   for (const model of models) show(await runModel(model, text, markersFile, refs, device, options));
 }
