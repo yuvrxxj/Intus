@@ -8,6 +8,7 @@ import { ScrollHeading } from '@/components/ui/scroll-heading';
 import { cn } from '@/lib/utils';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { takeDeletionNotice } from '../account/localData.ts';
+import { WEB_AUTH_ENABLED } from '../auth/webAuthFlag.ts';
 import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { PRICING } from './pricing.ts';
@@ -98,7 +99,7 @@ export function Header({ quiet = false }: { quiet?: boolean }) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link to={SIGN_IN_PATH} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'hidden md:inline-flex')}>Sign in</Link>
+          {WEB_AUTH_ENABLED && <Link to={SIGN_IN_PATH} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'hidden md:inline-flex')}>Sign in</Link>}
           {/* Phone widths keep this ghost, so the hero button stays the only red control. */}
           <a href={sectionHref('waitlist')} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}>{WAITLIST.headerLink}</a>
           <a href={sectionHref('waitlist')} className={cn(waitlistClass, 'hidden md:inline-flex')}>{WAITLIST.headerLink}</a>
@@ -119,7 +120,7 @@ export function Header({ quiet = false }: { quiet?: boolean }) {
             {NAV.map(([id, label]) => (
               <a key={id} href={sectionHref(id)} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>{label}</a>
             ))}
-            <Link to={SIGN_IN_PATH} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>Sign in</Link>
+            {WEB_AUTH_ENABLED && <Link to={SIGN_IN_PATH} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>Sign in</Link>}
           </nav>
         </div>
       )}

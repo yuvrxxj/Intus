@@ -169,6 +169,8 @@ time. A model with no private host is reported as unusable. Keep real reports an
 
 ## Sign-in
 
+The public website does not offer these screens until `VITE_WEB_AUTH_ENABLED` is `true` (see the README, "Web sign-in"). The Supabase settings below stay as they are.
+
 Three ways in, all free:
 
 - **Email and password.** Sign-up, sign-in, and "Forgot password?" with a link that opens a "Choose a new
