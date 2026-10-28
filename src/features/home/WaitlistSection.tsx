@@ -5,6 +5,7 @@ import { Reveal } from '@/components/ui/reveal';
 import { ScrollHeading } from '@/components/ui/scroll-heading';
 import { Segmented } from '@/components/ui/segmented';
 import { cn } from '@/lib/utils';
+import { currentReferral, rememberReferral } from './referral.ts';
 import { submitJoin, submitResend } from './waitlistApi.ts';
 import {
   DEVICES,
@@ -38,6 +39,9 @@ function phoneWidth(): boolean {
 export function WaitlistForm({ className }: { className?: string }) {
   const [state, setState] = useState<WaitlistState>(() => initialWaitlistState(phoneWidth()));
   const [now, setNow] = useState(() => Date.now());
+
+  // A friend's link (?ref=CODE) is remembered for the visit, so the code is still there if the page is reloaded.
+  useEffect(() => { rememberReferral(window.location.search); }, []);
   const emailRef = useRef<HTMLInputElement>(null);
   const checkRef = useRef<HTMLDivElement>(null);
   const returnFocus = useRef(false);
@@ -74,7 +78,7 @@ export function WaitlistForm({ className }: { className?: string }) {
       return;
     }
     if (next.phase !== 'submitting') return;
-    const outcome = await submitJoin(next);
+    const outcome = await submitJoin(next, fetch, currentReferral(window.location.search));
     setState((current) => reduceWaitlist(current, { type: 'result', outcome }));
   }
 

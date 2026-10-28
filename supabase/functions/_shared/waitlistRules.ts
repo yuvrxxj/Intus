@@ -77,6 +77,40 @@ export async function sha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+/** A referral code is ten upper-case hex characters, made by the database. Anything else in ?ref= is ignored. */
+export function referralCodeFrom(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const code = value.trim().toUpperCase();
+  return /^[0-9A-F]{10}$/.test(code) ? code : null;
+}
+
+export const REFERRAL_ORIGIN = 'https://intus.fit';
+
+export function referralLink(code: string): string {
+  return `${REFERRAL_ORIGIN}/?ref=${code}`;
+}
+
+/**
+ * The address with the +tag dropped, and the dots dropped for gmail. Two spellings of one inbox match, so nobody can
+ * refer themselves. The database trigger waitlist_normal_email does the same; keep the two in step.
+ */
+export function normalReferralEmail(raw: string): string {
+  const email = normalizeEmail(raw);
+  const at = email.indexOf('@');
+  if (at < 0) return email;
+  const local = email.slice(0, at).split('+')[0];
+  const domain = email.slice(at + 1);
+  if (domain === 'gmail.com' || domain === 'googlemail.com') return `${local.replaceAll('.', '')}@gmail.com`;
+  return `${local}@${domain}`;
+}
+
+/** What the confirmed page shows: your place, how many confirmed friends you have, and the code behind your link. */
+export interface ReferralStanding {
+  code: string;
+  place: number;
+  referrals: number;
+}
+
 /** True when the hidden company field should be treated as a bot and answered with a fake success. */
 export function honeypotTripped(company: unknown): boolean {
   if (company == null) return false;

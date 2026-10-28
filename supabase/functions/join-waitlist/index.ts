@@ -66,10 +66,21 @@ Deno.serve(createHandler({
       confirm_token_hash: row.confirmTokenHash,
       confirm_token_expires_at: row.confirmTokenExpiresAt,
       confirm_sent_at: row.confirmSentAt,
+      referred_by: row.referredBy ?? null,
     });
     if (!error) return 'created';
     if (error.code === '23505') return 'exists';
     throw new Error('insert failed');
+  },
+  findReferrer: async (code) => {
+    const { data, error } = await admin.from('waitlist').select('id, email').eq('referral_code', code).eq('status', 'confirmed').maybeSingle();
+    if (error) throw new Error('read failed');
+    return data ? { id: data.id as string, email: data.email as string } : null;
+  },
+  standing: async (id) => {
+    const { data, error } = await admin.from('waitlist_standing').select('referral_code, place, referrals').eq('id', id).maybeSingle();
+    if (error) throw new Error('read failed');
+    return data ? { code: data.referral_code as string, place: data.place as number, referrals: data.referrals as number } : null;
   },
   replaceToken: async (id, hash, expiresAt, device, sentAt) => {
     const { error } = await admin.from('waitlist').update({

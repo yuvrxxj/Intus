@@ -167,7 +167,7 @@ test('join and confirm responses map onto the form states', () => {
   assert.equal(interpretJoinResponse(400, { error: 'invalid_email' }, false).kind, 'invalid_email');
   assert.deepEqual(interpretJoinResponse(500, { error: 'unavailable' }, true), { kind: 'network', offline: true });
   assert.deepEqual(interpretJoinResponse(0, null, false), { kind: 'network', offline: false });
-  assert.deepEqual(interpretConfirmResponse(200, { result: 'confirmed', device: 'iphone', tracksToday: 'sleep' }), { kind: 'confirmed', details: { device: 'iphone', tracksToday: 'sleep' } });
+  assert.deepEqual(interpretConfirmResponse(200, { result: 'confirmed', device: 'iphone', tracksToday: 'sleep' }), { kind: 'confirmed', details: { device: 'iphone', tracksToday: 'sleep', referral: null } });
   assert.deepEqual(interpretConfirmResponse(200, { result: 'expired' }), { kind: 'expired' });
   assert.deepEqual(interpretConfirmResponse(500, null), { kind: 'error' });
   assert.deepEqual(interpretConfirmResponse(404, { error: 'nope' }), { kind: 'expired' });

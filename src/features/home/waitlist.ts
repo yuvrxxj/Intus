@@ -21,8 +21,11 @@ import {
   newConfirmToken,
   normalizeEmail,
   normalizeTracks,
+  referralCodeFrom,
+  referralLink,
   sha256Hex,
   type Device,
+  type ReferralStanding,
 } from '../../../supabase/functions/_shared/waitlistRules.ts';
 
 // The pure rules the edge function also needs live in supabase/functions/_shared/waitlistRules.ts, and are re-exported
@@ -42,8 +45,11 @@ export {
   newConfirmToken,
   normalizeEmail,
   normalizeTracks,
+  referralCodeFrom,
+  referralLink,
   sha256Hex,
   type Device,
+  type ReferralStanding,
 };
 
 export const WAITLIST = {
@@ -92,7 +98,19 @@ export const WAITLIST = {
   confirmChecking: 'Checking the link',
   confirmError: 'We could not check that link. Try again.',
   confirmRetry: 'Try again',
+  referralKicker: 'Move up the list',
+  referralHelper: 'Each friend who joins moves you up.',
+  referralNote: 'Everyone still gets in at launch. Your place only decides who goes first. A friend counts once they confirm their email.',
+  referralLinkLabel: 'Your link',
+  copyLink: 'Copy link',
+  copiedLink: 'Copied',
+  copyError: 'We could not copy the link. Select it and copy it by hand.',
 } as const;
+
+/** "Your place: #4". The place is computed by the database from confirmed friends, so it can change between visits. */
+export function placeText(place: number): string {
+  return `Your place: #${place}`;
+}
 
 /** Body of the check-your-email notice, including the promise line. */
 export function checkEmailMessage(email: string): string {
@@ -161,6 +179,18 @@ export function interpretResendResponse(status: number, body: unknown, offline: 
 export interface ConfirmedDetails {
   device: Device;
   tracksToday: string;
+  /** Null when the function could not work out a place; the page then shows no referral block. */
+  referral: ReferralStanding | null;
+}
+
+function referralFrom(value: unknown): ReferralStanding | null {
+  const record = recordOf(value);
+  const code = referralCodeFrom(record?.code);
+  const place = record?.place;
+  const referrals = record?.referrals;
+  if (!code || typeof place !== 'number' || !Number.isInteger(place) || place < 1) return null;
+  if (typeof referrals !== 'number' || !Number.isInteger(referrals) || referrals < 0) return null;
+  return { code, place, referrals };
 }
 
 export type ConfirmPageResult =
@@ -173,7 +203,7 @@ export function interpretConfirmResponse(status: number, body: unknown): Confirm
   const record = body && typeof body === 'object' ? body as Record<string, unknown> : null;
   if (record?.result === 'confirmed') {
     const tracks = typeof record.tracksToday === 'string' ? record.tracksToday : '';
-    return { kind: 'confirmed', details: { device: isDevice(record.device) ? record.device : 'laptop', tracksToday: tracks.slice(0, TRACKS_MAX) } };
+    return { kind: 'confirmed', details: { device: isDevice(record.device) ? record.device : 'laptop', tracksToday: tracks.slice(0, TRACKS_MAX), referral: referralFrom(record.referral) } };
   }
   if (record?.result === 'expired') return { kind: 'expired' };
   if (status === 0 || status >= 500) return { kind: 'error' };
@@ -340,11 +370,20 @@ export interface JoinPayload {
   email: string;
   device: Device;
   company: string;
+  /** The code from a friend's link. Left out when there is none. */
+  ref?: string;
 }
 
 /** The body of a real join. The honeypot is sent empty; a filled one never reaches here. */
-export function payloadFrom(state: WaitlistState): JoinPayload {
-  return { action: 'join', email: normalizeEmail(state.email), device: state.device, company: '' };
+export function payloadFrom(state: WaitlistState, ref: string | null = null): JoinPayload {
+  const payload: JoinPayload = { action: 'join', email: normalizeEmail(state.email), device: state.device, company: '' };
+  const code = referralCodeFrom(ref);
+  return code ? { ...payload, ref: code } : payload;
+}
+
+/** What a confirmed person shares: the homepage with their code. */
+export function shareLink(code: string): string {
+  return referralLink(code);
 }
 
 export function confirmPayload(token: string): { action: 'confirm'; token: string } {
