@@ -4,5 +4,19 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "headers": [
+    {
+      "source": "/photoassets",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/photoassets/:path*",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ],
+  "rewrites": [
+    { "source": "/photoassets", "destination": "/photoassets/index.html" },
+    { "source": "/photoassets/", "destination": "/photoassets/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
