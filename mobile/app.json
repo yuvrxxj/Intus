@@ -10,7 +10,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "fit.intus.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "Intus reads your sleep, heart rate variability and resting heart rate from Apple Health to show them in your log. It never writes to Apple Health. Only you can see this data."
       }
     },
     "android": {
@@ -30,7 +31,7 @@
       [
         "@kingstinct/react-native-healthkit",
         {
-          "NSHealthShareUsageDescription": "Intus reads your sleep, heart rate variability and resting heart rate to show them next to the rest of your log. Only you can see them.",
+          "NSHealthShareUsageDescription": "Intus reads your sleep, heart rate variability and resting heart rate from Apple Health to show them in your log. It never writes to Apple Health. Only you can see this data.",
           "NSHealthUpdateUsageDescription": false,
           "background": false
         }
@@ -43,7 +44,9 @@
             "deploymentTarget": "16.4"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "intus"
   }
