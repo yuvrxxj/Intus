@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Platform, Text, TextInput, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LIMITS, validateSleepForm, type SleepErrors, type SleepForm, type SleepSession, type SleepValues } from '../../../src/features/sleep/model.ts';
 import { sessionMetrics } from '../../../src/features/sleep/metrics.ts';
 import { formatDuration } from '../../../src/features/sleep/time.ts';
 import { s } from '../theme/styles';
 import { Button } from '../ui/Button';
-import { blankSleepForm, deviceResolver } from './rules';
+import { ErrorNotice } from '../ui/ErrorNotice';
+import { NEXT, blankSleepForm, dateFromStamp, deviceResolver, stampFromDate } from './rules';
 
 const zoneName = (): string | null => {
   try {
@@ -15,9 +17,8 @@ const zoneName = (): string | null => {
   }
 };
 
-function splitStamp(stamp: string): [string, string] {
-  const [date, time] = stamp.split('T');
-  return [date ?? '', (time ?? '').slice(0, 5)];
+function initialDate(stamp: string): Date {
+  return dateFromStamp(stamp) ?? new Date();
 }
 
 /** A night typed by hand, checked with the same rules as the website, then saved to sleep_sessions. */
@@ -36,55 +37,54 @@ export function ManualEntry({
   onSave: (values: SleepValues) => Promise<void>;
 }) {
   const blank = blankSleepForm(today);
-  const [bedDate, bedTime] = splitStamp(blank.start);
-  const [upDate, upTime] = splitStamp(blank.end);
-  const [startDate, setStartDate] = useState(bedDate);
-  const [startTime, setStartTime] = useState(bedTime);
-  const [endDate, setEndDate] = useState(upDate);
-  const [endTime, setEndTime] = useState(upTime);
+  const [start, setStart] = useState(() => initialDate(blank.start));
+  const [end, setEnd] = useState(() => initialDate(blank.end));
   const [latency, setLatency] = useState('');
   const [awake, setAwake] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<SleepErrors>({});
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const awakeRef = useRef<TextInput>(null);
+  const notesRef = useRef<TextInput>(null);
 
   const form: SleepForm = {
-    start: `${startDate.trim()}T${startTime.trim()}`,
-    end: `${endDate.trim()}T${endTime.trim()}`,
+    start: stampFromDate(start),
+    end: stampFromDate(end),
     latency,
     awake,
     notes,
   };
-  const ctx = useMemo(
-    () => ({ nowMs, resolve: deviceResolver, tzId: zoneName(), existing, editingId: null }),
-    [nowMs, existing],
-  );
-  const preview = useMemo(() => {
-    const result = validateSleepForm(form, ctx);
-    if (!result.ok) return null;
-    const session: SleepSession = {
+  const ctx = { nowMs, resolve: deviceResolver, tzId: zoneName(), existing, editingId: null };
+  const checked = validateSleepForm(form, ctx);
+  const preview = checked.ok
+    ? sessionMetrics({
       id: 'preview',
       sourceKind: 'manual',
       sourceName: null,
       externalId: null,
-      start: Date.parse(result.value.start_at),
-      end: Date.parse(result.value.end_at),
-      startOffsetMin: result.value.start_offset_min,
-      endOffsetMin: result.value.end_offset_min,
-      tzId: result.value.tz_id,
-      latencyMin: result.value.latency_min,
-      awakeMin: result.value.awake_min,
+      start: Date.parse(checked.value.start_at),
+      end: Date.parse(checked.value.end_at),
+      startOffsetMin: checked.value.start_offset_min,
+      endOffsetMin: checked.value.end_offset_min,
+      tzId: checked.value.tz_id,
+      latencyMin: checked.value.latency_min,
+      awakeMin: checked.value.awake_min,
       stages: [],
       startIsInBed: true,
       notes: null,
       recordedAt: nowMs,
-    };
-    return { metrics: sessionMetrics(session), warnings: result.warnings };
-  }, [form, ctx, nowMs]);
+    } satisfies SleepSession)
+    : null;
 
-  function edit(set: (value: string) => void, value: string) {
+  function changeTime(set: (value: Date) => void, value: Date | undefined) {
+    if (!value) return;
+    set(value);
+    setConfirming(false);
+  }
+
+  function changeText(set: (value: string) => void, value: string) {
     set(value);
     setConfirming(false);
   }
@@ -101,12 +101,12 @@ export function ManualEntry({
       setConfirming(true);
       return;
     }
-    setFailure(null);
+    setFailure(false);
     setBusy(true);
     try {
       await onSave(result.value);
-    } catch (e) {
-      setFailure(e instanceof Error ? e.message : String(e));
+    } catch {
+      setFailure(true);
     } finally {
       setBusy(false);
     }
@@ -115,120 +115,105 @@ export function ManualEntry({
   return (
     <View style={s.card}>
       <Text style={s.label}>Add a night</Text>
-      <Text style={s.hint}>For when Apple Health is off or has nothing to read. Saved to your account, which only you can see.</Text>
-      <View style={s.row}>
-        <View style={s.field}>
-          <Text style={s.hint}>Got into bed</Text>
-          <TextInput
-            accessibilityLabel="Got into bed, date"
-            style={s.input}
-            value={startDate}
-            onChangeText={(value) => edit(setStartDate, value)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="YYYY-MM-DD"
-            inputMode="numeric"
-          />
-        </View>
-        <View style={s.field}>
-          <Text style={s.hint}>Time</Text>
-          <TextInput
-            accessibilityLabel="Got into bed, time"
-            style={s.input}
-            value={startTime}
-            onChangeText={(value) => edit(setStartTime, value)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="HH:MM"
-            inputMode="numeric"
-          />
-        </View>
-      </View>
-      {errors.start ? <Text style={s.error} accessibilityRole="alert">{errors.start}</Text> : null}
-      <View style={s.row}>
-        <View style={s.field}>
-          <Text style={s.hint}>Got up</Text>
-          <TextInput
-            accessibilityLabel="Got up, date"
-            style={s.input}
-            value={endDate}
-            onChangeText={(value) => edit(setEndDate, value)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="YYYY-MM-DD"
-            inputMode="numeric"
-          />
-        </View>
-        <View style={s.field}>
-          <Text style={s.hint}>Time</Text>
-          <TextInput
-            accessibilityLabel="Got up, time"
-            style={s.input}
-            value={endTime}
-            onChangeText={(value) => edit(setEndTime, value)}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="HH:MM"
-            inputMode="numeric"
-          />
-        </View>
-      </View>
-      {errors.end ? <Text style={s.error} accessibilityRole="alert">{errors.end}</Text> : null}
+      <Text style={s.hint}>Saved to your account, which only you can see. intus.fit reads the same nights.</Text>
+      <WhenField label="Got into bed" value={start} invalid={!!errors.start} message={errors.start} onChange={(value) => changeTime(setStart, value)} />
+      <WhenField label="Got up" value={end} invalid={!!errors.end} message={errors.end} onChange={(value) => changeTime(setEnd, value)} />
       <View style={s.field}>
         <Text style={s.hint}>Minutes to fall asleep</Text>
         <TextInput
-          accessibilityLabel="Minutes to fall asleep"
-          style={s.input}
+          accessibilityLabel="Minutes to fall asleep, optional"
+          accessibilityHint="Optional"
+          style={[s.input, errors.latency && s.inputInvalid]}
           value={latency}
-          onChangeText={(value) => edit(setLatency, value)}
+          onChangeText={(value) => changeText(setLatency, value)}
           keyboardType="number-pad"
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={() => awakeRef.current?.focus()}
           placeholder="Optional"
           maxLength={3}
         />
-        {errors.latency ? <Text style={s.error} accessibilityRole="alert">{errors.latency}</Text> : null}
+        {errors.latency ? <ErrorNotice message={errors.latency} /> : null}
       </View>
       <View style={s.field}>
         <Text style={s.hint}>Minutes awake in the night</Text>
         <TextInput
-          accessibilityLabel="Minutes awake in the night"
-          style={s.input}
+          ref={awakeRef}
+          accessibilityLabel="Minutes awake in the night, optional"
+          accessibilityHint="Optional"
+          style={[s.input, errors.awake && s.inputInvalid]}
           value={awake}
-          onChangeText={(value) => edit(setAwake, value)}
+          onChangeText={(value) => changeText(setAwake, value)}
           keyboardType="number-pad"
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={() => notesRef.current?.focus()}
           placeholder="Optional"
           maxLength={3}
         />
-        {errors.awake ? <Text style={s.error} accessibilityRole="alert">{errors.awake}</Text> : null}
+        {errors.awake ? <ErrorNotice message={errors.awake} /> : null}
       </View>
       <View style={s.field}>
         <Text style={s.hint}>Note</Text>
         <TextInput
-          accessibilityLabel="Note"
-          style={s.input}
+          ref={notesRef}
+          accessibilityLabel="Note, optional"
+          style={[s.input, errors.notes && s.inputInvalid]}
           value={notes}
-          onChangeText={(value) => edit(setNotes, value)}
+          onChangeText={(value) => changeText(setNotes, value)}
           placeholder="Optional"
           maxLength={LIMITS.notesChars}
         />
-        {errors.notes ? <Text style={s.error} accessibilityRole="alert">{errors.notes}</Text> : null}
+        {errors.notes ? <ErrorNotice message={errors.notes} /> : null}
       </View>
       {preview ? (
         <Text style={s.body} accessibilityRole="summary">
-          {preview.metrics.basis === 'bed_to_wake'
-            ? `${formatDuration(preview.metrics.tibMin)} from getting into bed to getting up.`
-            : `${formatDuration(preview.metrics.tstMin)} asleep, ${formatDuration(preview.metrics.tibMin)} in bed.`}
+          {preview.basis === 'bed_to_wake'
+            ? `${formatDuration(preview.tibMin)} from getting into bed to getting up.`
+            : `${formatDuration(preview.tstMin)} asleep, ${formatDuration(preview.tibMin)} in bed.`}
         </Text>
       ) : null}
-      {confirming && preview ? preview.warnings.map((warning) => (
-        <Text key={warning} style={s.error} accessibilityRole="alert">{warning}</Text>
+      {confirming && checked.ok ? checked.warnings.map((warning) => (
+        <Text key={warning} style={s.warning} accessibilityRole="alert">{warning}</Text>
       )) : null}
-      {failure ? <Text style={s.error} accessibilityRole="alert">Could not save: {failure}</Text> : null}
+      {failure ? <ErrorNotice message={NEXT.save} /> : null}
       <Button
-        label={busy ? 'Saving' : confirming ? 'Save anyway' : 'Save night'}
+        label={confirming ? 'Save anyway' : 'Save night'}
         tone={accent ? 'red' : 'quiet'}
         onPress={() => void submit()}
         busy={busy}
       />
+    </View>
+  );
+}
+
+function WhenField({
+  label,
+  value,
+  invalid,
+  message,
+  onChange,
+}: {
+  label: string;
+  value: Date;
+  invalid: boolean;
+  message?: string;
+  onChange: (value: Date) => void;
+}) {
+  return (
+    <View style={s.field}>
+      <Text style={s.hint}>{label}</Text>
+      <View style={[s.picker, invalid && s.inputInvalid]}>
+        <DateTimePicker
+          accessibilityLabel={label}
+          value={value}
+          mode="datetime"
+          display={Platform.OS === 'ios' ? 'compact' : 'default'}
+          themeVariant="light"
+          onChange={(_event, next) => onChange(next ?? value)}
+        />
+      </View>
+      {message ? <ErrorNotice message={message} /> : null}
     </View>
   );
 }

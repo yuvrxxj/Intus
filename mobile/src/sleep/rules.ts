@@ -17,7 +17,34 @@ export const HEALTH_SHEET = {
   reads: ['Sleep', 'Heart rate variability', 'Resting heart rate'],
   aside: 'Steps, workouts and everything else stay in Apple Health. Intus does not read them.',
   denial: 'If you turn access off, or if there is no sleep to read, you can enter nights by hand. iOS does not tell Intus which one happened.',
+  sync: 'Intus only reads Health when you tap Sync.',
 } as const;
+
+/** Shown when a sync comes back empty. Names the three switches, because iOS will not say which were refused. */
+export const HEALTH_SETTINGS_HINT =
+  'Nothing came back. If you turned access off, iOS does not tell apps. Open Settings, Health, Data Access and Devices, Intus, and turn on Sleep, Heart rate variability, and Resting heart rate.';
+
+/** What to say instead of a raw client or database message. */
+export const NEXT = {
+  load: 'Your sleep could not be loaded. Check your connection and try again.',
+  save: 'This night could not be saved. Check your connection and try again.',
+  sync: 'Apple Health could not be read. Try Sync again.',
+  remove: 'That night could not be deleted. Try again.',
+  signIn: 'Sign-in did not work. Check the email and password and try again.',
+} as const;
+
+/** How long the loading spinner waits before it says the work is still going. */
+export const SLOW_LOAD_MS = 8000;
+
+/**
+ * Font scales at or above this are the large accessibility sizes. Stats and night rows stack so a
+ * longer line is not squeezed beside a number.
+ */
+export const STACK_FONT_SCALE = 1.3;
+
+export function stacksForFontScale(fontScale: number): boolean {
+  return fontScale >= STACK_FONT_SCALE;
+}
 
 /** Same window the website uses for the averages. */
 export const SLEEP_WINDOW_DAYS = 28;
@@ -65,14 +92,20 @@ export interface NightLine {
   deleteId: string;
 }
 
+export interface ManualEntryState {
+  /** the "Add a night by hand" control. A stored Health night does not remove it. */
+  offered: true;
+  /** the form is open without a tap */
+  open: boolean;
+}
+
 export interface SleepPresentation {
   nights: Night[];
   quarantined: { when: string; reason: string }[];
   summary: PeriodSummary;
   /** false below MIN_NIGHTS: the figures stay hidden */
   showAverages: boolean;
-  /** manual entry, when Apple Health is missing on this device or has not supplied a night */
-  showManual: boolean;
+  manual: ManualEntryState;
   band: AgeBand | null;
 }
 
@@ -82,17 +115,38 @@ export function todayKey(now: Date): string {
 }
 
 /**
- * A hand-entered night is the fallback when this device has no Health store, or when none of the stored nights
- * came from Apple Health on the phone. A night that did come from Health is shown from that source.
+ * Hand entry stays offered after a Health night is already stored. The form opens on its own when this phone has
+ * no Health store, when no stored night came from Health, or when the latest sync wrote no sleep.
  */
-export function showManualEntry(sessions: readonly Pick<SleepSession, 'sourceKind'>[], healthAvailable: boolean): boolean {
-  if (!healthAvailable) return true;
-  return !sessions.some((s) => s.sourceKind === 'healthkit');
+export function showManualEntry(
+  sessions: readonly Pick<SleepSession, 'sourceKind'>[],
+  healthAvailable: boolean,
+  lastSyncNights: number | null,
+): ManualEntryState {
+  const noHealthNight = !sessions.some((s) => s.sourceKind === 'healthkit');
+  return {
+    offered: true,
+    open: !healthAvailable || lastSyncNights === 0 || noHealthNight,
+  };
 }
 
 /** The purpose sheet is first-run only, and only where Apple Health exists. */
 export function shouldOfferHealthSheet(healthAvailable: boolean, alreadyAsked: boolean): boolean {
   return healthAvailable && !alreadyAsked;
+}
+
+/** 'YYYY-MM-DDTHH:MM' from a picker value, on the phone's local clock. */
+export function stampFromDate(when: Date): string {
+  const part = (n: number) => String(n).padStart(2, '0');
+  return `${when.getFullYear()}-${part(when.getMonth() + 1)}-${part(when.getDate())}T${part(when.getHours())}:${part(when.getMinutes())}`;
+}
+
+/** The Date a stamp means on this device, or null when it is not a real moment. */
+export function dateFromStamp(stamp: string): Date | null {
+  const [date, clock] = stamp.split('T');
+  if (!date || !clock) return null;
+  const resolved = deviceResolver(date, clock.slice(0, 5));
+  return resolved ? new Date(resolved.utcMs) : null;
 }
 
 /** Bed 23:00 the evening before `today`, up at 07:00. The person overwrites both. */
@@ -179,6 +233,7 @@ export function nightLine(night: Night, band: AgeBand | null): NightLine {
     alternatives: main.alternatives.map((alt) =>
       `Also recorded by ${sourceLabel(alt)}: ${approx(formatDuration(alt.tstMin))} (${REASON_TEXT[alt.reason]}).`),
     flags: main.flags.map((flag) => FLAG_TEXT[flag]),
+    // the shared label only says where the hours sit against the published range. It is not a verdict.
     range: band ? CLASS_LABEL[classifyHours(hours, band)] : null,
     editable: main.session.sourceKind === 'manual' && main.session.members.length === 1,
     deleteId: main.session.members[0],
@@ -191,6 +246,7 @@ export function presentSleep(
   nowMs: number,
   age: number | null,
   healthAvailable: boolean,
+  lastSyncNights: number | null = null,
 ): SleepPresentation {
   const built = buildNights(sessions, { nowMs });
   const summary = summarize(built.nights, today, SLEEP_WINDOW_DAYS);
@@ -200,7 +256,7 @@ export function presentSleep(
     quarantined: built.quarantined.map((item) => ({ when: clockRange(item.session), reason: item.reason })),
     summary,
     showAverages: averageFigures(summary, band) !== null,
-    showManual: showManualEntry(sessions, healthAvailable),
+    manual: showManualEntry(sessions, healthAvailable, lastSyncNights),
     band,
   };
 }

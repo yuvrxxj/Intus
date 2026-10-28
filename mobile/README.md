@@ -39,7 +39,7 @@ Installing on a real iPhone for more than a week, and TestFlight, need the Apple
 
 ## Sleep
 
-The Sleep screen lists nights from `sleep_sessions` with the same rules as the website (`src/features/sleep`): one source per night, and averages only after 5 nights in a 28 day stretch. The first time you are signed in on a device with Apple Health, a sheet explains the three reads and then iOS shows its own permission sheet. The purpose string is `NSHealthShareUsageDescription` in `app.json` (the HealthKit plugin writes it into Info.plist on `npm run ios`). If Health is off or has no sleep, add a night by hand. That row is `source_kind = 'manual'` and the website reads it from the same table.
+The Sleep screen lists nights from `sleep_sessions` with the same rules as the website (`src/features/sleep`): one source per night, and averages only after 5 nights in a 28 day stretch. The first time you are signed in on a device with Apple Health, a sheet explains the three reads and then iOS shows its own permission sheet. The purpose string is `NSHealthShareUsageDescription` in `app.json` (the HealthKit plugin writes it into Info.plist on `npm run ios`). Add a night by hand stays on the screen after a Health night is stored. The form also opens on its own when a sync comes back with no sleep. That row is `source_kind = 'manual'` and the website reads it from the same table.
 
 ## Not done yet
 

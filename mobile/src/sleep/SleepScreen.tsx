@@ -1,6 +1,5 @@
-import type { Session } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Alert, Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import type { SleepSession, SleepValues } from '../../../src/features/sleep/model.ts';
 import { addSleep, deleteSleep, fetchProfileAge, fetchSleepSince } from '../data/sleep';
 import { askToRead, available } from '../healthkit';
@@ -8,16 +7,22 @@ import { healthAsked, markHealthAsked } from '../health/asked';
 import { s } from '../theme/styles';
 import { color } from '../theme/tokens';
 import { Button } from '../ui/Button';
+import { ErrorNotice } from '../ui/ErrorNotice';
 import { supabase } from '../supabase';
 import { lastSync, syncNow, type SyncResult } from '../sync/run';
 import { ManualEntry } from './ManualEntry';
 import { PermissionSheet } from './PermissionSheet';
 import {
+  HEALTH_SETTINGS_HINT,
+  NEXT,
   SLEEP_HISTORY_DAYS,
+  SLOW_LOAD_MS,
   averageFigures,
   nightLine,
   presentSleep,
   shouldOfferHealthSheet,
+  showManualEntry,
+  stacksForFontScale,
   todayKey,
   waitingCopy,
   type NightLine,
@@ -31,23 +36,26 @@ interface Loaded {
   sessions: SleepSession[];
   today: string;
   nowMs: number;
-  age: number | null;
   view: SleepPresentation;
 }
 
-export function SleepScreen({ session }: { session: Session }) {
+export function SleepScreen() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshProblem, setRefreshProblem] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [asked, setAsked] = useState<boolean | null>(null);
   const [last, setLast] = useState<SyncResult | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncProblem, setSyncProblem] = useState(false);
+  const [deleteProblem, setDeleteProblem] = useState(false);
   const [shown, setShown] = useState(PAGE);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [formHeld, setFormHeld] = useState(false);
   const healthOn = available();
   const request = useRef(0);
+  const { fontScale } = useWindowDimensions();
+  const stacked = stacksForFontScale(fontScale);
 
   const load = useCallback(async (initial: boolean) => {
     const id = ++request.current;
@@ -64,18 +72,13 @@ export function SleepScreen({ session }: { session: Session }) {
         age = null;
       }
       if (request.current !== id) return;
-      setLoaded({ sessions, today, nowMs, age, view: presentSleep(sessions, today, nowMs, age, healthOn) });
-      setLoadError(null);
+      setLoaded({ sessions, today, nowMs, view: presentSleep(sessions, today, nowMs, age, healthOn) });
+      setRefreshProblem(false);
       setStatus('ready');
-    } catch (e) {
+    } catch {
       if (request.current !== id) return;
-      const message = e instanceof Error ? e.message : String(e);
-      if (initial) {
-        setStatus('error');
-        setLoadError(message);
-      } else {
-        setLoadError(message);
-      }
+      if (initial) setStatus('error');
+      else setRefreshProblem(true);
     }
   }, [healthOn]);
 
@@ -104,15 +107,15 @@ export function SleepScreen({ session }: { session: Session }) {
 
   const runSync = useCallback(async () => {
     setSyncing(true);
-    setSyncError(null);
+    setSyncProblem(false);
     try {
       await askToRead();
       await markHealthAsked();
       setAsked(true);
       setLast(await syncNow());
       await load(false);
-    } catch (e) {
-      setSyncError(e instanceof Error ? e.message : String(e));
+    } catch {
+      setSyncProblem(true);
     } finally {
       setSyncing(false);
     }
@@ -122,8 +125,8 @@ export function SleepScreen({ session }: { session: Session }) {
     try {
       await markHealthAsked();
       setAsked(true);
-    } catch (e) {
-      setSyncError(e instanceof Error ? e.message : String(e));
+    } catch {
+      setSyncProblem(true);
     }
   }, []);
 
@@ -134,11 +137,12 @@ export function SleepScreen({ session }: { session: Session }) {
 
   async function remove(id: string) {
     setBusyId(id);
+    setDeleteProblem(false);
     try {
       await deleteSleep(id);
       await load(false);
-    } catch (e) {
-      setSyncError(e instanceof Error ? e.message : String(e));
+    } catch {
+      setDeleteProblem(true);
     } finally {
       setBusyId(null);
     }
@@ -146,9 +150,11 @@ export function SleepScreen({ session }: { session: Session }) {
 
   const sheet = status !== 'error' && asked !== null && shouldOfferHealthSheet(healthOn, asked);
   const view = loaded?.view;
+  const manual = loaded ? showManualEntry(loaded.sessions, healthOn, last?.nights ?? null) : null;
+  const formOpen = formHeld || (manual?.open ?? false);
   const accent = !sheet && status === 'ready';
-  const manualIsRed = accent && (view?.showManual ?? false);
-  const syncIsRed = accent && !(view?.showManual ?? true);
+  const saveIsRed = accent && formOpen;
+  const syncIsRed = accent && !formOpen;
 
   return (
     <>
@@ -159,21 +165,20 @@ export function SleepScreen({ session }: { session: Session }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.ink} />}
       >
         <Text style={s.largeTitle} accessibilityRole="header">Sleep</Text>
-        <Text style={s.hint}>{session.user.email}</Text>
 
-        {status === 'loading' ? <ActivityIndicator color={color.ink} /> : null}
+        {status === 'loading' ? <LoadingSleep /> : null}
         {status === 'error' ? (
           <View style={s.card}>
             <Text style={s.title}>Your sleep could not be loaded</Text>
-            <Text style={s.error} accessibilityRole="alert">{loadError}</Text>
+            <ErrorNotice message={NEXT.load} />
             <Button label="Try again" tone={sheet ? 'quiet' : 'red'} onPress={() => void load(true)} />
           </View>
         ) : null}
 
-        {status === 'ready' && view && loaded ? (
+        {status === 'ready' && view && loaded && manual ? (
           <>
-            <Summary view={view} />
-            {loadError ? <Text style={s.error} accessibilityRole="alert">{loadError}</Text> : null}
+            <Summary view={view} stacked={stacked} />
+            {refreshProblem ? <ErrorNotice message={NEXT.load} /> : null}
             {view.nights.length > 0 ? (
               <View style={s.card}>
                 <Text style={s.label}>Nights</Text>
@@ -183,6 +188,7 @@ export function SleepScreen({ session }: { session: Session }) {
                     key={`${night.key}-${night.main.session.id}`}
                     line={nightLine(night, view.band)}
                     first={index === 0}
+                    stacked={stacked}
                     busy={busyId === night.main.session.members[0]}
                     onDelete={(id) => void remove(id)}
                   />
@@ -192,13 +198,16 @@ export function SleepScreen({ session }: { session: Session }) {
                 ) : null}
               </View>
             ) : null}
-            {view.showManual ? (
+            {manual.offered ? (
+              <Button label="Add a night by hand" tone="quiet" onPress={() => setFormHeld(true)} />
+            ) : null}
+            {formOpen ? (
               <ManualEntry
                 key={loaded.sessions.filter((item) => item.sourceKind === 'manual').length}
                 today={loaded.today}
                 nowMs={loaded.nowMs}
                 existing={loaded.sessions}
-                accent={manualIsRed}
+                accent={saveIsRed}
                 onSave={save}
               />
             ) : null}
@@ -209,6 +218,7 @@ export function SleepScreen({ session }: { session: Session }) {
               tone={syncIsRed ? 'red' : 'quiet'}
               onSync={() => void runSync()}
             />
+            {deleteProblem ? <ErrorNotice message={NEXT.remove} /> : null}
             {view.quarantined.length > 0 ? (
               <View style={s.card}>
                 <Text style={s.label}>Set aside</Text>
@@ -221,26 +231,43 @@ export function SleepScreen({ session }: { session: Session }) {
           </>
         ) : null}
 
-        {syncError && !sheet ? <Text style={s.error} accessibilityRole="alert">{syncError}</Text> : null}
+        {syncProblem && !sheet ? <ErrorNotice message={NEXT.sync} /> : null}
         <Button label="Sign out" tone="quiet" onPress={() => void supabase.auth.signOut()} />
       </ScrollView>
-      <PermissionSheet visible={sheet} busy={syncing} error={sheet ? syncError : null} onContinue={() => void runSync()} onNotNow={() => void skipSheet()} />
+      <PermissionSheet visible={sheet} busy={syncing} problem={sheet && syncProblem} onContinue={() => void runSync()} onNotNow={() => void skipSheet()} />
     </>
   );
 }
 
-function Summary({ view }: { view: SleepPresentation }) {
+function LoadingSleep() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSlow(true), SLOW_LOAD_MS);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <View style={s.field}>
+      <ActivityIndicator
+        color={color.ink}
+        accessibilityLabel={slow ? 'Loading your sleep. Still working' : 'Loading your sleep'}
+      />
+      {slow ? <Text style={s.hint}>Still working</Text> : null}
+    </View>
+  );
+}
+
+function Summary({ view, stacked }: { view: SleepPresentation; stacked: boolean }) {
   const figures = view.showAverages ? averageFigures(view.summary, view.band) : null;
   return (
     <View style={s.card}>
       <Text style={s.label}>Last {view.summary.windowDays} days</Text>
       {figures ? (
         <>
-          <View style={s.stats}>
-            <Stat label="Time asleep" value={figures.asleep} note={figures.asleepNote} />
-            {figures.fellAsleep ? <Stat label="Usually asleep" value={figures.fellAsleep} note={figures.fellAsleepNote ?? undefined} /> : null}
-            {figures.woke ? <Stat label="Usually up" value={figures.woke} note={figures.wokeNote ?? undefined} /> : null}
-            <Stat label="Nights" value={figures.nights} note="with a record" />
+          <View style={[s.stats, stacked && s.stacked]}>
+            <Stat label="Time asleep" value={figures.asleep} note={figures.asleepNote} stacked={stacked} />
+            {figures.fellAsleep ? <Stat label="Usually asleep" value={figures.fellAsleep} note={figures.fellAsleepNote ?? undefined} stacked={stacked} /> : null}
+            {figures.woke ? <Stat label="Usually up" value={figures.woke} note={figures.wokeNote ?? undefined} stacked={stacked} /> : null}
+            <Stat label="Nights" value={figures.nights} note="with a record" stacked={stacked} />
           </View>
           <Text style={s.hint}>{figures.footnote}</Text>
         </>
@@ -251,9 +278,9 @@ function Summary({ view }: { view: SleepPresentation }) {
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+function Stat({ label, value, note, stacked }: { label: string; value: string; note?: string; stacked: boolean }) {
   return (
-    <View style={s.stat}>
+    <View style={[s.stat, stacked && s.statStacked]}>
       <Text style={s.label}>{label}</Text>
       <Text style={s.number}>{value}</Text>
       {note ? <Text style={s.hint}>{note}</Text> : null}
@@ -264,18 +291,34 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
 function NightRow({
   line,
   first,
+  stacked,
   busy,
   onDelete,
 }: {
   line: NightLine;
   first: boolean;
+  stacked: boolean;
   busy: boolean;
   onDelete: (id: string) => void;
 }) {
-  const [asking, setAsking] = useState(false);
+  function ask() {
+    const run = () => onDelete(line.deleteId);
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Delete this night', 'Keep'], cancelButtonIndex: 1, userInterfaceStyle: 'light' },
+        (index) => { if (index === 0) run(); },
+      );
+      return;
+    }
+    Alert.alert('Delete this night', undefined, [
+      { text: 'Delete this night', onPress: run },
+      { text: 'Keep', style: 'cancel' },
+    ]);
+  }
+
   return (
     <View style={[s.night, first && s.nightFirst]}>
-      <View style={s.nightTop}>
+      <View style={[s.nightTop, stacked && s.stacked]}>
         <Text style={s.body}>{line.heading}</Text>
         <Text style={s.nightDuration}>{line.duration}</Text>
       </View>
@@ -288,18 +331,7 @@ function NightRow({
       {line.alternatives.map((alt) => <Text key={alt} style={s.hint}>{alt}</Text>)}
       {line.flags.map((flag) => <Text key={flag} style={s.hint}>{flag}</Text>)}
       {line.editable ? (
-        asking ? (
-          <View style={s.row}>
-            <View style={s.field}>
-              <Button label="Delete for good" tone="quiet" busy={busy} onPress={() => onDelete(line.deleteId)} />
-            </View>
-            <View style={s.field}>
-              <Button label="Keep" tone="quiet" onPress={() => setAsking(false)} />
-            </View>
-          </View>
-        ) : (
-          <Button label="Delete" tone="quiet" onPress={() => setAsking(true)} accessibilityLabel={`Delete ${line.heading}`} />
-        )
+        <Button label="Delete" tone="quiet" busy={busy} onPress={ask} accessibilityLabel={`Delete ${line.heading}`} />
       ) : null}
     </View>
   );
@@ -338,11 +370,7 @@ function HealthCard({
       ) : (
         <Text style={s.body}>Nothing synced yet. The first sync reads the last 90 days. Later syncs re-read the last 3 days.</Text>
       )}
-      {empty ? (
-        <Text style={s.hint}>
-          Nothing came back. If you turned access off, iOS does not tell apps: open Settings, Health, Data Access and Devices, Intus, and turn the three on.
-        </Text>
-      ) : null}
+      {empty ? <Text style={s.hint}>{HEALTH_SETTINGS_HINT}</Text> : null}
       <Button label="Sync now" tone={tone} onPress={onSync} busy={busy} accessibilityLabel="Sync Apple Health now" />
     </View>
   );

@@ -39,7 +39,7 @@ export default function App() {
             {session === undefined ? (
               <View style={s.center}><ActivityIndicator color={color.ink} /></View>
             ) : session ? (
-              <SleepScreen session={session} />
+              <SleepScreen />
             ) : (
               <SignIn />
             )}

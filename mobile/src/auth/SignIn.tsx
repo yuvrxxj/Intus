@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { s } from '../theme/styles';
 import { Button } from '../ui/Button';
+import { ErrorNotice } from '../ui/ErrorNotice';
+import { NEXT } from '../sleep/rules';
 import { supabase } from '../supabase';
 
 export function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   async function submit() {
     setBusy(true);
-    setError(null);
+    setFailed(false);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
-    if (signInError) setError(signInError.message);
+    if (signInError) setFailed(true);
   }
 
   return (
@@ -41,7 +43,7 @@ export function SignIn() {
         value={password}
         onChangeText={setPassword}
       />
-      {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
+      {failed ? <ErrorNotice message={NEXT.signIn} /> : null}
       <Button label="Sign in" tone="red" onPress={() => void submit()} busy={busy} />
     </View>
   );

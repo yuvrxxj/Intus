@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { color, font } from './tokens';
+import { color, font, type } from './tokens';
 
 export const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
@@ -7,6 +7,7 @@ export const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wrap: { flex: 1, paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
   scroll: { gap: 14, paddingBottom: 24 },
+  sheetScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, gap: 14 },
   brand: { fontFamily: font.mono, fontSize: 12, letterSpacing: 2, color: color.ink, marginTop: 8 },
   card: {
     backgroundColor: color.surface,
@@ -16,16 +17,16 @@ export const s = StyleSheet.create({
     padding: 18,
     gap: 10,
   },
-  largeTitle: { fontFamily: font.bold, fontSize: 34, lineHeight: 40, color: color.ink, letterSpacing: -0.6 },
-  title: { fontFamily: font.bold, fontSize: 22, lineHeight: 28, color: color.ink, letterSpacing: -0.4 },
+  largeTitle: { fontFamily: font.heading, fontSize: type.largeTitle, color: color.ink, letterSpacing: -0.6 },
+  title: { fontFamily: font.heading, fontSize: type.title, color: color.ink, letterSpacing: -0.4 },
   label: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.ink3, textTransform: 'uppercase' },
-  body: { fontFamily: font.body, fontSize: 15, lineHeight: 21, color: color.ink },
-  hint: { fontFamily: font.body, fontSize: 13, lineHeight: 18, color: color.ink3 },
-  meta: { fontFamily: font.mono, fontSize: 12, lineHeight: 18, color: color.ink3 },
-  number: { fontFamily: font.monoBold, fontSize: 22, lineHeight: 28, color: color.ink },
-  nightDuration: { fontFamily: font.monoBold, fontSize: 18, lineHeight: 24, color: color.ink },
+  body: { fontFamily: font.body, fontSize: type.body, color: color.ink },
+  hint: { fontFamily: font.body, fontSize: 13, color: color.ink3 },
+  meta: { fontFamily: font.mono, fontSize: 12, color: color.ink3 },
+  number: { fontFamily: font.monoBold, fontSize: 22, color: color.ink },
+  nightDuration: { fontFamily: font.monoBold, fontSize: 18, color: color.ink },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: color.lineStrong,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -35,7 +36,17 @@ export const s = StyleSheet.create({
     color: color.ink,
     backgroundColor: color.paper,
   },
-  error: { fontFamily: font.medium, fontSize: 14, lineHeight: 18, color: color.ochre },
+  picker: {
+    alignSelf: 'flex-start',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    borderRadius: 10,
+    padding: 2,
+  },
+  inputInvalid: { borderColor: color.red },
+  errorNotice: { backgroundColor: color.redTint, borderRadius: 10, padding: 12, gap: 6 },
+  errorKicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red },
+  warning: { fontFamily: font.heading, fontSize: 14, color: color.ochre },
   footer: {
     fontFamily: font.mono,
     fontSize: 10,
@@ -47,9 +58,10 @@ export const s = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   field: { flex: 1, gap: 6 },
   stat: { width: '46%', minWidth: 120, gap: 2 },
+  statStacked: { width: '100%' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  stacked: { flexDirection: 'column', alignItems: 'stretch' },
   night: { borderTopWidth: 1, borderTopColor: color.line, paddingVertical: 12, gap: 4 },
   nightFirst: { borderTopWidth: 0, paddingTop: 0 },
-  link: { fontFamily: font.medium, fontSize: 14, lineHeight: 20, color: color.ink3 },
   nightTop: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
 });
