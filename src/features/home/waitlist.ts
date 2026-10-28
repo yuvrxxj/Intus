@@ -3,26 +3,48 @@
 // TODO(INT-94 follow-up): send the confirmation email with Resend (double opt-in). This file only describes the
 // promise and checks the form. Country (INT-110), campaign/UTM and analytics are later pull requests too.
 
-/** How long a confirmation link stays valid. The later email carries the raw token; the database stores only its hash. */
-export const CONFIRM_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+import {
+  CONFIRM_TOKEN_TTL_MS,
+  DEVICES,
+  EMAIL_EMPTY,
+  EMAIL_FORMAT,
+  JOIN_RATE_LIMIT,
+  JOIN_RATE_WINDOW_MS,
+  PROMISE,
+  PROMISE_CONFIRMED,
+  RESEND_COOLDOWN_MS,
+  TRACKS_MAX,
+  emailError,
+  honeypotTripped,
+  isConfirmToken,
+  isDevice,
+  newConfirmToken,
+  normalizeEmail,
+  normalizeTracks,
+  sha256Hex,
+  type Device,
+} from '../../../supabase/functions/_shared/waitlistRules.ts';
 
-/** "Send it again" may issue a new token once a minute. The form's own submit is not held to this. */
-export const RESEND_COOLDOWN_MS = 60 * 1000;
-
-/** The sentence the page, the check-your-email state, the confirmed page and the later confirm email all use. */
-export const PROMISE = "We'll email you three times: to confirm, when your place is ready, and when the app ships for your device. Nothing else.";
-
-/** Join attempts allowed from one address inside JOIN_RATE_WINDOW_MS. Enforced in the edge function. */
-export const JOIN_RATE_LIMIT = 5;
-export const JOIN_RATE_WINDOW_MS = 10 * 60 * 1000;
-
-export const DEVICES = [
-  { value: 'laptop', label: 'Laptop or desktop' },
-  { value: 'iphone', label: 'iPhone' },
-  { value: 'android', label: 'Android' },
-] as const;
-
-export type Device = (typeof DEVICES)[number]['value'];
+// The pure rules the edge function also needs live in supabase/functions/_shared/waitlistRules.ts, and are re-exported
+// here so the page and the tests keep importing from one place.
+export {
+  CONFIRM_TOKEN_TTL_MS,
+  DEVICES,
+  JOIN_RATE_LIMIT,
+  JOIN_RATE_WINDOW_MS,
+  PROMISE,
+  RESEND_COOLDOWN_MS,
+  TRACKS_MAX,
+  emailError,
+  honeypotTripped,
+  isConfirmToken,
+  isDevice,
+  newConfirmToken,
+  normalizeEmail,
+  normalizeTracks,
+  sha256Hex,
+  type Device,
+};
 
 export const WAITLIST = {
   heroKicker: 'Early access',
@@ -37,12 +59,12 @@ export const WAITLIST = {
   intro: 'We let people in in small groups.',
   promise: PROMISE,
   /** After someone has confirmed, one of the three emails has already been sent. */
-  promiseConfirmed: "We'll email you twice more: when your place is ready, and when the app ships for your device. Nothing else.",
+  promiseConfirmed: PROMISE_CONFIRMED,
   emailLabel: 'Email',
   deviceLabel: 'Where will you use Intus most?',
   button: 'Join the waitlist',
-  emailEmpty: 'Enter your email.',
-  emailFormat: 'That email looks incomplete. Check for a missing @ or dot.',
+  emailEmpty: EMAIL_EMPTY,
+  emailFormat: EMAIL_FORMAT,
   checkKicker: 'One more step',
   sendAgain: 'Send it again',
   sentAgain: 'Sent again.',
@@ -77,16 +99,6 @@ export function checkEmailMessage(email: string): string {
   return `Check your inbox. We sent a link to ${email}. Tap it to confirm your place on the list. ${PROMISE}`;
 }
 
-/** Free-text answer on the confirmed page. Optional, and never longer than this. */
-export const TRACKS_MAX = 280;
-
-/** Blank stays blank. A longer note is refused. */
-export function normalizeTracks(raw: string): { ok: true; value: string | null } | { ok: false } {
-  const value = raw.trim();
-  if (value.length > TRACKS_MAX) return { ok: false };
-  return { ok: true, value: value.length === 0 ? null : value };
-}
-
 /** An invite goes only to someone who has confirmed. Pending rows are not eligible. */
 export function isInviteEligible(status: 'pending' | 'confirmed'): boolean {
   return status === 'confirmed';
@@ -97,46 +109,9 @@ export function resendLabel(resentUntil: number | null, now: number): string {
   return resentUntil != null && now < resentUntil ? WAITLIST.sentAgain : WAITLIST.sendAgain;
 }
 
-/** A local part, an @, and a domain with a dot. Deliberately short of the full RFC. */
-const EMAIL = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-
-export function normalizeEmail(raw: string): string {
-  return raw.trim().toLowerCase();
-}
-
-/** Empty and malformed are different messages. Checked on blur and submit, not on each keystroke. */
-export function emailError(raw: string): string | null {
-  const email = normalizeEmail(raw);
-  if (email.length === 0) return WAITLIST.emailEmpty;
-  if (email.length > 254 || email.includes('..') || !EMAIL.test(email)) return WAITLIST.emailFormat;
-  return null;
-}
-
-export function isDevice(value: unknown): value is Device {
-  return DEVICES.some((d) => d.value === value);
-}
-
 /** Laptop or desktop, except on a phone-width screen, where iPhone starts selected. */
 export function defaultDevice(phoneWidth: boolean): Device {
   return phoneWidth ? 'iphone' : 'laptop';
-}
-
-export function isConfirmToken(value: unknown): value is string {
-  return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
-}
-
-/** 32 random bytes, base64url, no padding. This is what a confirmation link will carry. Never store it. */
-export function newConfirmToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/g, '');
-}
-
-export async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function confirmTokenFrom(search: string): string | null {
@@ -382,11 +357,4 @@ export function resendPayload(email: string): { action: 'resend'; email: string 
 
 export function waitlistFunctionUrl(supabaseUrl: string): string {
   return `${supabaseUrl.replace(/\/$/, '')}/functions/v1/join-waitlist`;
-}
-
-/** True when the hidden company field should be treated as a bot and answered with a fake success. */
-export function honeypotTripped(company: unknown): boolean {
-  if (company == null) return false;
-  if (typeof company !== 'string') return true;
-  return company.trim() !== '';
 }

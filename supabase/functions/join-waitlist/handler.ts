@@ -1,8 +1,8 @@
 // Public waitlist endpoint. Callers are signed out, so this checks the body itself and writes with the service role
 // (wired in index.ts). The raw confirmation token is never stored and never returned: only its SHA-256 hash is.
 //
-// TODO(INT-94 follow-up): email that token with Resend. Do not send mail from here. Country, UTM and analytics
-// are later pull requests and are not accepted on this body.
+// The raw token is emailed through Deps.sendConfirm (Resend, see mailer.ts) and nowhere else. Country, UTM and
+// analytics are later pull requests and are not accepted on this body.
 
 import {
   CONFIRM_TOKEN_TTL_MS,
@@ -18,7 +18,7 @@ import {
   normalizeTracks,
   sha256Hex,
   type Device,
-} from '../../../src/features/home/waitlist.ts';
+} from '../_shared/waitlistRules.ts';
 import { createMemoryRateLimit, type RateLimiter } from './rateLimit.ts';
 
 export interface StoredWaitlist {
@@ -46,6 +46,8 @@ export interface Deps {
   saveAnswers(id: string, device: Device, tracksToday: string | null, answeredAt: string): Promise<void>;
   /** Overridable in tests. Production draws a fresh token per insert. */
   newToken(): string;
+  /** Emails the raw token. Optional: absent or 'skipped' means nothing was sent. A throw is logged and not shown. */
+  sendConfirm?(email: string, token: string): Promise<'sent' | 'skipped'>;
   log(message: string): void;
 }
 
@@ -75,10 +77,11 @@ export function createJoinLimiter(): RateLimiter {
   return createMemoryRateLimit(JOIN_RATE_LIMIT, JOIN_RATE_WINDOW_MS);
 }
 
-async function issue(deps: Deps, now: number): Promise<{ hash: string; expiresAt: string }> {
-  // The raw token is hashed and dropped. The later email pull request is what will send it.
+async function issue(deps: Deps, now: number): Promise<{ token: string; hash: string; expiresAt: string }> {
+  // The raw token is hashed for the database. It stays in memory only long enough to email it.
   const token = deps.newToken();
   return {
+    token,
     hash: await sha256Hex(token),
     expiresAt: new Date(now + CONFIRM_TOKEN_TTL_MS).toISOString(),
   };
@@ -123,7 +126,7 @@ export function createHandler(deps: Deps) {
       if (existing?.status === 'confirmed') return reply(200, { result: 'exists' });
       if (existing) {
         // Still unconfirmed, whether or not the previous link is live: a new signup replaces the token.
-        await issueFor(deps, existing.id, device, now);
+        await issueFor(deps, existing.id, email, device, now);
         return reply(200, { result: 'pending' });
       }
       const next = await issue(deps, now);
@@ -135,11 +138,12 @@ export function createHandler(deps: Deps) {
         confirmTokenExpiresAt: next.expiresAt,
         confirmSentAt: sentAt,
       });
+      if (outcome === 'created') await mail(deps, email, next.token);
       if (outcome === 'exists') {
         const raced = await deps.findByEmail(email);
         if (raced?.status === 'confirmed') return reply(200, { result: 'exists' });
         if (raced) {
-          await issueFor(deps, raced.id, device, now);
+          await issueFor(deps, raced.id, email, device, now);
           return reply(200, { result: 'pending' });
         }
       }
@@ -151,9 +155,20 @@ export function createHandler(deps: Deps) {
   };
 }
 
-async function issueFor(deps: Deps, id: string, device: Device, now: number): Promise<void> {
+async function issueFor(deps: Deps, id: string, email: string, device: Device, now: number): Promise<void> {
   const next = await issue(deps, now);
   await deps.replaceToken(id, next.hash, next.expiresAt, device, new Date(now).toISOString());
+  await mail(deps, email, next.token);
+}
+
+/** The row is already saved, so a mail failure must not fail the request: "Send it again" is the way back. */
+async function mail(deps: Deps, email: string, token: string): Promise<void> {
+  if (!deps.sendConfirm) return;
+  try {
+    await deps.sendConfirm(email, token);
+  } catch {
+    deps.log('confirm email failed');
+  }
 }
 
 /** "Send it again": one new token a minute. Inside that minute the answer is still pending, with again: false. */
@@ -166,7 +181,7 @@ async function resend(deps: Deps, body: Record<string, unknown>, now: number, ip
     if (!existing || existing.status === 'confirmed') return reply(200, { result: existing ? 'exists' : 'pending', again: false });
     const sent = existing.confirmSentAt ? Date.parse(existing.confirmSentAt) : 0;
     if (sent > 0 && now - sent < RESEND_COOLDOWN_MS) return reply(200, { result: 'pending', again: false });
-    await issueFor(deps, existing.id, existing.device, now);
+    await issueFor(deps, existing.id, email, existing.device, now);
     return reply(200, { result: 'pending', again: true });
   } catch {
     deps.log('resend failed');
