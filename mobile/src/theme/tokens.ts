@@ -10,6 +10,8 @@ export const color = {
   ink2: '#48422F',
   ink3: '#5A5446',
   red: '#A31621',
+  /** The error notice ground. A solid tint, not a translucent red. */
+  redTint: '#F0DFDF',
   green: '#12695F',
   ochre: '#8A5A14',
   line: 'rgba(31, 19, 0, 0.12)',

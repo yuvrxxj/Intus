@@ -38,13 +38,13 @@ export const s = StyleSheet.create({
   destructive: { ...type.heading, color: color.red },
   footer: { ...type.body, color: color.ink3, textAlign: 'center', marginTop: 'auto' },
   notice: {
-    backgroundColor: 'rgba(163, 22, 33, 0.07)',
-    borderColor: 'rgba(163, 22, 33, 0.25)',
+    backgroundColor: color.redTint,
+    borderColor: color.red,
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
     gap: 4,
   },
-  kicker: { fontFamily: font.mono, fontSize: 15, letterSpacing: 1, color: color.red },
-  noticeText: { ...type.body, color: color.red },
+  kicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red },
+  noticeText: { ...type.body, color: color.ink },
 });

@@ -1,11 +1,12 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { color, font } from '../theme/tokens';
 
-/**
- * `red` is the one filled action on a screen. Disabled is never red: surface-3 fill and ink-3 text.
- * PR #48's Button takes the same `tone` and still fades a disabled red button with opacity; that
- * branch is adding this fill. Busy keeps the label and puts a spinner beside it.
- */
+const SPIN = ['|', '/', '-', '\\'] as const;
+const SPIN_DELAY_MS = 400;
+const SPIN_STEP_MS = 120;
+
+/** `red` is the one Swiss-red action on a screen. Every other button is quiet. */
 export function Button({
   label,
   onPress,
@@ -21,38 +22,58 @@ export function Button({
   tone: 'red' | 'quiet';
   accessibilityLabel?: string;
 }) {
-  const red = tone === 'red';
-  const faded = !!disabled;
-  const ink = faded ? color.ink3 : red ? color.paper : color.ink;
+  const measured = useRef(0);
+  const [locked, setLocked] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
+  const [showSpin, setShowSpin] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setLocked(null);
+      setShowSpin(false);
+      setTick(0);
+      return;
+    }
+    setLocked(measured.current > 0 ? measured.current : null);
+    const appear = setTimeout(() => setShowSpin(true), SPIN_DELAY_MS);
+    const step = setInterval(() => setTick((n) => (n + 1) % SPIN.length), SPIN_STEP_MS);
+    return () => {
+      clearTimeout(appear);
+      clearInterval(step);
+    };
+  }, [busy]);
+
+  const off = !!disabled;
+  const red = tone === 'red' && !off;
+  const ink = [styles.text, off ? styles.textDisabled : red ? styles.textOnRed : styles.textQuiet];
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: faded || !!busy, busy: !!busy }}
+      accessibilityState={{ disabled: off || !!busy, busy: !!busy }}
       onPress={onPress}
-      disabled={faded || !!busy}
-      style={[styles.base, red && !faded && styles.red, !red && !faded && styles.quiet, faded && styles.disabled]}
+      disabled={off || !!busy}
+      onLayout={(event) => {
+        if (!busy) measured.current = event.nativeEvent.layout.width;
+      }}
+      style={[styles.base, off ? styles.disabled : red ? styles.red : styles.quiet, locked != null && { width: locked }]}
     >
       <View style={styles.row}>
-        {busy ? <ActivityIndicator color={ink} /> : null}
-        <Text style={[styles.text, { color: ink }]}>{label}</Text>
+        <Text style={ink}>{label}</Text>
+        {showSpin ? <Text accessible={false} importantForAccessibility="no" style={[ink, styles.spin]}>{SPIN[tick]}</Text> : null}
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: 10,
-    minHeight: 44,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  base: { borderRadius: 10, minHeight: 44, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
   red: { backgroundColor: color.red },
   quiet: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
-  disabled: { backgroundColor: color.surface3, borderWidth: 0 },
+  disabled: { backgroundColor: color.surface3 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  text: { fontFamily: font.medium, fontSize: 15, textAlign: 'center', flexShrink: 1 },
+  text: { fontFamily: font.bold, fontSize: 16 },
+  spin: { fontFamily: font.mono, fontSize: 14, width: 12, textAlign: 'center' },
+  textOnRed: { color: color.paper },
+  textQuiet: { color: color.ink },
+  textDisabled: { color: color.ink3 },
 });
