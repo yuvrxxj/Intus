@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Reveal } from '@/components/ui/reveal';
-import { ScrollHeading } from '@/components/ui/scroll-heading';
 import { Segmented } from '@/components/ui/segmented';
 import { cn } from '@/lib/utils';
 import { currentReferral, rememberReferral } from './referral.ts';
@@ -18,7 +17,7 @@ import {
   type WaitlistState,
 } from './waitlist.ts';
 
-/** A save error: red kicker, ink sentence, solid tint. Not an all-red paragraph. */
+/** A save error: red kicker, ink sentence, solid tint. No outline. */
 export function ErrorNotice({ children }: { children: ReactNode }) {
   return (
     <div className="mt-3 rounded-[10px] bg-[#F0DFDF] px-4 py-3" role="status">
@@ -36,7 +35,7 @@ function phoneWidth(): boolean {
  * The waitlist form and its check-your-email state. The homepage section and the expired-link page both use it.
  * TODO(INT-94): country select under the row (INT-110). The confirmation email itself is the Resend pull request.
  */
-export function WaitlistForm({ className }: { className?: string }) {
+export function WaitlistForm({ className, showPromise = true }: { className?: string; showPromise?: boolean }) {
   const [state, setState] = useState<WaitlistState>(() => initialWaitlistState(phoneWidth()));
   const [now, setNow] = useState(() => Date.now());
 
@@ -184,7 +183,7 @@ export function WaitlistForm({ className }: { className?: string }) {
           onChange={(e) => dispatch({ type: 'company', value: e.target.value })}
         />
       </div>
-      <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink-3">{WAITLIST.promise}</p>
+      {showPromise && <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink-3">{WAITLIST.promise}</p>}
       <div aria-live="polite">
         {state.notice && (state.notice.tone === 'warn'
           ? <div className="notice notice-warn" role="status">{state.notice.text}</div>
@@ -199,17 +198,19 @@ export function WaitlistSection({ className }: { className?: string }) {
   return (
     <section id="waitlist" aria-labelledby="waitlist-title" className={cn('scroll-mt-20 border-t border-line-strong py-14 sm:py-16', className)}>
       <Reveal>
-        <div className="on-dots flex items-baseline gap-3">
-          <span className="font-mono text-xs text-primary">04</span>
-          <span className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">{WAITLIST.kicker}</span>
+        <div className="on-dots-panel max-w-2xl">
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-xs text-primary">04</span>
+            <span className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">{WAITLIST.kicker}</span>
+          </div>
+          <h2 id="waitlist-title" className="mt-3 font-sans text-[28px] leading-tight font-[600] tracking-[-0.02em] text-ink opacity-100 sm:text-[34px]">
+            {WAITLIST.title}
+          </h2>
+          <p className="mt-3 text-[15px] leading-relaxed font-normal text-ink-2">{WAITLIST.intro} {WAITLIST.promise}</p>
         </div>
-        <ScrollHeading id="waitlist-title" className="on-dots mt-3 text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[34px]">
-          {WAITLIST.title}
-        </ScrollHeading>
-        <p className="on-dots mt-3 max-w-2xl text-[15px] leading-relaxed font-normal text-ink-2">{WAITLIST.intro} {WAITLIST.promise}</p>
       </Reveal>
       <Reveal delay={0.05} className="mt-8 max-w-4xl">
-        <WaitlistForm />
+        <WaitlistForm showPromise={false} />
       </Reveal>
     </section>
   );

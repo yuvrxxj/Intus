@@ -62,7 +62,7 @@ export const WAITLIST = {
   headerLink: 'Waitlist',
   kicker: 'Early access',
   title: 'Join the waitlist.',
-  intro: 'We let people in in small groups.',
+  intro: 'Everyone on the list gets in at launch.',
   promise: PROMISE,
   /** After someone has confirmed, one of the three emails has already been sent. */
   promiseConfirmed: PROMISE_CONFIRMED,
@@ -321,9 +321,15 @@ export function reduceWaitlist(state: WaitlistState, event: WaitlistEvent): Wait
     case 'company':
       if (state.phase !== 'idle') return state;
       return { ...state, company: event.value };
-    case 'blur-email':
+    case 'blur-email': {
       if (state.phase !== 'idle') return state;
-      return { ...state, emailError: emailError(state.email) };
+      const error = emailError(state.email);
+      // An empty box is not an error until the person tries to join. A broken address still is.
+      if (error === WAITLIST.emailEmpty) {
+        return state.emailError === WAITLIST.emailEmpty ? state : { ...state, emailError: null };
+      }
+      return { ...state, emailError: error };
+    }
     case 'submit': {
       if (state.phase !== 'idle') return state;
       if (state.company.trim() !== '') return checkState(state);

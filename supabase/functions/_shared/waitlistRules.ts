@@ -47,7 +47,7 @@ export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-/** Empty and malformed are different messages. Checked on blur and submit, not on each keystroke. */
+/** Empty and malformed are different messages. A broken address is checked on blur and on submit. An empty box is an error only on submit, not on each keystroke. */
 export function emailError(raw: string): string | null {
   const email = normalizeEmail(raw);
   if (email.length === 0) return EMAIL_EMPTY;
