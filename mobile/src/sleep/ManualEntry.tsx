@@ -18,7 +18,8 @@ const zoneName = (): string | null => {
 };
 
 function initialDate(stamp: string): Date {
-  return dateFromStamp(stamp) ?? new Date();
+  const when = dateFromStamp(stamp) ?? new Date();
+  return when.getTime() > Date.now() ? new Date() : when;
 }
 
 /** A night typed by hand, checked with the same rules as the website, then saved to sleep_sessions. */
@@ -46,6 +47,7 @@ export function ManualEntry({
   const [failure, setFailure] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [focused, setFocused] = useState<'latency' | 'awake' | 'notes' | null>(null);
   const awakeRef = useRef<TextInput>(null);
   const notesRef = useRef<TextInput>(null);
 
@@ -123,7 +125,9 @@ export function ManualEntry({
         <TextInput
           accessibilityLabel="Minutes to fall asleep, optional"
           accessibilityHint="Optional"
-          style={[s.input, errors.latency && s.inputInvalid]}
+          style={[s.input, focused === 'latency' && s.inputFocus, errors.latency && s.inputInvalid]}
+          onFocus={() => setFocused('latency')}
+          onBlur={() => setFocused((current) => current === 'latency' ? null : current)}
           value={latency}
           onChangeText={(value) => changeText(setLatency, value)}
           keyboardType="number-pad"
@@ -141,7 +145,9 @@ export function ManualEntry({
           ref={awakeRef}
           accessibilityLabel="Minutes awake in the night, optional"
           accessibilityHint="Optional"
-          style={[s.input, errors.awake && s.inputInvalid]}
+          style={[s.input, focused === 'awake' && s.inputFocus, errors.awake && s.inputInvalid]}
+          onFocus={() => setFocused('awake')}
+          onBlur={() => setFocused((current) => current === 'awake' ? null : current)}
           value={awake}
           onChangeText={(value) => changeText(setAwake, value)}
           keyboardType="number-pad"
@@ -158,7 +164,9 @@ export function ManualEntry({
         <TextInput
           ref={notesRef}
           accessibilityLabel="Note, optional"
-          style={[s.input, errors.notes && s.inputInvalid]}
+          style={[s.input, focused === 'notes' && s.inputFocus, errors.notes && s.inputInvalid]}
+          onFocus={() => setFocused('notes')}
+          onBlur={() => setFocused((current) => current === 'notes' ? null : current)}
           value={notes}
           onChangeText={(value) => changeText(setNotes, value)}
           placeholder="Optional"
@@ -210,6 +218,7 @@ function WhenField({
           mode="datetime"
           display={Platform.OS === 'ios' ? 'compact' : 'default'}
           themeVariant="light"
+          maximumDate={new Date()}
           onChange={(_event, next) => onChange(next ?? value)}
         />
       </View>

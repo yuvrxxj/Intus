@@ -198,7 +198,7 @@ export function SleepScreen() {
                 ) : null}
               </View>
             ) : null}
-            {manual.offered ? (
+            {manual.offered && !formOpen ? (
               <Button label="Add a night by hand" tone="quiet" onPress={() => setFormHeld(true)} />
             ) : null}
             {formOpen ? (

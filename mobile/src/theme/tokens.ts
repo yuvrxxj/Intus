@@ -10,8 +10,8 @@ export const color = {
   ink2: '#48422F',
   ink3: '#5A5446',
   red: '#A31621',
-  /** a real error's ground, red at the same strength as the web notice */
-  redTint: 'rgba(163, 22, 33, 0.07)',
+  /** the error notice ground */
+  redTint: '#F0DFDF',
   green: '#12695F',
   ochre: '#8A5A14',
   line: 'rgba(31, 19, 0, 0.12)',
