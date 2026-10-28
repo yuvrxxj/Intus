@@ -6,7 +6,7 @@ import { ErrorNotice } from '../ui/ErrorNotice';
 import { NEXT } from '../sleep/rules';
 import { supabase } from '../supabase';
 
-export function SignIn() {
+export function SignIn({ deleted = false }: { deleted?: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,6 +23,9 @@ export function SignIn() {
   return (
     <View style={s.card}>
       <Text style={s.title} accessibilityRole="header">Sign in</Text>
+      {deleted ? (
+        <Text style={s.body} accessibilityLiveRegion="polite">Your account and everything saved in it have been deleted.</Text>
+      ) : null}
       <Text style={s.body}>Use the same email and password as on intus.fit. New accounts are made on the website.</Text>
       <TextInput
         accessibilityLabel="Email"

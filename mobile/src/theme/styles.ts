@@ -6,7 +6,10 @@ export const s = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wrap: { flex: 1, paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  /** Sleep sits in a padded wrap, so the scroll itself only spaces the blocks. */
   scroll: { gap: 14, paddingBottom: 24 },
+  /** Account and More sit under a navigation header, so the scroll carries its own inset. */
+  pageScroll: { flexGrow: 1, padding: 20, gap: 14 },
   sheetScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, gap: 14 },
   brand: { fontFamily: font.mono, fontSize: 12, letterSpacing: 2, color: color.ink, marginTop: 8 },
   card: {
@@ -49,6 +52,15 @@ export const s = StyleSheet.create({
   /** Label size, not body 15. Red is only this word and the field border. */
   errorKicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red, textTransform: 'uppercase' },
   noticeBody: { fontFamily: font.body, fontSize: type.body, color: color.ink },
+  /** Account's notice: the same solid tint, without the uppercase transform on the kicker. */
+  notice: {
+    backgroundColor: color.redTint,
+    borderRadius: 10,
+    padding: 12,
+    gap: 4,
+  },
+  kicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red },
+  noticeText: { fontFamily: font.body, fontSize: type.body, color: color.ink },
   warning: { fontFamily: font.heading, fontSize: 14, color: color.ochre },
   footer: {
     fontFamily: font.mono,
@@ -58,7 +70,18 @@ export const s = StyleSheet.create({
     textTransform: 'uppercase',
     textAlign: 'center',
   },
-  row: { flexDirection: 'row', gap: 10 },
+  /** The same sentence, on More, in body type and pinned to the bottom of that list. */
+  pageFooter: {
+    fontFamily: font.body,
+    fontSize: type.body,
+    color: color.ink3,
+    textAlign: 'center',
+    marginTop: 'auto',
+  },
+  phrase: { fontFamily: font.mono, color: color.ink },
+  row: { gap: 8 },
+  listRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  destructive: { fontFamily: font.heading, fontSize: type.body, color: color.red },
   field: { flex: 1, gap: 6 },
   stat: { width: '46%', minWidth: 120, gap: 2 },
   statStacked: { width: '100%' },

@@ -46,6 +46,8 @@
         }
       ],
       "expo-font",
+      "expo-sharing",
+      "expo-web-browser",
       "@react-native-community/datetimepicker"
     ],
     "scheme": "intus"
