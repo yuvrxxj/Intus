@@ -6,7 +6,7 @@ import { cardioRows, sleepRows, syncWindowStart } from './mapping';
 /** The first sync reads this far back; later ones re-read a few days so late-arriving watch data is caught. */
 export const FIRST_SYNC_DAYS = 90;
 export const RESYNC_DAYS = 3;
-const LAST_SYNC_KEY = 'intus.lastSync';
+export const LAST_SYNC_KEY = 'intus.lastSync';
 
 export interface SyncResult {
   at: string;

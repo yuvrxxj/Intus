@@ -43,7 +43,8 @@
             "deploymentTarget": "16.4"
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "intus"
   }

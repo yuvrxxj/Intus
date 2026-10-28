@@ -1,6 +1,6 @@
 # Intus for iPhone: the HealthKit sync companion
 
-A thin Expo (React Native) app on the same Supabase project as intus.fit. It does three things: sign in with your Intus account, ask Apple Health for read access, and sync. Everything else stays on the website until the phone screens are built (INT-89, INT-97).
+A thin Expo (React Native) app on the same Supabase project as intus.fit. It signs in with your Intus account, asks Apple Health for read access, syncs, and from Account can sign out, download your data, or delete the account. The daily log and the other screens stay on the website until they are built (INT-89, INT-97).
 
 What it reads, and where it goes:
 
@@ -32,6 +32,10 @@ npm run ios                   # builds the development client, installs it in th
 ## A real iPhone and TestFlight (later, paid)
 
 Installing on a real iPhone for more than a week, and TestFlight, need the Apple Developer Program (99 USD a year). Not now. When it is time: create the app in App Store Connect with the bundle id `fit.intus.app`, then `npm run build:testflight`. EAS makes the certificates and the provisioning profile with the HealthKit capability, builds, and submits. App Store review for a HealthKit app wants a privacy policy URL (INT-66) and a clear purpose string (in `app.json`).
+
+## Account
+
+The signed-in screen has an Account button. Sign out ends the session, the same way as the website. Download my data builds the same JSON file the website saves (the shared `buildExport`) and opens the iOS share sheet. Delete account asks for the email to be typed back, removes photos and uploaded lab reports, calls `delete_my_account()`, clears the keychain, async storage and the cache, then signs out. Privacy policy and terms open https://intus.fit/privacy and https://intus.fit/terms, the pages the website already serves.
 
 ## Settings
 
