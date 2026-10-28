@@ -39,8 +39,6 @@ export const s = StyleSheet.create({
   footer: { ...type.body, color: color.ink3, textAlign: 'center', marginTop: 'auto' },
   notice: {
     backgroundColor: color.redTint,
-    borderColor: color.red,
-    borderWidth: 1,
     borderRadius: 10,
     padding: 12,
     gap: 4,
