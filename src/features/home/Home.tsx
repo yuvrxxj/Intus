@@ -154,7 +154,9 @@ export function Home() {
             </h1>
             <p className="mt-6 max-w-xl text-[17px] leading-relaxed font-normal text-ink-2">{WAITLIST.heroLead}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a href="#waitlist" className={buttonClass({ variant: 'primary', size: 'lg' })}>{WAITLIST.heroButton}</a>
+              {/* Under 640px the form sits under the hero, so this button is not red or two reds share the screen. */}
+              <a href="#waitlist" className={cn(buttonClass({ variant: 'primary', size: 'lg' }), 'hidden sm:inline-flex')}>{WAITLIST.heroButton}</a>
+              <a href="#waitlist" className={cn(buttonClass({ variant: 'secondary', size: 'lg' }), 'sm:hidden')}>{WAITLIST.heroButton}</a>
             </div>
             <p className="mt-5 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">{WAITLIST.heroNote}</p>
           </div>

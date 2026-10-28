@@ -42,6 +42,8 @@ function state(over: Partial<WaitlistState> = {}): WaitlistState {
 
 test('the email promise is the agreed sentence, and it is the line used in each state', () => {
   assert.equal(WAITLIST.promise, PROMISE);
+  assert.equal(WAITLIST.promiseConfirmed, "We'll email you twice more: when your place is ready, and when the app ships for your device. Nothing else.");
+  assert.notEqual(WAITLIST.promiseConfirmed, WAITLIST.promise);
   assert.equal(WAITLIST.heroLead, "Log your day, read your bloodwork and keep your supplements in one place. Intus flags values outside the lab's range. It does not diagnose anything.");
   assert.equal(WAITLIST.footer, "Not medical advice. Intus flags values outside the lab's range and does not diagnose anything.");
   assert.equal(WAITLIST.confirmedTitle, 'You are on the list.');

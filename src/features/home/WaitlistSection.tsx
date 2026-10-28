@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Reveal } from '@/components/ui/reveal';
@@ -17,6 +17,16 @@ import {
   type WaitlistState,
 } from './waitlist.ts';
 
+/** A save error: red kicker, ink sentence, solid tint. Not an all-red paragraph. */
+export function ErrorNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-3 rounded-[10px] bg-[#F0DFDF] px-4 py-3" role="status">
+      <p className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">Error</p>
+      <div className="mt-2 text-[15px] leading-relaxed font-normal text-ink">{children}</div>
+    </div>
+  );
+}
+
 function phoneWidth(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
 }
@@ -29,8 +39,15 @@ export function WaitlistForm({ className }: { className?: string }) {
   const [state, setState] = useState<WaitlistState>(() => initialWaitlistState(phoneWidth()));
   const [now, setNow] = useState(() => Date.now());
   const emailRef = useRef<HTMLInputElement>(null);
+  const checkRef = useRef<HTMLDivElement>(null);
   const returnFocus = useRef(false);
+  const phaseRef = useRef(state.phase);
   const busy = state.phase === 'submitting';
+
+  useEffect(() => {
+    if (phaseRef.current !== 'check' && state.phase === 'check') checkRef.current?.focus();
+    phaseRef.current = state.phase;
+  }, [state.phase]);
 
   useEffect(() => {
     if (!state.resentUntil || state.resentUntil <= Date.now()) return;
@@ -79,7 +96,7 @@ export function WaitlistForm({ className }: { className?: string }) {
   if (state.phase === 'check' && state.sentTo) {
     const cooled = resendLabel(state.resentUntil, now) === WAITLIST.sentAgain;
     return (
-      <div className={cn('rounded-[10px] border border-line bg-surface-3 px-5 py-5', className)} role="status" aria-live="polite">
+      <div ref={checkRef} tabIndex={-1} className={cn('rounded-[10px] border border-line bg-surface-3 px-5 py-5 outline-none', className)} role="status" aria-live="polite">
         <div className="font-mono text-[11px] tracking-[0.08em] text-ink-2 uppercase">{WAITLIST.checkKicker}</div>
         <p className="mt-3 text-[15px] leading-relaxed font-normal text-ink">{checkEmailMessage(state.sentTo)}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -95,9 +112,9 @@ export function WaitlistForm({ className }: { className?: string }) {
             {WAITLIST.changeEmail}
           </button>
         </div>
-        {state.notice && (
-          <div className={cn('notice', state.notice.tone === 'warn' ? 'notice-warn' : 'notice-bad')} role="status">{state.notice.text}</div>
-        )}
+        {state.notice && (state.notice.tone === 'warn'
+          ? <div className="notice notice-warn" role="status">{state.notice.text}</div>
+          : <ErrorNotice>{state.notice.text}</ErrorNotice>)}
       </div>
     );
   }
@@ -115,7 +132,7 @@ export function WaitlistForm({ className }: { className?: string }) {
 
   return (
     <form className={cn('@container relative', className)} onSubmit={submit} noValidate>
-      <div className="grid gap-4 @min-[720px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_auto] @min-[720px]:items-end">
+      <div className="grid gap-4 @min-[840px]:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_auto] @min-[840px]:items-end">
         <Field id="waitlist-email" label={WAITLIST.emailLabel} error={state.emailError ?? undefined}>
           <input
             ref={emailRef}
@@ -137,7 +154,7 @@ export function WaitlistForm({ className }: { className?: string }) {
         <div className="min-w-0">
           <span id="waitlist-device-label" className="mb-1.5 block text-[13px] font-semibold text-ink-2">{WAITLIST.deviceLabel}</span>
           <Segmented<Device>
-            label={WAITLIST.deviceLabel}
+            labelledBy="waitlist-device-label"
             size="md"
             disabled={busy}
             value={state.device}
@@ -145,7 +162,7 @@ export function WaitlistForm({ className }: { className?: string }) {
             onChange={(value) => dispatch({ type: 'device', value })}
           />
         </div>
-        <Button type="submit" variant="primary" size="lg" className="w-full disabled:opacity-100 lg:w-auto" aria-busy={busy} disabled={busy}>
+        <Button type="submit" variant="primary" size="lg" className="w-full disabled:opacity-100 @min-[840px]:w-auto" aria-busy={busy} disabled={busy}>
           {WAITLIST.button}
           {busy && <span className="font-mono motion-safe:animate-pulse" aria-hidden="true">_</span>}
         </Button>
@@ -165,11 +182,9 @@ export function WaitlistForm({ className }: { className?: string }) {
       </div>
       <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink-3">{WAITLIST.promise}</p>
       <div aria-live="polite">
-        {state.notice && (
-          <div className={cn('notice', state.notice.tone === 'warn' ? 'notice-warn' : 'notice-bad')} role="status">
-            {state.notice.text}
-          </div>
-        )}
+        {state.notice && (state.notice.tone === 'warn'
+          ? <div className="notice notice-warn" role="status">{state.notice.text}</div>
+          : <ErrorNotice>{state.notice.text}</ErrorNotice>)}
       </div>
     </form>
   );
@@ -189,7 +204,7 @@ export function WaitlistSection({ className }: { className?: string }) {
         </ScrollHeading>
         <p className="on-dots mt-3 max-w-2xl text-[15px] leading-relaxed font-normal text-ink-2">{WAITLIST.intro} {WAITLIST.promise}</p>
       </Reveal>
-      <Reveal delay={0.05} className="mt-8 max-w-3xl">
+      <Reveal delay={0.05} className="mt-8 max-w-4xl">
         <WaitlistForm />
       </Reveal>
     </section>

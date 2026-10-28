@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, buttonClass } from '@/components/ui/button';
 import { Header } from './Home.tsx';
 import { CONFIRMED_PATH } from './route.ts';
-import { WaitlistForm } from './WaitlistSection.tsx';
+import { ErrorNotice, WaitlistForm } from './WaitlistSection.tsx';
 import { submitAnswers, submitConfirm } from './waitlistApi.ts';
 import {
   DEVICES,
@@ -30,6 +30,11 @@ export function ConfirmWaitlist() {
   const [sent, setSent] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const thanksRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (sent) thanksRef.current?.focus();
+  }, [sent]);
 
   useEffect(() => {
     if (!token) return;
@@ -65,10 +70,10 @@ export function ConfirmWaitlist() {
       <main className="mx-auto w-full max-w-[560px] px-4 py-10 sm:py-14">
         {phase === 'checking' && <p className="font-mono text-xs tracking-[0.06em] text-ink-3 uppercase">{WAITLIST.confirmChecking}</p>}
         {phase === 'error' && (
-          <div className="notice notice-bad" role="status">
-            <p className="text-[15px] leading-relaxed font-normal text-ink">{WAITLIST.confirmError}</p>
+          <ErrorNotice>
+            {WAITLIST.confirmError}
             <Button type="button" variant="secondary" size="md" className="mt-4" onClick={() => setAttempt((n) => n + 1)}>{WAITLIST.confirmRetry}</Button>
-          </div>
+          </ErrorNotice>
         )}
         {phase === 'expired' && (
           <>
@@ -79,7 +84,7 @@ export function ConfirmWaitlist() {
         {phase === 'confirmed' && (
           <div className="rounded-[16px] border border-line bg-surface px-4 py-5 sm:p-6">
             {sent ? (
-              <div className="notice notice-ok mt-0" role="status">
+              <div ref={thanksRef} tabIndex={-1} className="notice notice-ok mt-0 outline-none" role="status">
                 <p className="text-[15px] leading-relaxed font-normal text-ink">{WAITLIST.sentThanks}</p>
                 <p className="mt-4">
                   <a href={WAITLIST.confirmedLink} className="text-sm text-primary underline">{WAITLIST.sentBack}</a>
@@ -90,7 +95,7 @@ export function ConfirmWaitlist() {
                 <div className="notice notice-ok mt-0" role="status">
                   <div className="font-mono text-[11px] tracking-[0.08em] uppercase">{WAITLIST.confirmedKicker}</div>
                   <h1 className="mt-3 text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink">{WAITLIST.confirmedTitle}</h1>
-                  <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink">{WAITLIST.promise}</p>
+                  <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink">{WAITLIST.promiseConfirmed}</p>
                 </div>
                 <p className="mt-6 text-[15px] leading-relaxed font-normal text-ink-2">{WAITLIST.whatIntus}</p>
                 <form className="mt-8" onSubmit={send} noValidate>
@@ -99,7 +104,7 @@ export function ConfirmWaitlist() {
                   <div className="mt-5">
                     <span id="confirmed-device-label" className="mb-1.5 block text-[13px] font-semibold text-ink-2">{WAITLIST.deviceLabel}</span>
                     <Segmented<Device>
-                      label={WAITLIST.deviceLabel}
+                      labelledBy="confirmed-device-label"
                       size="md"
                       disabled={sending}
                       value={device}
@@ -121,7 +126,7 @@ export function ConfirmWaitlist() {
                       className="border-2 border-line-strong focus:border-ink"
                     />
                   </label>
-                  {saveError && <div className="notice notice-bad" role="status">{saveError}</div>}
+                  {saveError && <ErrorNotice>{saveError}</ErrorNotice>}
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Button type="submit" variant="primary" size="lg" className="disabled:opacity-100" aria-busy={sending} disabled={sending}>
                       {WAITLIST.sendAnswers}

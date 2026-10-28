@@ -36,6 +36,8 @@ export const WAITLIST = {
   title: 'Join the waitlist.',
   intro: 'We let people in in small groups.',
   promise: PROMISE,
+  /** After someone has confirmed, one of the three emails has already been sent. */
+  promiseConfirmed: "We'll email you twice more: when your place is ready, and when the app ships for your device. Nothing else.",
   emailLabel: 'Email',
   deviceLabel: 'Where will you use Intus most?',
   button: 'Join the waitlist',
