@@ -5,10 +5,13 @@ import {
   confirmPayload,
   interpretConfirmResponse,
   interpretJoinResponse,
+  interpretResendResponse,
   payloadFrom,
+  resendPayload,
   waitlistFunctionUrl,
   type ConfirmOutcome,
   type JoinOutcome,
+  type ResendOutcome,
   type WaitlistState,
 } from './waitlist.ts';
 
@@ -44,4 +47,8 @@ export function submitJoin(state: WaitlistState, fetcher: typeof fetch = fetch):
 
 export function submitConfirm(token: string, fetcher: typeof fetch = fetch): Promise<ConfirmOutcome> {
   return post(confirmPayload(token), fetcher).then((posted) => interpretConfirmResponse(posted.status, posted.body));
+}
+
+export function submitResend(email: string, fetcher: typeof fetch = fetch): Promise<ResendOutcome> {
+  return post(resendPayload(email), fetcher).then((posted) => interpretResendResponse(posted.status, posted.body, offlineNow()));
 }

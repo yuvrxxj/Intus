@@ -39,7 +39,7 @@ function WebApp() {
   // the privacy policy, terms and pricing are readable by anyone, signed in or not
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
   if (route === 'pricing') return <Pricing />;
-  if (route === 'confirm') return <ConfirmWaitlist />;
+  if (route === 'confirmed') return <ConfirmWaitlist />;
   return (
     <>
       {session.status === 'loading' && <Loading />}
@@ -61,7 +61,7 @@ function PhoneSite() {
   const route = useRoute();
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
   if (route === 'pricing') return <Pricing />;
-  if (route === 'confirm') return <ConfirmWaitlist />;
+  if (route === 'confirmed') return <ConfirmWaitlist />;
   return route === 'home' ? <Home /> : <ComingSoon />;
 }
 

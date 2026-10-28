@@ -5,9 +5,11 @@
 -- without citext (the throwaway database the migration tests run on has no citext extension). The edge function
 -- lowercases before it inserts. A@B.com and a@b.com are one address.
 --
--- status starts at pending. The later double opt-in email (not sent by this migration) carries a random token;
--- confirm_token_hash is the SHA-256 of that token, and confirm_token_expires_at is when the link stops working.
--- The raw token is never stored.
+-- status starts at pending. Only a confirmed row may later be invited. The confirmation email is not sent by
+-- this migration. confirm_token_hash is the SHA-256 of the token that email will carry, and
+-- confirm_token_expires_at is seven days after it was issued. Opening the link sets confirmed_at and clears the
+-- hash, so the same link cannot be used again. confirm_sent_at is when the token was last issued. The raw token
+-- is never stored.
 --
 -- TODO(INT-94 follow-up): Resend confirmation email. Country, campaign/UTM and analytics are later pull requests
 -- and have no columns here yet.
@@ -21,6 +23,8 @@ create table if not exists public.waitlist (
   status text not null default 'pending' check (status in ('pending', 'confirmed')),
   confirm_token_hash text,
   confirm_token_expires_at timestamptz,
+  -- When the current token was issued. The Resend pull request is what actually sends the email.
+  confirm_sent_at timestamptz,
   confirmed_at timestamptz,
   created_at timestamptz not null default now(),
   constraint waitlist_email_unique unique (email),
@@ -34,7 +38,9 @@ create table if not exists public.waitlist (
   constraint waitlist_confirmed_fields check (
     (status = 'confirmed' and confirmed_at is not null)
     or (status = 'pending' and confirmed_at is null)
-  )
+  ),
+  -- A pending row still has a live token. Confirming clears it, which is what makes a used link fail closed.
+  constraint waitlist_pending_has_token check (status <> 'pending' or confirm_token_hash is not null)
 );
 
 create unique index if not exists waitlist_confirm_token_hash_idx
@@ -49,4 +55,4 @@ revoke all on table public.waitlist from public, anon, authenticated;
 grant select, insert, update on table public.waitlist to service_role;
 
 comment on table public.waitlist is
-  'Early-access waitlist. No public read. The join-waitlist edge function is the only writer. Confirm tokens are stored as SHA-256 hashes.';
+  'Early-access waitlist. No public read. The join-waitlist edge function is the only writer. Confirm tokens are stored as SHA-256 hashes. Only status = confirmed is eligible for an invite.';

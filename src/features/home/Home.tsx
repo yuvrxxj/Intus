@@ -150,7 +150,7 @@ export function Home() {
             <h1 id="home-title" className="mt-4 max-w-2xl text-[40px] leading-[42px] font-semibold tracking-[-0.03em] text-ink sm:text-[64px] sm:leading-[1.03] sm:tracking-[-0.035em]">
               {WAITLIST.heroTitle}
             </h1>
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-2">{WAITLIST.heroLead}</p>
+            <p className="mt-6 max-w-xl text-[17px] leading-relaxed font-normal text-ink-2">{WAITLIST.heroLead}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a href="#waitlist" className={buttonClass({ variant: 'primary', size: 'lg' })}>{WAITLIST.heroButton}</a>
             </div>

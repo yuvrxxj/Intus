@@ -6,6 +6,12 @@
 /** How long a confirmation link stays valid. The later email carries the raw token; the database stores only its hash. */
 export const CONFIRM_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** "Send it again" may issue a new token once a minute. The form's own submit is not held to this. */
+export const RESEND_COOLDOWN_MS = 60 * 1000;
+
+/** The sentence the page, the check-your-email state, the confirmed page and the later confirm email all use. */
+export const PROMISE = "We'll email you three times: to confirm, when your place is ready, and when the app ships for your device. Nothing else.";
+
 /** Join attempts allowed from one address inside JOIN_RATE_WINDOW_MS. Enforced in the edge function. */
 export const JOIN_RATE_LIMIT = 5;
 export const JOIN_RATE_WINDOW_MS = 10 * 60 * 1000;
@@ -28,30 +34,43 @@ export const WAITLIST = {
   kicker: 'Early access',
   title: 'Join the waitlist.',
   intro: 'We let people in in small groups.',
-  promise: "We'll email you three times: to confirm, when your place is ready, and when the app ships for your device. Nothing else.",
+  promise: PROMISE,
   emailLabel: 'Email',
   deviceLabel: 'Where will you use Intus most?',
   button: 'Join the waitlist',
-  consent: 'Only emails about your place on the list. Unsubscribe any time.',
   emailEmpty: 'Enter your email.',
   emailFormat: 'That email looks incomplete. Check for a missing @ or dot.',
-  successKicker: 'On the list',
-  success: 'Check your inbox to confirm',
+  checkKicker: 'One more step',
+  sendAgain: 'Send it again',
+  sentAgain: 'Sent again.',
+  changeEmail: 'Wrong email? Change it',
   exists: 'This email is already on the list. Nothing else to do.',
   rateLimit: 'Too many tries. Wait a minute and try again.',
   saveError: 'We could not save that. Your email is still in the box. Try again.',
   offline: 'You look offline.',
-  expiredKicker: 'Early access',
-  expiredTitle: 'This link has expired',
-  expiredBody: 'This confirmation link is no longer valid. Join the waitlist again from the homepage.',
+  expiredBody: 'That link has expired. Enter your email again and we will send a new one.',
   confirmedKicker: 'On the list',
-  confirmedTitle: 'You are confirmed',
-  confirmedBody: 'Your email is confirmed. We will email you when your place is ready, and when the app ships for your device.',
+  confirmedBody: `You are on the list. ${PROMISE}`,
+  confirmedLink: 'intus.fit',
   confirmChecking: 'Checking the link',
   confirmError: 'We could not check that link. Try again.',
   confirmRetry: 'Try again',
-  backHome: 'Back to the homepage',
 } as const;
+
+/** Body of the check-your-email notice, including the promise line. */
+export function checkEmailMessage(email: string): string {
+  return `Check your inbox. We sent a link to ${email}. Tap it to confirm your place on the list. ${PROMISE}`;
+}
+
+/** An invite goes only to someone who has confirmed. Pending rows are not eligible. */
+export function isInviteEligible(status: 'pending' | 'confirmed'): boolean {
+  return status === 'confirmed';
+}
+
+/** The resend control reads "Sent again." until a minute has passed. */
+export function resendLabel(resentUntil: number | null, now: number): string {
+  return resentUntil != null && now < resentUntil ? WAITLIST.sentAgain : WAITLIST.sendAgain;
+}
 
 /** A local part, an @, and a domain with a dot. Deliberately short of the full RFC. */
 const EMAIL = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
@@ -101,21 +120,41 @@ export function confirmTokenFrom(search: string): string | null {
 }
 
 export type JoinOutcome =
-  | { kind: 'success' }
+  | { kind: 'pending' }
   | { kind: 'exists' }
   | { kind: 'rate_limited' }
   | { kind: 'invalid_email' }
   | { kind: 'invalid_device' }
   | { kind: 'network'; offline: boolean };
 
+export type ResendOutcome =
+  | { kind: 'sent' }
+  | { kind: 'cooled' }
+  | { kind: 'exists' }
+  | { kind: 'rate_limited' }
+  | { kind: 'network'; offline: boolean };
+
+function recordOf(body: unknown): Record<string, unknown> | null {
+  return body && typeof body === 'object' ? body as Record<string, unknown> : null;
+}
+
 export function interpretJoinResponse(status: number, body: unknown, offline: boolean): JoinOutcome {
-  const record = body && typeof body === 'object' ? body as Record<string, unknown> : null;
+  const record = recordOf(body);
   const error = record && typeof record.error === 'string' ? record.error : null;
   if (status === 429 || error === 'rate_limited') return { kind: 'rate_limited' };
   if (error === 'invalid_email') return { kind: 'invalid_email' };
   if (error === 'invalid_device') return { kind: 'invalid_device' };
-  if (record?.result === 'created') return { kind: 'success' };
+  if (record?.result === 'pending') return { kind: 'pending' };
   if (record?.result === 'exists') return { kind: 'exists' };
+  return { kind: 'network', offline };
+}
+
+export function interpretResendResponse(status: number, body: unknown, offline: boolean): ResendOutcome {
+  const record = recordOf(body);
+  const error = record && typeof record.error === 'string' ? record.error : null;
+  if (status === 429 || error === 'rate_limited') return { kind: 'rate_limited' };
+  if (record?.result === 'exists') return { kind: 'exists' };
+  if (record?.result === 'pending') return record.again === false ? { kind: 'cooled' } : { kind: 'sent' };
   return { kind: 'network', offline };
 }
 
@@ -134,20 +173,19 @@ export interface WaitlistNotice {
   text: string;
 }
 
-export interface WaitlistDone {
-  kicker: string;
-  text: string;
-}
-
 export interface WaitlistState {
   email: string;
   device: Device;
-  /** Honeypot. People never see it. A filled value is treated as success and is not saved. */
+  /** Honeypot. People never see it. A filled value is treated as the check-your-email state and is not saved. */
   company: string;
   emailError: string | null;
-  phase: 'idle' | 'submitting' | 'done';
+  phase: 'idle' | 'submitting' | 'check' | 'listed';
   notice: WaitlistNotice | null;
-  done: WaitlistDone | null;
+  /** Normalised address shown in the check-your-email notice. */
+  sentTo: string | null;
+  /** Epoch ms until which "Send it again" reads "Sent again." */
+  resentUntil: number | null;
+  resending: boolean;
 }
 
 export type WaitlistEvent =
@@ -156,7 +194,10 @@ export type WaitlistEvent =
   | { type: 'company'; value: string }
   | { type: 'blur-email' }
   | { type: 'submit' }
-  | { type: 'result'; outcome: JoinOutcome };
+  | { type: 'result'; outcome: JoinOutcome }
+  | { type: 'change-email' }
+  | { type: 'resend'; now: number }
+  | { type: 'resend-result'; outcome: ResendOutcome; now: number };
 
 export function initialWaitlistState(phoneWidth: boolean): WaitlistState {
   return {
@@ -166,38 +207,41 @@ export function initialWaitlistState(phoneWidth: boolean): WaitlistState {
     emailError: null,
     phase: 'idle',
     notice: null,
-    done: null,
+    sentTo: null,
+    resentUntil: null,
+    resending: false,
   };
 }
 
-function doneState(state: WaitlistState, text: string): WaitlistState {
+function checkState(state: WaitlistState): WaitlistState {
   return {
     ...state,
-    phase: 'done',
+    phase: 'check',
     emailError: null,
     notice: null,
-    done: { kicker: WAITLIST.successKicker, text },
+    sentTo: normalizeEmail(state.email),
+    resentUntil: null,
+    resending: false,
   };
 }
 
 function applyOutcome(state: WaitlistState, outcome: JoinOutcome): WaitlistState {
   switch (outcome.kind) {
-    case 'success':
-      return doneState(state, WAITLIST.success);
+    case 'pending':
+      return checkState(state);
     case 'exists':
-      return doneState(state, WAITLIST.exists);
+      return { ...state, phase: 'listed', emailError: null, notice: null, resending: false };
     case 'rate_limited':
-      return { ...state, phase: 'idle', notice: { tone: 'warn', text: WAITLIST.rateLimit }, done: null };
+      return { ...state, phase: 'idle', notice: { tone: 'warn', text: WAITLIST.rateLimit } };
     case 'invalid_email':
-      return { ...state, phase: 'idle', emailError: emailError(state.email) ?? WAITLIST.emailFormat, notice: null, done: null };
+      return { ...state, phase: 'idle', emailError: emailError(state.email) ?? WAITLIST.emailFormat, notice: null };
     case 'invalid_device':
-      return { ...state, phase: 'idle', notice: { tone: 'bad', text: WAITLIST.saveError }, done: null };
+      return { ...state, phase: 'idle', notice: { tone: 'bad', text: WAITLIST.saveError } };
     case 'network':
       return {
         ...state,
         phase: 'idle',
         notice: { tone: 'bad', text: outcome.offline ? `${WAITLIST.saveError} ${WAITLIST.offline}` : WAITLIST.saveError },
-        done: null,
       };
     default: {
       const _never: never = outcome;
@@ -207,7 +251,7 @@ function applyOutcome(state: WaitlistState, outcome: JoinOutcome): WaitlistState
 }
 
 /**
- * The form as data. Submit does not clear the email. A filled honeypot ends as success with nothing to send.
+ * The form as data. Submit does not clear the email. A filled honeypot ends on check-your-email with nothing to send.
  * A result is applied only while a submit is in flight, so a late reply cannot overwrite a newer edit.
  */
 export function reduceWaitlist(state: WaitlistState, event: WaitlistEvent): WaitlistState {
@@ -226,7 +270,7 @@ export function reduceWaitlist(state: WaitlistState, event: WaitlistEvent): Wait
       return { ...state, emailError: emailError(state.email) };
     case 'submit': {
       if (state.phase !== 'idle') return state;
-      if (state.company.trim() !== '') return doneState(state, WAITLIST.success);
+      if (state.company.trim() !== '') return checkState(state);
       const error = emailError(state.email);
       if (error) return { ...state, emailError: error, notice: null };
       return { ...state, phase: 'submitting', emailError: null, notice: null };
@@ -234,6 +278,30 @@ export function reduceWaitlist(state: WaitlistState, event: WaitlistEvent): Wait
     case 'result':
       if (state.phase !== 'submitting') return state;
       return applyOutcome(state, event.outcome);
+    case 'change-email':
+      if (state.phase !== 'check' && state.phase !== 'listed') return state;
+      return { ...state, phase: 'idle', notice: null, resending: false };
+    case 'resend': {
+      if (state.phase !== 'check' || state.resending) return state;
+      if (state.resentUntil != null && event.now < state.resentUntil) return state;
+      if (state.company.trim() !== '') return { ...state, resentUntil: event.now + RESEND_COOLDOWN_MS };
+      return { ...state, resending: true, notice: null };
+    }
+    case 'resend-result': {
+      if (state.phase !== 'check') return state;
+      if (event.outcome.kind === 'sent' || event.outcome.kind === 'cooled') {
+        return { ...state, resending: false, resentUntil: event.now + RESEND_COOLDOWN_MS, notice: null };
+      }
+      if (event.outcome.kind === 'exists') return { ...state, phase: 'listed', resending: false, notice: null };
+      if (event.outcome.kind === 'rate_limited') {
+        return { ...state, resending: false, notice: { tone: 'warn', text: WAITLIST.rateLimit } };
+      }
+      return {
+        ...state,
+        resending: false,
+        notice: { tone: 'bad', text: event.outcome.offline ? `${WAITLIST.saveError} ${WAITLIST.offline}` : WAITLIST.saveError },
+      };
+    }
     default: {
       const _never: never = event;
       return _never;
@@ -255,6 +323,10 @@ export function payloadFrom(state: WaitlistState): JoinPayload {
 
 export function confirmPayload(token: string): { action: 'confirm'; token: string } {
   return { action: 'confirm', token };
+}
+
+export function resendPayload(email: string): { action: 'resend'; email: string } {
+  return { action: 'resend', email: normalizeEmail(email) };
 }
 
 export function waitlistFunctionUrl(supabaseUrl: string): string {

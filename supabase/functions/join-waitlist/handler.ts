@@ -8,6 +8,7 @@ import {
   CONFIRM_TOKEN_TTL_MS,
   JOIN_RATE_LIMIT,
   JOIN_RATE_WINDOW_MS,
+  RESEND_COOLDOWN_MS,
   emailError,
   honeypotTripped,
   isConfirmToken,
@@ -22,8 +23,10 @@ import { createMemoryRateLimit, type RateLimiter } from './rateLimit.ts';
 export interface StoredWaitlist {
   id: string;
   status: 'pending' | 'confirmed';
+  device: Device;
   confirmTokenHash: string | null;
   confirmTokenExpiresAt: string | null;
+  confirmSentAt: string | null;
 }
 
 export interface Deps {
@@ -32,9 +35,10 @@ export interface Deps {
   allowJoin(ip: string, now: number): boolean;
   clientIp(req: Request): string;
   findByEmail(email: string): Promise<StoredWaitlist | null>;
-  insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string }): Promise<'created' | 'exists'>;
-  replaceToken(id: string, hash: string, expiresAt: string, device: Device): Promise<void>;
+  insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string; confirmSentAt: string }): Promise<'created' | 'exists'>;
+  replaceToken(id: string, hash: string, expiresAt: string, device: Device, sentAt: string): Promise<void>;
   findByTokenHash(hash: string): Promise<StoredWaitlist | null>;
+  /** Sets confirmed and clears the token, so the link cannot be opened twice. */
   markConfirmed(id: string, confirmedAt: string): Promise<void>;
   /** Overridable in tests. Production draws a fresh token per insert. */
   newToken(): string;
@@ -95,13 +99,14 @@ export function createHandler(deps: Deps) {
     if (!isRecord(body)) return reply(400, { error: 'bad_request' });
 
     if (body.action === 'confirm') return confirm(deps, body, now);
+    if (body.action === 'resend') return resend(deps, body, now, ip);
 
     // Missing action is a join. Anything else is refused. Joins are rate limited; confirms are not.
     if (body.action != null && body.action !== 'join') return reply(400, { error: 'bad_request' });
     if (!deps.allowJoin(ip, now)) return reply(429, { error: 'rate_limited' });
 
-    // A filled honeypot looks like success and writes nothing, so a bot learns no new trick.
-    if (honeypotTripped(body.company)) return reply(200, { result: 'created' });
+    // A filled honeypot looks like the check-your-email state and writes nothing, so a bot learns no new trick.
+    if (honeypotTripped(body.company)) return reply(200, { result: 'pending' });
 
     if (typeof body.email !== 'string' || emailError(body.email)) return reply(400, { error: 'invalid_email' });
     if (!isDevice(body.device)) return reply(400, { error: 'invalid_device' });
@@ -110,23 +115,30 @@ export function createHandler(deps: Deps) {
 
     try {
       const existing = await deps.findByEmail(email);
+      if (existing?.status === 'confirmed') return reply(200, { result: 'exists' });
       if (existing) {
-        const expires = existing.confirmTokenExpiresAt ? Date.parse(existing.confirmTokenExpiresAt) : 0;
-        const stillPending = existing.status === 'pending' && !(expires > now);
-        if (!stillPending) return reply(200, { result: 'exists' });
-        // The old link is dead and no mail has gone out for a new one yet. Mint a replacement hash.
-        const next = await issue(deps, now);
-        await deps.replaceToken(existing.id, next.hash, next.expiresAt, device);
-        return reply(200, { result: 'created' });
+        // Still unconfirmed, whether or not the previous link is live: a new signup replaces the token.
+        await issueFor(deps, existing.id, device, now);
+        return reply(200, { result: 'pending' });
       }
       const next = await issue(deps, now);
+      const sentAt = new Date(now).toISOString();
       const outcome = await deps.insert({
         email,
         device,
         confirmTokenHash: next.hash,
         confirmTokenExpiresAt: next.expiresAt,
+        confirmSentAt: sentAt,
       });
-      return reply(200, { result: outcome });
+      if (outcome === 'exists') {
+        const raced = await deps.findByEmail(email);
+        if (raced?.status === 'confirmed') return reply(200, { result: 'exists' });
+        if (raced) {
+          await issueFor(deps, raced.id, device, now);
+          return reply(200, { result: 'pending' });
+        }
+      }
+      return reply(200, { result: 'pending' });
     } catch {
       deps.log('join failed');
       return reply(500, { error: 'unavailable' });
@@ -134,12 +146,35 @@ export function createHandler(deps: Deps) {
   };
 }
 
+async function issueFor(deps: Deps, id: string, device: Device, now: number): Promise<void> {
+  const next = await issue(deps, now);
+  await deps.replaceToken(id, next.hash, next.expiresAt, device, new Date(now).toISOString());
+}
+
+/** "Send it again": one new token a minute. Inside that minute the answer is still pending, with again: false. */
+async function resend(deps: Deps, body: Record<string, unknown>, now: number, ip: string): Promise<Response> {
+  if (!deps.allowJoin(ip, now)) return reply(429, { error: 'rate_limited' });
+  if (typeof body.email !== 'string' || emailError(body.email)) return reply(400, { error: 'invalid_email' });
+  const email = normalizeEmail(body.email);
+  try {
+    const existing = await deps.findByEmail(email);
+    if (!existing || existing.status === 'confirmed') return reply(200, { result: existing ? 'exists' : 'pending', again: false });
+    const sent = existing.confirmSentAt ? Date.parse(existing.confirmSentAt) : 0;
+    if (sent > 0 && now - sent < RESEND_COOLDOWN_MS) return reply(200, { result: 'pending', again: false });
+    await issueFor(deps, existing.id, existing.device, now);
+    return reply(200, { result: 'pending', again: true });
+  } catch {
+    deps.log('resend failed');
+    return reply(500, { error: 'unavailable' });
+  }
+}
+
 async function confirm(deps: Deps, body: Record<string, unknown>, now: number): Promise<Response> {
   if (!isConfirmToken(body.token)) return reply(200, { result: 'expired' });
   try {
     const row = await deps.findByTokenHash(await sha256Hex(body.token));
-    if (!row) return reply(200, { result: 'expired' });
-    if (row.status === 'confirmed') return reply(200, { result: 'confirmed' });
+    // Missing covers an unknown token and one already used: confirming clears the hash.
+    if (!row || row.status === 'confirmed') return reply(200, { result: 'expired' });
     const expires = row.confirmTokenExpiresAt ? Date.parse(row.confirmTokenExpiresAt) : 0;
     if (!(expires > now)) return reply(200, { result: 'expired' });
     await deps.markConfirmed(row.id, new Date(now).toISOString());

@@ -9,9 +9,14 @@ import {
   emailError,
   honeypotTripped,
   initialWaitlistState,
+  RESEND_COOLDOWN_MS,
+  checkEmailMessage,
   interpretConfirmResponse,
   interpretJoinResponse,
+  interpretResendResponse,
   isConfirmToken,
+  isInviteEligible,
+  resendLabel,
   newConfirmToken,
   normalizeEmail,
   payloadFrom,
@@ -33,10 +38,13 @@ function state(over: Partial<WaitlistState> = {}): WaitlistState {
   return { ...initialWaitlistState(false), email: 'person@example.com', ...over };
 }
 
-test('the email promise and the success line are the agreed sentences', () => {
+test('the email promise is the agreed sentence, and it is the line used in each state', () => {
   assert.equal(WAITLIST.promise, PROMISE);
-  assert.equal(WAITLIST.success, 'Check your inbox to confirm');
-  assert.equal(WAITLIST.expiredTitle, 'This link has expired');
+  assert.equal(WAITLIST.confirmedBody, `You are on the list. ${PROMISE}`);
+  assert.equal(checkEmailMessage('a@b.co'), `Check your inbox. We sent a link to a@b.co. Tap it to confirm your place on the list. ${PROMISE}`);
+  assert.equal(WAITLIST.expiredBody, 'That link has expired. Enter your email again and we will send a new one.');
+  assert.equal(isInviteEligible('confirmed'), true);
+  assert.equal(isInviteEligible('pending'), false);
 });
 
 test('waitlist copy names no price, plan, open sign-up, emoji or exclamation mark', () => {
@@ -89,28 +97,45 @@ test('typing does not validate, blur and submit do, and a failure keeps the type
   assert.equal(after.phase, 'idle');
   assert.equal(after.email, 'person@example.com');
   assert.equal(after.notice?.text, WAITLIST.saveError);
-  assert.equal(after.done, null);
+  assert.equal(after.phase, 'idle');
 });
 
-test('submit sends the normalised email, and success or an existing row replaces the form', () => {
+test('a new signup shows check your email, and a confirmed address says it is already on the list', () => {
   const editing = state({ email: '  Person@Example.com ' });
   const submitting = reduceWaitlist(editing, { type: 'submit' });
   assert.equal(submitting.phase, 'submitting');
   assert.deepEqual(payloadFrom(submitting), { action: 'join', email: 'person@example.com', device: 'laptop', company: '' });
 
-  const created = reduceWaitlist(submitting, { type: 'result', outcome: { kind: 'success' } });
-  assert.equal(created.phase, 'done');
-  assert.equal(created.done?.text, WAITLIST.success);
-  assert.equal(created.email, '  Person@Example.com ');
+  const pending = reduceWaitlist(submitting, { type: 'result', outcome: { kind: 'pending' } });
+  assert.equal(pending.phase, 'check');
+  assert.equal(pending.sentTo, 'person@example.com');
+  assert.equal(checkEmailMessage(pending.sentTo ?? ''), `Check your inbox. We sent a link to person@example.com. Tap it to confirm your place on the list. ${PROMISE}`);
+  assert.equal(pending.email, '  Person@Example.com ');
 
   const exists = reduceWaitlist(submitting, { type: 'result', outcome: { kind: 'exists' } });
-  assert.equal(exists.done?.text, WAITLIST.exists);
+  assert.equal(exists.phase, 'listed');
+
+  const edited = reduceWaitlist(pending, { type: 'change-email' });
+  assert.equal(edited.phase, 'idle');
+  assert.equal(edited.email, '  Person@Example.com ');
 });
 
-test('a filled honeypot is success with nothing to send, and a rate limit or offline notice keeps the form', () => {
+test('send it again is quiet for a minute, then can be asked for once more', () => {
+  const checking = reduceWaitlist(reduceWaitlist(state(), { type: 'submit' }), { type: 'result', outcome: { kind: 'pending' } });
+  const started = reduceWaitlist(checking, { type: 'resend', now: 1_000 });
+  assert.equal(started.resending, true);
+  const sent = reduceWaitlist(started, { type: 'resend-result', outcome: { kind: 'sent' }, now: 1_000 });
+  assert.equal(resendLabel(sent.resentUntil, 1_000), WAITLIST.sentAgain);
+  assert.equal(reduceWaitlist(sent, { type: 'resend', now: 1_000 + RESEND_COOLDOWN_MS - 1 }).resending, false);
+  assert.equal(resendLabel(sent.resentUntil, 1_000 + RESEND_COOLDOWN_MS), WAITLIST.sendAgain);
+  const cooled = reduceWaitlist(started, { type: 'resend-result', outcome: { kind: 'cooled' }, now: 2_000 });
+  assert.equal(resendLabel(cooled.resentUntil, 2_000), WAITLIST.sentAgain);
+});
+
+test('a filled honeypot shows check your email with nothing to send, and a rate limit or offline notice keeps the form', () => {
   const trapped = reduceWaitlist(state({ company: 'acme' }), { type: 'submit' });
-  assert.equal(trapped.phase, 'done');
-  assert.equal(trapped.done?.text, WAITLIST.success);
+  assert.equal(trapped.phase, 'check');
+  assert.equal(trapped.sentTo, 'person@example.com');
   assert.equal(honeypotTripped('acme'), true);
   assert.equal(honeypotTripped('  '), false);
   assert.equal(honeypotTripped(1), true);
@@ -127,8 +152,10 @@ test('a filled honeypot is success with nothing to send, and a rate limit or off
 });
 
 test('join and confirm responses map onto the form states', () => {
-  assert.equal(interpretJoinResponse(200, { result: 'created' }, false).kind, 'success');
+  assert.equal(interpretJoinResponse(200, { result: 'pending' }, false).kind, 'pending');
   assert.equal(interpretJoinResponse(200, { result: 'exists' }, false).kind, 'exists');
+  assert.equal(interpretResendResponse(200, { result: 'pending', again: true }, false).kind, 'sent');
+  assert.equal(interpretResendResponse(200, { result: 'pending', again: false }, false).kind, 'cooled');
   assert.equal(interpretJoinResponse(429, { error: 'rate_limited' }, false).kind, 'rate_limited');
   assert.equal(interpretJoinResponse(400, { error: 'invalid_email' }, false).kind, 'invalid_email');
   assert.deepEqual(interpretJoinResponse(500, { error: 'unavailable' }, true), { kind: 'network', offline: true });

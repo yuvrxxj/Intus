@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHandler, createJoinLimiter, clientIpFrom, type Deps, type StoredWaitlist } from '../supabase/functions/join-waitlist/handler.ts';
-import { CONFIRM_TOKEN_TTL_MS, sha256Hex, type Device } from '../src/features/home/waitlist.ts';
+import { CONFIRM_TOKEN_TTL_MS, sha256Hex } from '../src/features/home/waitlist.ts';
 import { createMemoryRateLimit } from '../supabase/functions/join-waitlist/rateLimit.ts';
 
 const TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -9,7 +9,6 @@ const NOW = Date.parse('2026-10-28T12:00:00.000Z');
 
 interface Row extends StoredWaitlist {
   email: string;
-  device: Device;
 }
 
 function setup(over: Partial<Deps> = {}) {
@@ -35,15 +34,17 @@ function setup(over: Partial<Deps> = {}) {
         status: 'pending',
         confirmTokenHash: row.confirmTokenHash,
         confirmTokenExpiresAt: row.confirmTokenExpiresAt,
+        confirmSentAt: row.confirmSentAt,
       });
       return 'created';
     },
-    replaceToken: async (id, hash, expiresAt, device) => {
+    replaceToken: async (id, hash, expiresAt, device, sentAt) => {
       calls.replace += 1;
       for (const row of rows.values()) {
         if (row.id === id) {
           row.confirmTokenHash = hash;
           row.confirmTokenExpiresAt = expiresAt;
+          row.confirmSentAt = sentAt;
           row.device = device;
         }
       }
@@ -54,6 +55,8 @@ function setup(over: Partial<Deps> = {}) {
       for (const row of rows.values()) {
         if (row.id === id) {
           row.status = 'confirmed';
+          row.confirmTokenHash = null;
+          row.confirmTokenExpiresAt = null;
           void confirmedAt;
         }
       }
@@ -84,7 +87,7 @@ test('a valid join stores a hash and an expiry, never the raw token', async () =
   const res = await post({ email: '  Person@Example.com ', device: 'iphone', company: '' });
   assert.equal(res.status, 200);
   const body = await json(res);
-  assert.deepEqual(body, { result: 'created' });
+  assert.deepEqual(body, { result: 'pending' });
   assert.equal(JSON.stringify(body).includes(TOKEN), false);
   const row = rows.get('person@example.com');
   assert.ok(row);
@@ -93,18 +96,27 @@ test('a valid join stores a hash and an expiry, never the raw token', async () =
   assert.equal(row.confirmTokenHash, await sha256Hex(TOKEN));
   assert.equal(row.confirmTokenHash?.includes(TOKEN), false);
   assert.equal(Date.parse(row.confirmTokenExpiresAt ?? ''), NOW + CONFIRM_TOKEN_TTL_MS);
+  assert.equal(row.confirmSentAt, new Date(NOW).toISOString());
 });
 
-test('a second join while the link is live reports exists and does not replace the hash', async () => {
-  const { post, rows, calls } = setup();
+test('signing up again while unconfirmed replaces the token, and a confirmed address does not', async () => {
+  let issued = 0;
+  const tokens = [TOKEN, 'b'.repeat(43)];
+  const { post, rows, calls } = setup({ newToken: () => tokens[issued++] ?? TOKEN });
   await post({ email: 'person@example.com', device: 'laptop' });
   const first = rows.get('person@example.com')?.confirmTokenHash;
   const again = await post({ email: 'Person@Example.com', device: 'android' });
-  assert.deepEqual(await json(again), { result: 'exists' });
+  assert.deepEqual(await json(again), { result: 'pending' });
   assert.equal(calls.insert, 1);
-  assert.equal(calls.replace, 0);
-  assert.equal(rows.get('person@example.com')?.confirmTokenHash, first);
-  assert.equal(rows.get('person@example.com')?.device, 'laptop');
+  assert.equal(calls.replace, 1);
+  assert.notEqual(rows.get('person@example.com')?.confirmTokenHash, first);
+  assert.equal(rows.get('person@example.com')?.device, 'android');
+
+  rows.get('person@example.com')!.status = 'confirmed';
+  rows.get('person@example.com')!.confirmTokenHash = null;
+  const confirmed = await post({ email: 'person@example.com', device: 'laptop' });
+  assert.deepEqual(await json(confirmed), { result: 'exists' });
+  assert.equal(calls.replace, 1);
 });
 
 test('a pending row with a dead link gets a new hash and looks like a fresh join', async () => {
@@ -116,7 +128,7 @@ test('a pending row with a dead link gets a new hash and looks like a fresh join
   setNow(NOW + CONFIRM_TOKEN_TTL_MS + 1);
   const again = await post({ email: 'person@example.com', device: 'android' });
   const body = await json(again);
-  assert.deepEqual(body, { result: 'created' });
+  assert.deepEqual(body, { result: 'pending' });
   assert.equal(JSON.stringify(body).includes('b'.repeat(43)), false);
   assert.equal(calls.replace, 1);
   assert.equal(calls.insert, 1);
@@ -130,7 +142,7 @@ test('a honeypot is a fake success and writes nothing', async () => {
   for (const company of ['Acme', { name: 'Acme' }]) {
     const res = await post({ email: 'bot@example.com', device: 'laptop', company });
     assert.equal(res.status, 200);
-    assert.deepEqual(await json(res), { result: 'created' });
+    assert.deepEqual(await json(res), { result: 'pending' });
   }
   assert.equal(rows.size, 0);
   assert.equal(calls.insert, 0);
@@ -189,7 +201,25 @@ test('the client address is the first forwarded hop', () => {
   assert.equal(clientIpFrom(new Request('https://fn.test/')), 'unknown');
 });
 
-test('a live token confirms once, a repeat stays confirmed, and a dead or unknown token is expired', async () => {
+test('send it again waits a minute, then issues a new token', async () => {
+  let issued = 0;
+  const tokens = [TOKEN, 'b'.repeat(43), 'c'.repeat(43)];
+  const { post, rows, calls, setNow } = setup({ newToken: () => tokens[issued++] ?? TOKEN });
+  await post({ email: 'person@example.com', device: 'laptop' });
+  const first = rows.get('person@example.com')?.confirmTokenHash;
+  const soon = await post({ action: 'resend', email: 'person@example.com' });
+  assert.deepEqual(await json(soon), { result: 'pending', again: false });
+  assert.equal(calls.replace, 0);
+  assert.equal(rows.get('person@example.com')?.confirmTokenHash, first);
+
+  setNow(NOW + 60_000);
+  const later = await post({ action: 'resend', email: 'person@example.com' });
+  assert.deepEqual(await json(later), { result: 'pending', again: true });
+  assert.equal(calls.replace, 1);
+  assert.equal(rows.get('person@example.com')?.confirmTokenHash, await sha256Hex('b'.repeat(43)));
+});
+
+test('a live token confirms once, a used link is then expired, and a dead or unknown token is expired', async () => {
   const { post, handle, rows, calls, setNow } = setup();
   await post({ email: 'person@example.com', device: 'laptop' });
   const confirm = (token: string) => handle(new Request('https://fn.test/join-waitlist', {
@@ -204,8 +234,9 @@ test('a live token confirms once, a repeat stays confirmed, and a dead or unknow
   assert.equal(calls.confirm, 1);
 
   const again = await confirm(TOKEN);
-  assert.deepEqual(await json(again), { result: 'confirmed' });
+  assert.deepEqual(await json(again), { result: 'expired' });
   assert.equal(calls.confirm, 1);
+  assert.equal(rows.get('person@example.com')?.confirmTokenHash, null);
 
   const unknown = await confirm(`${'b'.repeat(43)}`);
   assert.deepEqual(await json(unknown), { result: 'expired' });
@@ -220,6 +251,7 @@ test('a live token confirms once, a repeat stays confirmed, and a dead or unknow
     status: 'pending',
     confirmTokenHash: await sha256Hex('c'.repeat(43)),
     confirmTokenExpiresAt: new Date(NOW - 1000).toISOString(),
+    confirmSentAt: new Date(NOW - 86_400_000).toISOString(),
   });
   const expired = await confirm('c'.repeat(43));
   assert.deepEqual(await json(expired), { result: 'expired' });

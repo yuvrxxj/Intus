@@ -1,31 +1,43 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from './Link.tsx';
-import { CONFIRM_PATH, HOME_PATH } from './route.ts';
+import { CONFIRMED_PATH, HOME_PATH } from './route.ts';
+import { WaitlistForm } from './WaitlistSection.tsx';
 import { submitConfirm } from './waitlistApi.ts';
 import { WAITLIST, confirmTokenFrom, type ConfirmOutcome } from './waitlist.ts';
 
 type Phase = 'checking' | ConfirmOutcome;
 
+const JUST_CONFIRMED = 'intus.waitlist.confirmed';
+
 /**
- * Where a confirmation link lands. No email is sent from here. A missing or unknown token, and a token past its
- * expiry, all show the same expired page. The token is taken off the address bar once it has been read.
+ * `/waitlist/confirmed`. A live token confirms the row and shows the on-the-list notice. An expired or already used
+ * token shows the expired line and the form, so the person can ask for a new link. No email is sent from here.
  */
 export function ConfirmWaitlist() {
   const [token] = useState(() => confirmTokenFrom(window.location.search));
-  const [phase, setPhase] = useState<Phase>(token ? 'checking' : 'expired');
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (token) return 'checking';
+    try {
+      return sessionStorage.getItem(JUST_CONFIRMED) === '1' ? 'confirmed' : 'expired';
+    } catch {
+      return 'expired';
+    }
+  });
   const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    if (window.location.search) window.history.replaceState(null, '', CONFIRM_PATH);
-  }, []);
 
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
     setPhase('checking');
     submitConfirm(token).then((result) => {
-      if (!cancelled) setPhase(result);
+      if (cancelled) return;
+      try {
+        if (result === 'confirmed') sessionStorage.setItem(JUST_CONFIRMED, '1');
+        else sessionStorage.removeItem(JUST_CONFIRMED);
+      } catch { /* a private window can refuse storage; the page still shows the result */ }
+      window.history.replaceState(null, '', CONFIRMED_PATH);
+      setPhase(result);
     });
     return () => { cancelled = true; };
   }, [token, attempt]);
@@ -38,28 +50,28 @@ export function ConfirmWaitlist() {
         {phase === 'confirmed' && (
           <div className="notice notice-ok mt-8" role="status">
             <div className="font-mono text-[11px] tracking-[0.08em] uppercase">{WAITLIST.confirmedKicker}</div>
-            <h1 className="mt-3 text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink">{WAITLIST.confirmedTitle}</h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-ink">{WAITLIST.confirmedBody}</p>
+            <p className="mt-3 text-[15px] leading-relaxed font-normal text-ink">{WAITLIST.confirmedBody}</p>
           </div>
         )}
+        {phase === 'confirmed' && (
+          <p className="mt-8">
+            <a href="https://intus.fit" className="text-sm text-primary underline">{WAITLIST.confirmedLink}</a>
+          </p>
+        )}
         {phase === 'expired' && (
-          <div className="notice notice-warn mt-8" role="status">
-            <div className="font-mono text-[11px] tracking-[0.08em] uppercase">{WAITLIST.expiredKicker}</div>
-            <h1 className="mt-3 text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink">{WAITLIST.expiredTitle}</h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-ink">{WAITLIST.expiredBody}</p>
-          </div>
+          <>
+            <p className="mt-8 text-[15px] leading-relaxed font-normal text-ink" role="status">{WAITLIST.expiredBody}</p>
+            <WaitlistForm className="mt-8" />
+          </>
         )}
         {phase === 'error' && (
           <div className="notice notice-bad mt-8" role="status">
-            <p className="text-[15px] leading-relaxed text-ink">{WAITLIST.confirmError}</p>
+            <p className="text-[15px] leading-relaxed font-normal text-ink">{WAITLIST.confirmError}</p>
             <Button type="button" variant="secondary" size="md" className="mt-4" onClick={() => setAttempt((n) => n + 1)}>
               {WAITLIST.confirmRetry}
             </Button>
           </div>
         )}
-        <p className="mt-8">
-          <Link to={`${HOME_PATH}#waitlist`} className="text-sm text-primary underline">{WAITLIST.backHome}</Link>
-        </p>
       </main>
     </div>
   );
