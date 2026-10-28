@@ -15,6 +15,7 @@ import {
   isDevice,
   newConfirmToken,
   normalizeEmail,
+  normalizeTracks,
   sha256Hex,
   type Device,
 } from '../../../src/features/home/waitlist.ts';
@@ -27,6 +28,8 @@ export interface StoredWaitlist {
   confirmTokenHash: string | null;
   confirmTokenExpiresAt: string | null;
   confirmSentAt: string | null;
+  tracksToday: string | null;
+  answeredAt: string | null;
 }
 
 export interface Deps {
@@ -38,8 +41,9 @@ export interface Deps {
   insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string; confirmSentAt: string }): Promise<'created' | 'exists'>;
   replaceToken(id: string, hash: string, expiresAt: string, device: Device, sentAt: string): Promise<void>;
   findByTokenHash(hash: string): Promise<StoredWaitlist | null>;
-  /** Sets confirmed and clears the token, so the link cannot be opened twice. */
+  /** Sets confirmed and keeps the token, so the same link can be opened again. */
   markConfirmed(id: string, confirmedAt: string): Promise<void>;
+  saveAnswers(id: string, device: Device, tracksToday: string | null, answeredAt: string): Promise<void>;
   /** Overridable in tests. Production draws a fresh token per insert. */
   newToken(): string;
   log(message: string): void;
@@ -99,6 +103,7 @@ export function createHandler(deps: Deps) {
     if (!isRecord(body)) return reply(400, { error: 'bad_request' });
 
     if (body.action === 'confirm') return confirm(deps, body, now);
+    if (body.action === 'answers') return answers(deps, body, now);
     if (body.action === 'resend') return resend(deps, body, now, ip);
 
     // Missing action is a join. Anything else is refused. Joins are rate limited; confirms are not.
@@ -169,18 +174,40 @@ async function resend(deps: Deps, body: Record<string, unknown>, now: number, ip
   }
 }
 
+function confirmedPayload(row: StoredWaitlist) {
+  return { result: 'confirmed', device: row.device, tracksToday: row.tracksToday ?? '', answeredAt: row.answeredAt };
+}
+
 async function confirm(deps: Deps, body: Record<string, unknown>, now: number): Promise<Response> {
   if (!isConfirmToken(body.token)) return reply(200, { result: 'expired' });
   try {
     const row = await deps.findByTokenHash(await sha256Hex(body.token));
-    // Missing covers an unknown token and one already used: confirming clears the hash.
-    if (!row || row.status === 'confirmed') return reply(200, { result: 'expired' });
+    if (!row) return reply(200, { result: 'expired' });
+    // A second open of the same link still finds the row. The hash stays so the questions can load.
+    if (row.status === 'confirmed') return reply(200, confirmedPayload(row));
     const expires = row.confirmTokenExpiresAt ? Date.parse(row.confirmTokenExpiresAt) : 0;
     if (!(expires > now)) return reply(200, { result: 'expired' });
     await deps.markConfirmed(row.id, new Date(now).toISOString());
-    return reply(200, { result: 'confirmed' });
+    return reply(200, confirmedPayload(row));
   } catch {
     deps.log('confirm failed');
+    return reply(500, { error: 'unavailable' });
+  }
+}
+
+/** Saves the optional questions onto the confirmed row the token names. Nothing is written for a public caller. */
+async function answers(deps: Deps, body: Record<string, unknown>, now: number): Promise<Response> {
+  if (!isConfirmToken(body.token)) return reply(200, { result: 'expired' });
+  const parsed = normalizeTracks(typeof body.tracksToday === 'string' ? body.tracksToday : '');
+  if (!parsed.ok) return reply(400, { error: 'too_long' });
+  try {
+    const row = await deps.findByTokenHash(await sha256Hex(body.token));
+    if (!row || row.status !== 'confirmed') return reply(200, { result: 'expired' });
+    const device = isDevice(body.device) ? body.device : row.device;
+    await deps.saveAnswers(row.id, device, parsed.value, new Date(now).toISOString());
+    return reply(200, { result: 'saved' });
+  } catch {
+    deps.log('answers failed');
     return reply(500, { error: 'unavailable' });
   }
 }

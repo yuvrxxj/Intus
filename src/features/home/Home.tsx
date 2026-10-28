@@ -56,7 +56,8 @@ function Section({ id, n, title, intro, art, className, children }: { id: string
   );
 }
 
-function Header() {
+/** `quiet` is the confirmed page: the same bar, and the waitlist link never turns red. */
+export function Header({ quiet = false }: { quiet?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [heroGone, setHeroGone] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
@@ -84,7 +85,8 @@ function Header() {
   }, []);
 
   // Red only while the hero button is gone and the form button is not on screen, so one red shows at a time.
-  const waitlistClass = buttonClass({ variant: heroGone && !formVisible ? 'primary' : 'ghost', size: 'sm' });
+  const waitlistClass = buttonClass({ variant: !quiet && heroGone && !formVisible ? 'primary' : 'ghost', size: 'sm' });
+  const sectionHref = (id: string) => quiet ? `/#${id}` : `#${id}`;
 
   return (
     <header className="sticky top-0 z-20 border-b border-line-strong bg-paper">
@@ -92,14 +94,14 @@ function Header() {
         <Link to={HOME_PATH} aria-label="Intus, back to the top"><Brand /></Link>
         <nav aria-label="Sections" className="hidden items-center gap-6 md:flex">
           {NAV.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="text-sm font-medium text-ink-2 hover:text-ink">{label}</a>
+            <a key={id} href={sectionHref(id)} className="text-sm font-medium text-ink-2 hover:text-ink">{label}</a>
           ))}
         </nav>
         <div className="flex items-center gap-2">
           <Link to={SIGN_IN_PATH} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'hidden md:inline-flex')}>Sign in</Link>
           {/* Phone widths keep this ghost, so the hero button stays the only red control. */}
-          <a href="#waitlist" className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}>{WAITLIST.headerLink}</a>
-          <a href="#waitlist" className={cn(waitlistClass, 'hidden md:inline-flex')}>{WAITLIST.headerLink}</a>
+          <a href={sectionHref('waitlist')} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}>{WAITLIST.headerLink}</a>
+          <a href={sectionHref('waitlist')} className={cn(waitlistClass, 'hidden md:inline-flex')}>{WAITLIST.headerLink}</a>
           <button
             type="button"
             className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}
@@ -115,7 +117,7 @@ function Header() {
         <div id="home-menu" className="border-t border-line-strong px-5 py-3 md:hidden">
           <nav aria-label="Sections" className="grid gap-1">
             {NAV.map(([id, label]) => (
-              <a key={id} href={`#${id}`} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>{label}</a>
+              <a key={id} href={sectionHref(id)} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>{label}</a>
             ))}
             <Link to={SIGN_IN_PATH} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>Sign in</Link>
           </nav>
@@ -231,7 +233,7 @@ export function Home() {
       <footer className="border-t border-line-strong bg-paper">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-7 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase lg:px-10">
           <span>Intus</span>
-          <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
+          <span className="normal-case tracking-normal">{WAITLIST.footer}</span>
           <span className="flex flex-wrap gap-x-4 gap-y-2">
             <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
             <a href="/pricing" className="hover:text-ink">Pricing</a>

@@ -26,9 +26,11 @@ interface Row {
   confirm_token_hash: string | null;
   confirm_token_expires_at: string | null;
   confirm_sent_at: string | null;
+  tracks_today: string | null;
+  answered_at: string | null;
 }
 
-const COLUMNS = 'id, status, device, confirm_token_hash, confirm_token_expires_at, confirm_sent_at';
+const COLUMNS = 'id, status, device, confirm_token_hash, confirm_token_expires_at, confirm_sent_at, tracks_today, answered_at';
 
 function mapRow(row: Row): StoredWaitlist {
   return {
@@ -38,6 +40,8 @@ function mapRow(row: Row): StoredWaitlist {
     confirmTokenHash: row.confirm_token_hash,
     confirmTokenExpiresAt: row.confirm_token_expires_at,
     confirmSentAt: row.confirm_sent_at,
+    tracksToday: row.tracks_today,
+    answeredAt: row.answered_at,
   };
 }
 
@@ -83,9 +87,15 @@ Deno.serve(createHandler({
     const { error } = await admin.from('waitlist').update({
       status: 'confirmed',
       confirmed_at: confirmedAt,
-      confirm_token_hash: null,
-      confirm_token_expires_at: null,
     }).eq('id', id).eq('status', 'pending');
     if (error) throw new Error('confirm failed');
+  },
+  saveAnswers: async (id, device, tracksToday, answeredAt) => {
+    const { error } = await admin.from('waitlist').update({
+      device,
+      tracks_today: tracksToday,
+      answered_at: answeredAt,
+    }).eq('id', id).eq('status', 'confirmed');
+    if (error) throw new Error('answers failed');
   },
 }));

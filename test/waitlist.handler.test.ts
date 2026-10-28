@@ -35,6 +35,8 @@ function setup(over: Partial<Deps> = {}) {
         confirmTokenHash: row.confirmTokenHash,
         confirmTokenExpiresAt: row.confirmTokenExpiresAt,
         confirmSentAt: row.confirmSentAt,
+        tracksToday: null,
+        answeredAt: null,
       });
       return 'created';
     },
@@ -50,13 +52,20 @@ function setup(over: Partial<Deps> = {}) {
       }
     },
     findByTokenHash: async (hash) => [...rows.values()].find((row) => row.confirmTokenHash === hash) ?? null,
+    saveAnswers: async (id, device, tracksToday, answeredAt) => {
+      for (const row of rows.values()) {
+        if (row.id === id) {
+          row.device = device;
+          row.tracksToday = tracksToday;
+          row.answeredAt = answeredAt;
+        }
+      }
+    },
     markConfirmed: async (id, confirmedAt) => {
       calls.confirm += 1;
       for (const row of rows.values()) {
         if (row.id === id) {
           row.status = 'confirmed';
-          row.confirmTokenHash = null;
-          row.confirmTokenExpiresAt = null;
           void confirmedAt;
         }
       }
@@ -219,7 +228,7 @@ test('send it again waits a minute, then issues a new token', async () => {
   assert.equal(rows.get('person@example.com')?.confirmTokenHash, await sha256Hex('b'.repeat(43)));
 });
 
-test('a live token confirms once, a used link is then expired, and a dead or unknown token is expired', async () => {
+test('a live token confirms once, a second open returns the saved row, and a dead or unknown token is expired', async () => {
   const { post, handle, rows, calls, setNow } = setup();
   await post({ email: 'person@example.com', device: 'laptop' });
   const confirm = (token: string) => handle(new Request('https://fn.test/join-waitlist', {
@@ -229,14 +238,19 @@ test('a live token confirms once, a used link is then expired, and a dead or unk
   }));
 
   const ok = await confirm(TOKEN);
-  assert.deepEqual(await json(ok), { result: 'confirmed' });
+  const first = await json(ok);
+  assert.equal(first.result, 'confirmed');
+  assert.equal(first.device, 'laptop');
+  assert.equal(first.tracksToday, '');
   assert.equal(rows.get('person@example.com')?.status, 'confirmed');
   assert.equal(calls.confirm, 1);
 
   const again = await confirm(TOKEN);
-  assert.deepEqual(await json(again), { result: 'expired' });
+  const second = await json(again);
+  assert.equal(second.result, 'confirmed');
+  assert.equal(second.device, 'laptop');
   assert.equal(calls.confirm, 1);
-  assert.equal(rows.get('person@example.com')?.confirmTokenHash, null);
+  assert.equal(rows.get('person@example.com')?.confirmTokenHash, await sha256Hex(TOKEN));
 
   const unknown = await confirm(`${'b'.repeat(43)}`);
   assert.deepEqual(await json(unknown), { result: 'expired' });
@@ -252,10 +266,38 @@ test('a live token confirms once, a used link is then expired, and a dead or unk
     confirmTokenHash: await sha256Hex('c'.repeat(43)),
     confirmTokenExpiresAt: new Date(NOW - 1000).toISOString(),
     confirmSentAt: new Date(NOW - 86_400_000).toISOString(),
+    tracksToday: null,
+    answeredAt: null,
   });
   const expired = await confirm('c'.repeat(43));
   assert.deepEqual(await json(expired), { result: 'expired' });
   assert.equal(rows.get('late@example.com')?.status, 'pending');
+});
+
+test('answers are saved on the confirmed row, and a long note or a dead token is refused', async () => {
+  const { post, handle, rows } = setup();
+  await post({ email: 'person@example.com', device: 'laptop' });
+  const send = (body: unknown) => handle(new Request('https://fn.test/join-waitlist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }));
+  await send({ action: 'confirm', token: TOKEN });
+  const saved = await send({ action: 'answers', token: TOKEN, device: 'iphone', tracksToday: '  sleep on a watch  ' });
+  assert.equal((await json(saved)).result, 'saved');
+  assert.equal(rows.get('person@example.com')?.device, 'iphone');
+  assert.equal(rows.get('person@example.com')?.tracksToday, 'sleep on a watch');
+  assert.ok(rows.get('person@example.com')?.answeredAt);
+
+  const blank = await send({ action: 'answers', token: TOKEN, device: 'android', tracksToday: '   ' });
+  assert.equal((await json(blank)).result, 'saved');
+  assert.equal(rows.get('person@example.com')?.tracksToday, null);
+  assert.equal(rows.get('person@example.com')?.device, 'android');
+
+  const long = await send({ action: 'answers', token: TOKEN, device: 'laptop', tracksToday: 'x'.repeat(281) });
+  assert.equal(long.status, 400);
+  const dead = await send({ action: 'answers', token: 'b'.repeat(43), device: 'laptop', tracksToday: 'steps' });
+  assert.equal((await json(dead)).result, 'expired');
 });
 
 test('a database failure becomes an unavailable error and does not echo the address', async () => {

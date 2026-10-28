@@ -31,7 +31,7 @@ const count = async (db, sql) => Number((await db.query(sql)).rows[0].n);
 test('the waitlist table keeps a hashed confirm token and a pending or confirmed status', async () => {
   const db = await database();
   const columns = (await db.query(`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'waitlist' order by 1`)).rows.map((row) => row.column_name);
-  for (const name of ['id', 'email', 'device', 'status', 'confirm_token_hash', 'confirm_token_expires_at', 'confirm_sent_at', 'confirmed_at', 'created_at']) {
+  for (const name of ['id', 'email', 'device', 'status', 'confirm_token_hash', 'confirm_token_expires_at', 'confirm_sent_at', 'confirmed_at', 'tracks_today', 'answered_at', 'created_at']) {
     assert.ok(columns.includes(name), name);
   }
   assert.equal(await count(db, `select count(*) as n from information_schema.columns where table_schema = 'public' and table_name = 'waitlist' and column_name = 'user_id'`), 0);
@@ -65,8 +65,12 @@ test('the waitlist table keeps a hashed confirm token and a pending or confirmed
     () => db.exec(`insert into public.waitlist (email, device) values ('fifth@example.com', 'laptop')`),
     /check/,
   );
-  await db.exec(`update public.waitlist set status = 'confirmed', confirmed_at = now(), confirm_token_hash = null, confirm_token_expires_at = null where email = 'person@example.com'`);
-  assert.equal((await db.query(`select status from public.waitlist where email = 'person@example.com'`)).rows[0].status, 'confirmed');
+  await db.exec(`update public.waitlist set status = 'confirmed', confirmed_at = now(), tracks_today = '${'n'.repeat(280)}', answered_at = now() where email = 'person@example.com'`);
+  assert.equal((await db.query(`select status, char_length(tracks_today) as n from public.waitlist where email = 'person@example.com'`)).rows[0].n, 280);
+  await assert.rejects(
+    () => db.exec(`update public.waitlist set tracks_today = '${'n'.repeat(281)}' where email = 'person@example.com'`),
+    /check/,
+  );
 });
 
 test('row level security is on and the public roles cannot read or insert', async () => {

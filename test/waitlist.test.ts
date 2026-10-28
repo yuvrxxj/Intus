@@ -18,6 +18,8 @@ import {
   isInviteEligible,
   resendLabel,
   newConfirmToken,
+  TRACKS_MAX,
+  normalizeTracks,
   normalizeEmail,
   payloadFrom,
   reduceWaitlist,
@@ -40,7 +42,10 @@ function state(over: Partial<WaitlistState> = {}): WaitlistState {
 
 test('the email promise is the agreed sentence, and it is the line used in each state', () => {
   assert.equal(WAITLIST.promise, PROMISE);
-  assert.equal(WAITLIST.confirmedBody, `You are on the list. ${PROMISE}`);
+  assert.equal(WAITLIST.heroLead, "Log your day, read your bloodwork and keep your supplements in one place. Intus flags values outside the lab's range. It does not diagnose anything.");
+  assert.equal(WAITLIST.footer, "Not medical advice. Intus flags values outside the lab's range and does not diagnose anything.");
+  assert.equal(WAITLIST.confirmedTitle, 'You are on the list.');
+  assert.equal(WAITLIST.whatIntus.includes('does not diagnose anything'), true);
   assert.equal(checkEmailMessage('a@b.co'), `Check your inbox. We sent a link to a@b.co. Tap it to confirm your place on the list. ${PROMISE}`);
   assert.equal(WAITLIST.expiredBody, 'That link has expired. Enter your email again and we will send a new one.');
   assert.equal(isInviteEligible('confirmed'), true);
@@ -160,10 +165,13 @@ test('join and confirm responses map onto the form states', () => {
   assert.equal(interpretJoinResponse(400, { error: 'invalid_email' }, false).kind, 'invalid_email');
   assert.deepEqual(interpretJoinResponse(500, { error: 'unavailable' }, true), { kind: 'network', offline: true });
   assert.deepEqual(interpretJoinResponse(0, null, false), { kind: 'network', offline: false });
-  assert.equal(interpretConfirmResponse(200, { result: 'confirmed' }), 'confirmed');
-  assert.equal(interpretConfirmResponse(200, { result: 'expired' }), 'expired');
-  assert.equal(interpretConfirmResponse(500, null), 'error');
-  assert.equal(interpretConfirmResponse(404, { error: 'nope' }), 'expired');
+  assert.deepEqual(interpretConfirmResponse(200, { result: 'confirmed', device: 'iphone', tracksToday: 'sleep' }), { kind: 'confirmed', details: { device: 'iphone', tracksToday: 'sleep' } });
+  assert.deepEqual(interpretConfirmResponse(200, { result: 'expired' }), { kind: 'expired' });
+  assert.deepEqual(interpretConfirmResponse(500, null), { kind: 'error' });
+  assert.deepEqual(interpretConfirmResponse(404, { error: 'nope' }), { kind: 'expired' });
+  assert.deepEqual(normalizeTracks('  sleep  '), { ok: true, value: 'sleep' });
+  assert.deepEqual(normalizeTracks('   '), { ok: true, value: null });
+  assert.deepEqual(normalizeTracks('x'.repeat(TRACKS_MAX + 1)), { ok: false });
 });
 
 test('a confirmation token is 32 bytes of base64url, and only that shape is read from a link', async () => {

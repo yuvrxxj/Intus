@@ -7,9 +7,9 @@
 --
 -- status starts at pending. Only a confirmed row may later be invited. The confirmation email is not sent by
 -- this migration. confirm_token_hash is the SHA-256 of the token that email will carry, and
--- confirm_token_expires_at is seven days after it was issued. Opening the link sets confirmed_at and clears the
--- hash, so the same link cannot be used again. confirm_sent_at is when the token was last issued. The raw token
--- is never stored.
+-- confirm_token_expires_at is seven days after it was issued. Opening the link sets confirmed_at and keeps the
+-- hash, so the same link can be opened again to see or change the optional answers. confirm_sent_at is when the
+-- token was last issued. tracks_today and answered_at are those answers. The raw token is never stored.
 --
 -- TODO(INT-94 follow-up): Resend confirmation email. Country, campaign/UTM and analytics are later pull requests
 -- and have no columns here yet.
@@ -26,6 +26,8 @@ create table if not exists public.waitlist (
   -- When the current token was issued. The Resend pull request is what actually sends the email.
   confirm_sent_at timestamptz,
   confirmed_at timestamptz,
+  tracks_today text,
+  answered_at timestamptz,
   created_at timestamptz not null default now(),
   constraint waitlist_email_unique unique (email),
   constraint waitlist_email_lower check (email = lower(email)),
@@ -39,8 +41,9 @@ create table if not exists public.waitlist (
     (status = 'confirmed' and confirmed_at is not null)
     or (status = 'pending' and confirmed_at is null)
   ),
-  -- A pending row still has a live token. Confirming clears it, which is what makes a used link fail closed.
-  constraint waitlist_pending_has_token check (status <> 'pending' or confirm_token_hash is not null)
+  -- A pending row still has a live token. Confirming keeps it, so the same link can open the page again.
+  constraint waitlist_pending_has_token check (status <> 'pending' or confirm_token_hash is not null),
+  constraint waitlist_tracks_today_length check (tracks_today is null or char_length(tracks_today) <= 280)
 );
 
 create unique index if not exists waitlist_confirm_token_hash_idx

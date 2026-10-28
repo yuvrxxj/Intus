@@ -27,7 +27,8 @@ export type Device = (typeof DEVICES)[number]['value'];
 export const WAITLIST = {
   heroKicker: 'Early access',
   heroTitle: 'Your health, in plain numbers.',
-  heroLead: 'Log your day, read your bloodwork and keep your supplements in one place. Ranges are flagged, never diagnosed.',
+  heroLead: "Log your day, read your bloodwork and keep your supplements in one place. Intus flags values outside the lab's range. It does not diagnose anything.",
+  footer: "Not medical advice. Intus flags values outside the lab's range and does not diagnose anything.",
   heroButton: 'Join the waitlist',
   heroNote: 'Free during early access. No card needed. Only you can see your data.',
   headerLink: 'Waitlist',
@@ -50,8 +51,20 @@ export const WAITLIST = {
   offline: 'You look offline.',
   expiredBody: 'That link has expired. Enter your email again and we will send a new one.',
   confirmedKicker: 'On the list',
-  confirmedBody: `You are on the list. ${PROMISE}`,
-  confirmedLink: 'intus.fit',
+  confirmedTitle: 'You are on the list.',
+  whatIntus: "One place for your daily log, your bloodwork, your sleep and your supplements. Values outside the lab's reference range are flagged. Intus does not diagnose anything. Only you can see your data.",
+  questionsKicker: 'Two quick questions, optional',
+  questionsLead: 'Help us decide what to build first. Skip if you like.',
+  deviceHelper: 'We picked what you chose when you signed up. Change it if that is wrong.',
+  tracksLabel: 'What do you track today, and with which app or wearable?',
+  tracksPlaceholder: 'For example: sleep on a watch, steps on my phone, blood tests in PDFs',
+  sendAnswers: 'Send answers',
+  skip: 'Skip and go to intus.fit',
+  finePrint: 'Answers are saved with your place on the list. They are not shared.',
+  sentThanks: 'Thanks. Your answers are saved.',
+  sentBack: 'Back to intus.fit',
+  answersError: 'We could not save your answers. They are still here. Try again.',
+  confirmedLink: 'https://intus.fit',
   confirmChecking: 'Checking the link',
   confirmError: 'We could not check that link. Try again.',
   confirmRetry: 'Try again',
@@ -60,6 +73,16 @@ export const WAITLIST = {
 /** Body of the check-your-email notice, including the promise line. */
 export function checkEmailMessage(email: string): string {
   return `Check your inbox. We sent a link to ${email}. Tap it to confirm your place on the list. ${PROMISE}`;
+}
+
+/** Free-text answer on the confirmed page. Optional, and never longer than this. */
+export const TRACKS_MAX = 280;
+
+/** Blank stays blank. A longer note is refused. */
+export function normalizeTracks(raw: string): { ok: true; value: string | null } | { ok: false } {
+  const value = raw.trim();
+  if (value.length > TRACKS_MAX) return { ok: false };
+  return { ok: true, value: value.length === 0 ? null : value };
 }
 
 /** An invite goes only to someone who has confirmed. Pending rows are not eligible. */
@@ -158,14 +181,40 @@ export function interpretResendResponse(status: number, body: unknown, offline: 
   return { kind: 'network', offline };
 }
 
-export type ConfirmOutcome = 'confirmed' | 'expired' | 'error';
+export interface ConfirmedDetails {
+  device: Device;
+  tracksToday: string;
+}
 
-export function interpretConfirmResponse(status: number, body: unknown): ConfirmOutcome {
+export type ConfirmPageResult =
+  | { kind: 'confirmed'; details: ConfirmedDetails }
+  | { kind: 'expired' }
+  | { kind: 'error' };
+
+/** What the confirmed page needs from a confirm response. A missing device falls back to laptop. */
+export function interpretConfirmResponse(status: number, body: unknown): ConfirmPageResult {
   const record = body && typeof body === 'object' ? body as Record<string, unknown> : null;
-  if (record?.result === 'confirmed') return 'confirmed';
+  if (record?.result === 'confirmed') {
+    const tracks = typeof record.tracksToday === 'string' ? record.tracksToday : '';
+    return { kind: 'confirmed', details: { device: isDevice(record.device) ? record.device : 'laptop', tracksToday: tracks.slice(0, TRACKS_MAX) } };
+  }
+  if (record?.result === 'expired') return { kind: 'expired' };
+  if (status === 0 || status >= 500) return { kind: 'error' };
+  return { kind: 'expired' };
+}
+
+export type AnswersOutcome = 'saved' | 'expired' | 'error';
+
+export function interpretAnswersResponse(status: number, body: unknown): AnswersOutcome {
+  const record = body && typeof body === 'object' ? body as Record<string, unknown> : null;
+  if (record?.result === 'saved') return 'saved';
   if (record?.result === 'expired') return 'expired';
-  if (status === 0 || status >= 500) return 'error';
-  return 'expired';
+  if (status === 0 || status >= 500 || status === 400) return 'error';
+  return 'error';
+}
+
+export function answersPayload(token: string, device: Device, tracks: string): { action: 'answers'; token: string; device: Device; tracksToday: string } {
+  return { action: 'answers', token, device, tracksToday: tracks };
 }
 
 export interface WaitlistNotice {

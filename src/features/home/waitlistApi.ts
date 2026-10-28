@@ -9,7 +9,11 @@ import {
   payloadFrom,
   resendPayload,
   waitlistFunctionUrl,
-  type ConfirmOutcome,
+  answersPayload,
+  interpretAnswersResponse,
+  type AnswersOutcome,
+  type ConfirmPageResult,
+  type Device,
   type JoinOutcome,
   type ResendOutcome,
   type WaitlistState,
@@ -45,8 +49,12 @@ export function submitJoin(state: WaitlistState, fetcher: typeof fetch = fetch):
   return post(payloadFrom(state), fetcher).then((posted) => interpretJoinResponse(posted.status, posted.body, offlineNow()));
 }
 
-export function submitConfirm(token: string, fetcher: typeof fetch = fetch): Promise<ConfirmOutcome> {
+export function submitConfirm(token: string, fetcher: typeof fetch = fetch): Promise<ConfirmPageResult> {
   return post(confirmPayload(token), fetcher).then((posted) => interpretConfirmResponse(posted.status, posted.body));
+}
+
+export function submitAnswers(token: string, device: Device, tracks: string, fetcher: typeof fetch = fetch): Promise<AnswersOutcome> {
+  return post(answersPayload(token, device, tracks), fetcher).then((posted) => interpretAnswersResponse(posted.status, posted.body));
 }
 
 export function submitResend(email: string, fetcher: typeof fetch = fetch): Promise<ResendOutcome> {
