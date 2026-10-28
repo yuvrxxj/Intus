@@ -14,10 +14,13 @@ import {
   isConfirmToken,
   isDevice,
   newConfirmToken,
+  normalReferralEmail,
   normalizeEmail,
   normalizeTracks,
+  referralCodeFrom,
   sha256Hex,
   type Device,
+  type ReferralStanding,
 } from '../_shared/waitlistRules.ts';
 import { createMemoryRateLimit, type RateLimiter } from './rateLimit.ts';
 
@@ -38,7 +41,11 @@ export interface Deps {
   allowJoin(ip: string, now: number): boolean;
   clientIp(req: Request): string;
   findByEmail(email: string): Promise<StoredWaitlist | null>;
-  insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string; confirmSentAt: string }): Promise<'created' | 'exists'>;
+  insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string; confirmSentAt: string; referredBy?: string | null }): Promise<'created' | 'exists'>;
+  /** The confirmed row that owns this referral code, or null. Pending rows never match: only confirmed people share a link. */
+  findReferrer?(code: string): Promise<{ id: string; email: string } | null>;
+  /** Place and confirmed-friend count for a confirmed row (the waitlist_standing view). */
+  standing?(id: string): Promise<ReferralStanding | null>;
   replaceToken(id: string, hash: string, expiresAt: string, device: Device, sentAt: string): Promise<void>;
   findByTokenHash(hash: string): Promise<StoredWaitlist | null>;
   /** Sets confirmed and keeps the token, so the same link can be opened again. */
@@ -137,6 +144,7 @@ export function createHandler(deps: Deps) {
         confirmTokenHash: next.hash,
         confirmTokenExpiresAt: next.expiresAt,
         confirmSentAt: sentAt,
+        referredBy: await referrerFor(deps, body.ref, email),
       });
       if (outcome === 'created') await mail(deps, email, next.token);
       if (outcome === 'exists') {
@@ -153,6 +161,24 @@ export function createHandler(deps: Deps) {
       return reply(500, { error: 'unavailable' });
     }
   };
+}
+
+/**
+ * Who referred this sign-up, or null. Only set when the row is created, so a later sign-up cannot re-attribute it.
+ * An unknown code, a pending owner, the same inbox (+tag, gmail dots) or a lookup failure all mean "no referrer":
+ * the join itself never fails over a referral.
+ */
+async function referrerFor(deps: Deps, ref: unknown, email: string): Promise<string | null> {
+  const code = referralCodeFrom(ref);
+  if (!code || !deps.findReferrer) return null;
+  try {
+    const referrer = await deps.findReferrer(code);
+    if (!referrer || normalReferralEmail(referrer.email) === normalReferralEmail(email)) return null;
+    return referrer.id;
+  } catch {
+    deps.log('referral lookup failed');
+    return null;
+  }
 }
 
 async function issueFor(deps: Deps, id: string, email: string, device: Device, now: number): Promise<void> {
@@ -189,8 +215,17 @@ async function resend(deps: Deps, body: Record<string, unknown>, now: number, ip
   }
 }
 
-function confirmedPayload(row: StoredWaitlist) {
-  return { result: 'confirmed', device: row.device, tracksToday: row.tracksToday ?? '', answeredAt: row.answeredAt };
+async function confirmedPayload(deps: Deps, row: StoredWaitlist) {
+  const base = { result: 'confirmed', device: row.device, tracksToday: row.tracksToday ?? '', answeredAt: row.answeredAt };
+  if (!deps.standing) return base;
+  try {
+    const standing = await deps.standing(row.id);
+    return standing ? { ...base, referral: standing } : base;
+  } catch {
+    // The page still confirms the person; it just has no place to show.
+    deps.log('standing failed');
+    return base;
+  }
 }
 
 async function confirm(deps: Deps, body: Record<string, unknown>, now: number): Promise<Response> {
@@ -199,11 +234,11 @@ async function confirm(deps: Deps, body: Record<string, unknown>, now: number): 
     const row = await deps.findByTokenHash(await sha256Hex(body.token));
     if (!row) return reply(200, { result: 'expired' });
     // A second open of the same link still finds the row. The hash stays so the questions can load.
-    if (row.status === 'confirmed') return reply(200, confirmedPayload(row));
+    if (row.status === 'confirmed') return reply(200, await confirmedPayload(deps, row));
     const expires = row.confirmTokenExpiresAt ? Date.parse(row.confirmTokenExpiresAt) : 0;
     if (!(expires > now)) return reply(200, { result: 'expired' });
     await deps.markConfirmed(row.id, new Date(now).toISOString());
-    return reply(200, confirmedPayload(row));
+    return reply(200, await confirmedPayload(deps, row));
   } catch {
     deps.log('confirm failed');
     return reply(500, { error: 'unavailable' });

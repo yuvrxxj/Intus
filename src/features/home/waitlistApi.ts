@@ -45,8 +45,8 @@ async function post(body: unknown, fetcher: typeof fetch): Promise<{ status: num
   }
 }
 
-export function submitJoin(state: WaitlistState, fetcher: typeof fetch = fetch): Promise<JoinOutcome> {
-  return post(payloadFrom(state), fetcher).then((posted) => interpretJoinResponse(posted.status, posted.body, offlineNow()));
+export function submitJoin(state: WaitlistState, fetcher: typeof fetch = fetch, ref: string | null = null): Promise<JoinOutcome> {
+  return post(payloadFrom(state, ref), fetcher).then((posted) => interpretJoinResponse(posted.status, posted.body, offlineNow()));
 }
 
 export function submitConfirm(token: string, fetcher: typeof fetch = fetch): Promise<ConfirmPageResult> {
