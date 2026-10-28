@@ -2,13 +2,15 @@ import { motion } from 'framer-motion';
 import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
-/** An Apple-style segmented control: one pill slides to the chosen option. */
-export function Segmented<T extends string>({ value, options, onChange, label, className }: {
+/** An Apple-style segmented control: one pill slides to the chosen option. `md` is the 44px form size. */
+export function Segmented<T extends string>({ value, options, onChange, label, className, size = 'sm', disabled = false }: {
   value: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
   label: string;
   className?: string;
+  size?: 'sm' | 'md';
+  disabled?: boolean;
 }) {
   const id = useId();
   return (
@@ -22,7 +24,12 @@ export function Segmented<T extends string>({ value, options, onChange, label, c
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={cn('relative z-0 h-9 rounded-[7px] px-3 text-[13px] font-medium transition-colors', on ? 'text-ink' : 'text-ink-3 hover:text-ink')}
+            disabled={disabled}
+            className={cn(
+              'relative z-0 rounded-[7px] px-3 font-medium transition-colors disabled:opacity-45',
+              size === 'md' ? 'min-h-11 whitespace-normal px-2 text-center text-[12px] leading-snug sm:text-[13px]' : 'h-9 text-[13px]',
+              on ? 'text-ink' : 'text-ink-3 hover:text-ink',
+            )}
           >
             {on && (
               <motion.span

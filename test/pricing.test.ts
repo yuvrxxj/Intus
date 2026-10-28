@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRICING, PRICING_PAGE } from '../src/features/home/pricing.ts';
+import { DEVICES, WAITLIST } from '../src/features/home/waitlist.ts';
 
 // Every string the site shows about price, from the homepage card and the /pricing page.
 const words: string[] = [
@@ -10,6 +11,8 @@ const words: string[] = [
   PRICING_PAGE.lead,
   ...PRICING_PAGE.sections.flatMap((s) => [s.heading, ...s.paragraphs, ...(s.items ?? [])]),
   ...PRICING_PAGE.questions.flat(),
+  ...Object.values(WAITLIST),
+  ...DEVICES.map((device) => device.label),
 ];
 
 test('the site names no price, plan or subscription until the pricing decision is made (INT-38)', () => {

@@ -40,6 +40,7 @@ again. Do not add new files to it.
 | Files | the `lab-reports` Storage bucket | The same rules for uploaded lab report PDFs: own folder only, `<uuid>.pdf`, at most 10 MiB each and 200 per person, no update policy. `delete_my_account()` refuses while any remain, and the app removes them first |
 | Internal | `ai_settings` | Unreachable through the API: row level security with no policy. Edited in the Supabase dashboard |
 | Internal | `ai_usage` | A person can read their own rows. Only the Edge Function writes them |
+| Internal | `waitlist` | No `user_id`. Row level security is forced and there is no policy, and `anon` and `authenticated` have no grants, so the API cannot read it. Only the `join-waitlist` Edge Function (service role) inserts. The email is stored in lower case and is unique. A confirmation token is stored as a SHA-256 hash with an expiry, for the later double opt-in email, which this table does not send |
 
 One log per person per day (`unique (user_id, log_date)`), one profile per person, and one row of heart readings per person, day and source (`unique (user_id, measured_at, source)` on `cardio_metrics`, so the phone sync can upsert).
 
@@ -88,6 +89,7 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261012000600_ai_reading.sql` | Adds `ai_settings` (off by default: the limits, provider, model and prices), `ai_usage` (one row per AI call, never any report text) and the three functions that enforce the limits |
 | `20261013000100_date_of_birth.sql` | Adds `profile.date_of_birth` (nullable, not before 1900), so a person's age is worked out from it and goes up on their birthday. The old `age` column stays for people who have not given a date |
 | `20261015000100_cleanup_after_per_user_change.sql` | Housekeeping after the 5 Oct change (INT-67). First writes the one old `daily_logs.cardio` word the seed could not map (`stairs`) into the Cardio habit. Then drops `screening_history` and `screening_rules`, the profile columns `family_colorectal_cancer`, `family_prostate_cancer` and `noise_or_blast_exposure`, `medications.paracetamol_mg_per_dose`, the old `daily_logs` columns `lift`, `core`, `cardio`, `cigs` and `steps`, `private.is_owner()`, `app_owner`, and the `backup_20261005` schema (a copy of all 16 tables from before the per-person change) |
+| `20261028000100_waitlist.sql` | Adds `waitlist` for early access (INT-94): unique email, device, `pending` or `confirmed`, a SHA-256 confirm-token hash and its expiry, and `created_at`. Row level security is forced and the API roles cannot read or write it. The confirmation email is not part of this migration |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carried
@@ -140,6 +142,14 @@ set in code (`buildChatRequest`), not in the settings. A model with no host that
 prompts fails with "no endpoints", and nothing is sent. On Gemini, make sure Cloud Billing is on for the key's project:
 the free tier lets Google use prompts to improve its products and human reviewers may read them, which is not
 acceptable for health data.
+
+## Waitlist
+
+`public.waitlist` holds early-access sign-ups. It is not a personal table: there is no `user_id`, and deleting an account does not touch it. Row level security is forced on, there is no policy, and `anon` and `authenticated` have no grants. The browser never reads the table.
+
+The Edge Function `supabase/functions/join-waitlist` checks the email, the device and a honeypot field, allows 5 joins from one IP address per 10 minutes (in memory, per isolate), and inserts. It stores SHA-256 of a confirmation token and an expiry seven days out. It does not return the token and it does not send email.
+
+**Not deployed.** Shipping the function is a separate step, after this migration is merged: `supabase functions deploy join-waitlist --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`. The gateway check stays off because callers are signed out and the publishable key is not a JWT. Do not deploy it until the migration is on the project. The confirmation email (Resend), country, UTM and analytics are later pull requests.
 
 **Deploying the function.** It is not part of the migration workflow. Deploy `supabase/functions/read-report` with the
 Supabase CLI (`supabase functions deploy read-report --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`) or the
