@@ -1,17 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
 import { Brand } from '@/components/brand';
 import { StatueBust } from '@/components/statue-bust';
 import { AsciiArt, type AsciiShape } from '@/components/ui/ascii-art';
 import { buttonClass } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { ScrollHeading } from '@/components/ui/scroll-heading';
+import { cn } from '@/lib/utils';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
 import { takeDeletionNotice } from '../account/localData.ts';
 import { KnowledgeBase } from '../knowledge/KnowledgeBase.tsx';
 import { Link } from './Link.tsx';
 import { PRICING } from './pricing.ts';
-import { HOME_PATH, PRICING_PATH, SIGN_IN_PATH, SIGN_UP_URL } from './route.ts';
+import { HOME_PATH, PRICING_PATH, SIGN_IN_PATH } from './route.ts';
+import { WaitlistSection } from './WaitlistSection.tsx';
+import { WAITLIST } from './waitlist.ts';
 
 const NAV = [
   ['about', 'About'],
@@ -21,10 +23,10 @@ const NAV = [
 ] as const;
 
 const ABOUT = [
-  ['Daily log', 'Weigh in, log calories, steps and the habits you set, in under a minute. Your latest 30 entries are charted, with a dive deeper into the full history of each chart.'],
-  ['Bloodwork', 'Type in results from your lab report. Each one is flagged against its reference range, critical limits are called out, and an arrow compares it with your previous result.'],
-  ['Sleep', 'Add when you went to bed and got up. Intus shows time asleep night by night, your usual times and how much they vary, and which source each number came from. Missing nights stay missing, and nothing is scored.'],
-  ['Supplements', 'Record what you take, with start and end dates. Intus sets the days before against the days after, using only days you logged, and says nothing until there is enough to compare.'],
+  ['Daily log', '78.4 kg', 'Weigh in, log calories, steps and the habits you set, in under a minute. Your latest 30 entries are charted, with a dive deeper into the full history of each chart.'],
+  ['Bloodwork', 'LDL 118 mg/dL', 'Type in results from your lab report. Each one is flagged against its reference range, critical limits are called out, and an arrow compares it with your previous result.'],
+  ['Sleep', '7h 12m', 'Add when you went to bed and got up. Intus shows time asleep night by night, your usual times and how much they vary, and which source each number came from. Missing nights stay missing, and nothing is scored.'],
+  ['Supplements', 'Day 24', 'Record what you take, with start and end dates. Intus sets the days before against the days after, using only days you logged, and says nothing until there is enough to compare.'],
 ] as const;
 
 const WHY = [
@@ -34,9 +36,9 @@ const WHY = [
   ['04', 'Honest about what it cannot show', 'The supplement comparison looks at two periods side by side. It cannot show that a supplement works, and it never colours a change good or bad.'],
 ] as const;
 
-function Section({ id, n, title, intro, art, children }: { id: string; n: string; title: string; intro?: ReactNode; art?: AsciiShape; children: ReactNode }) {
+function Section({ id, n, title, intro, art, className, children }: { id: string; n: string; title: string; intro?: ReactNode; art?: AsciiShape; className?: string; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-20 border-t border-line-strong py-14 sm:py-16">
+    <section id={id} aria-labelledby={`${id}-title`} className={cn('scroll-mt-20 border-t border-line-strong py-14 sm:py-16', className)}>
       <Reveal>
         <div className="flex items-end justify-between gap-6">
           <div className="min-w-0">
@@ -54,21 +56,73 @@ function Section({ id, n, title, intro, art, children }: { id: string; n: string
   );
 }
 
-function Header() {
+/** `quiet` is the confirmed page: the same bar, and the waitlist link never turns red. */
+export function Header({ quiet = false }: { quiet?: boolean }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [heroGone, setHeroGone] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const hero = document.getElementById('top');
+    const form = document.getElementById('waitlist');
+    const watcher = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target.id === 'top') setHeroGone(!entry.isIntersecting);
+        if (entry.target.id === 'waitlist') setFormVisible(entry.isIntersecting);
+      }
+    }, { threshold: 0 });
+    if (hero) watcher.observe(hero);
+    if (form) watcher.observe(form);
+    return () => watcher.disconnect();
+  }, []);
+
+  // Red only while the hero button is gone and the form button is not on screen, so one red shows at a time.
+  const waitlistClass = buttonClass({ variant: !quiet && heroGone && !formVisible ? 'primary' : 'ghost', size: 'sm' });
+  const sectionHref = (id: string) => quiet ? `/#${id}` : `#${id}`;
+
   return (
     <header className="sticky top-0 z-20 border-b border-line-strong bg-paper">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 lg:px-10">
+      <div className={cn('mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 transition-[height] duration-150 lg:px-10', scrolled ? 'h-14' : 'h-16')}>
         <Link to={HOME_PATH} aria-label="Intus, back to the top"><Brand /></Link>
         <nav aria-label="Sections" className="hidden items-center gap-6 md:flex">
           {NAV.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="text-sm font-medium text-ink-2 hover:text-ink">{label}</a>
+            <a key={id} href={sectionHref(id)} className="text-sm font-medium text-ink-2 hover:text-ink">{label}</a>
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link to={SIGN_IN_PATH} className={buttonClass({ variant: 'ghost', size: 'sm' })}>Sign in</Link>
-          <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'sm' })}>Create account</Link>
+          <Link to={SIGN_IN_PATH} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'hidden md:inline-flex')}>Sign in</Link>
+          {/* Phone widths keep this ghost, so the hero button stays the only red control. */}
+          <a href={sectionHref('waitlist')} className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}>{WAITLIST.headerLink}</a>
+          <a href={sectionHref('waitlist')} className={cn(waitlistClass, 'hidden md:inline-flex')}>{WAITLIST.headerLink}</a>
+          <button
+            type="button"
+            className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'md:hidden')}
+            aria-expanded={menuOpen}
+            aria-controls="home-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? 'Close' : 'Menu'}
+          </button>
         </div>
       </div>
+      {menuOpen && (
+        <div id="home-menu" className="border-t border-line-strong px-5 py-3 md:hidden">
+          <nav aria-label="Sections" className="grid gap-1">
+            {NAV.map(([id, label]) => (
+              <a key={id} href={sectionHref(id)} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>{label}</a>
+            ))}
+            <Link to={SIGN_IN_PATH} className="rounded-md px-2 py-2 text-sm font-medium text-ink-2 hover:text-ink" onClick={() => setMenuOpen(false)}>Sign in</Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -78,6 +132,11 @@ export function Home() {
   // set once, in this tab, by a deleted account; the effect runs twice in development but only ever sets it to true
   const [deleted, setDeleted] = useState(false);
   useEffect(() => { if (takeDeletionNotice()) setDeleted(true); }, []);
+  useEffect(() => {
+    const id = window.location.hash.replace(/^#/, '');
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView();
+  }, []);
   return (
     <div className="relative z-10 min-h-dvh">
       <Header />
@@ -86,48 +145,47 @@ export function Home() {
           <p className="mx-auto w-full max-w-6xl px-5 py-3 text-sm text-ink lg:px-10">Your account and everything saved in it have been deleted.</p>
         </div>
       )}
-      <main className="mx-auto w-full max-w-6xl px-5 lg:px-10">
-        <section aria-labelledby="home-title" className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-20">
-          <div className="on-dots order-2 lg:order-1">
-            <div className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">Early access</div>
-            <h1 id="home-title" className="mt-4 max-w-2xl text-[44px] leading-[1.03] font-semibold tracking-[-0.035em] text-ink sm:text-[64px]">
-              Your health, in plain numbers.
+      <main className="mx-auto flex w-full max-w-6xl flex-col px-5 lg:px-10">
+        <section id="top" aria-labelledby="home-title" className="order-1 grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:gap-16 lg:py-20">
+          <div className="on-dots lg:col-span-7">
+            <div className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">{WAITLIST.heroKicker}</div>
+            <h1 id="home-title" className="mt-4 max-w-2xl text-[40px] leading-[42px] font-semibold tracking-[-0.03em] text-ink sm:text-[64px] sm:leading-[1.03] sm:tracking-[-0.035em]">
+              {WAITLIST.heroTitle}
             </h1>
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-2">
-              Weight, food, habits, supplements and bloodwork in one place. Every lab result is set against its reference range, and nothing is scored behind your back.
-            </p>
+            <p className="mt-6 max-w-xl text-[17px] leading-relaxed font-normal text-ink-2">{WAITLIST.heroLead}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'lg' })}>
-                Create account <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-              <Link to={SIGN_IN_PATH} className={buttonClass({ variant: 'secondary', size: 'lg' })}>Sign in</Link>
+              {/* Under 640px the form sits under the hero, so this button is not red or two reds share the screen. */}
+              <a href="#waitlist" className={cn(buttonClass({ variant: 'primary', size: 'lg' }), 'hidden sm:inline-flex')}>{WAITLIST.heroButton}</a>
+              <a href="#waitlist" className={cn(buttonClass({ variant: 'secondary', size: 'lg' }), 'sm:hidden')}>{WAITLIST.heroButton}</a>
             </div>
-            <p className="mt-5 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">
-              Free in early access. Laptop, desktop and tablet today. Phone apps are coming.
-            </p>
+            <p className="mt-5 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase">{WAITLIST.heroNote}</p>
           </div>
-          <div className="order-1 flex justify-start lg:order-2 lg:justify-center">
-            <StatueBust className="h-[clamp(200px,40vh,520px)]" />
+          <div className="flex justify-start lg:col-span-5 lg:justify-center">
+            <StatueBust className="h-[clamp(120px,24vh,312px)] sm:h-[clamp(200px,40vh,520px)]" />
           </div>
         </section>
+
+        <WaitlistSection className="order-2 sm:order-5" />
 
         <Section
           id="about"
           n="01"
           title="About"
+          className="order-3 sm:order-2"
           intro="Intus keeps the numbers that describe your health in one place and shows them against something you can check. It runs in the browser today, on laptops, desktops and tablets."
         >
           <ul className="grid gap-3 sm:grid-cols-2">
-            {ABOUT.map(([title, body]) => (
+            {ABOUT.map(([title, sample, body]) => (
               <li key={title} className="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
-                <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-ink">{title}</h3>
+                <p className="font-mono text-[22px] text-ink tabular-nums">{sample}</p>
+                <h3 className="mt-3 text-[17px] font-semibold tracking-[-0.01em] text-ink">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
               </li>
             ))}
           </ul>
         </Section>
 
-        <Section id="why" n="02" title="Why this" art="sphere" intro="Health apps tend to hand you a score and ask you to trust it. Intus does the opposite: it shows the number, the range and the rule.">
+        <Section id="why" n="02" title="Why this" art="sphere" className="order-4 sm:order-3" intro="Health apps tend to hand you a score and ask you to trust it. Intus does the opposite: it shows the number, the range and the rule.">
           <ul className="grid gap-x-12 gap-y-7 sm:grid-cols-2">
             {WHY.map(([n, title, body]) => (
               <li key={n} className="on-dots grid grid-cols-[36px_1fr] gap-2">
@@ -141,13 +199,10 @@ export function Home() {
           </ul>
         </Section>
 
-        <Section id="pricing" n="03" title="Pricing" art="coin">
+        <Section id="pricing" n="03" title="Pricing" art="coin" className="order-5 sm:order-4">
           <div className="grid gap-6 rounded-[14px] border border-line-strong bg-surface p-6 sm:p-8 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
             <div>
               <h3 className="text-[28px] leading-tight font-semibold tracking-[-0.02em] text-ink">{PRICING.headline}</h3>
-              <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
-                Create account <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
               <div className="mt-4"><Link to={PRICING_PATH} className="text-sm text-primary underline">Read the pricing page</Link></div>
             </div>
             <ul className="grid gap-3">
@@ -163,8 +218,9 @@ export function Home() {
 
         <Section
           id="knowledge"
-          n="04"
+          n="05"
           title="Knowledge base"
+          className="order-6"
           intro="Supplements can move a blood test without changing your health. Each entry says which results can shift, in which direction and why, so a number does not surprise you."
         >
           <div className="grid items-start gap-8 lg:grid-cols-[1fr_220px] lg:gap-12">
@@ -179,7 +235,7 @@ export function Home() {
       <footer className="border-t border-line-strong bg-paper">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-7 font-mono text-[11px] tracking-[0.06em] text-ink-3 uppercase lg:px-10">
           <span>Intus</span>
-          <span>Not medical advice. Ranges are flagged, never diagnosed.</span>
+          <span className="normal-case tracking-normal">{WAITLIST.footer}</span>
           <span className="flex flex-wrap gap-x-4 gap-y-2">
             <a href={`mailto:${CONTACT_EMAIL}`} className="normal-case hover:text-ink">{CONTACT_EMAIL}</a>
             <a href="/pricing" className="hover:text-ink">Pricing</a>
