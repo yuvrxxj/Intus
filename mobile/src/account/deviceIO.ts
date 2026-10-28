@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 import { LAST_SYNC_KEY } from '../sync/run';
 import { SUPABASE_URL } from '../env';
 import { flowsIndexKey, keysToClear } from './authKeys';
+import { isShareDismissal } from './copy';
 import { clearDevice } from './clearDevice';
 
 /** Deletes every file in the cache. The cache directory itself stays, because the system owns it. */
@@ -60,7 +61,11 @@ export async function shareJsonFile(name: string, body: string): Promise<void> {
     file.create({ overwrite: true });
     file.write(body);
     if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
-    await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json' });
+    try {
+      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json' });
+    } catch (e) {
+      if (!isShareDismissal(e)) throw e;
+    }
   } finally {
     try {
       if (file.exists) file.delete();

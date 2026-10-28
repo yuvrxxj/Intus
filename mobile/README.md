@@ -35,7 +35,7 @@ Installing on a real iPhone for more than a week, and TestFlight, need the Apple
 
 ## Account
 
-The signed-in screen has an Account button. Sign out ends the session, the same way as the website. Download my data builds the same JSON file the website saves (the shared `buildExport`) and opens the iOS share sheet. Delete account asks for the email to be typed back, removes photos and uploaded lab reports, calls `delete_my_account()`, clears the keychain, async storage and the cache, then signs out. Privacy policy and terms open https://intus.fit/privacy and https://intus.fit/terms, the pages the website already serves.
+The More tab pushes Account, with the system back chevron and a large title. Sign out asks "Sign out of Intus?" and returns to the sign-in screen. Download my data builds the same JSON file the website saves (the shared `buildExport`) and opens the iOS share sheet. Delete account is a destructive row that opens a system action sheet; only then does the email have to be typed back. Photos and uploaded lab reports are removed, `delete_my_account()` runs, and the keychain, async storage and cache are cleared. Privacy policy and terms open in the app at https://intus.fit/privacy and https://intus.fit/terms. The "Not medical advice" line sits at the bottom of More.
 
 ## Settings
 

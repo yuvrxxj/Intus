@@ -12,6 +12,8 @@ import { clearDevice } from '../mobile/src/account/clearDevice.ts';
 import { emptyStorageFolder } from '../mobile/src/account/emptyFolder.ts';
 import { exportDocument } from '../mobile/src/account/exportFile.ts';
 import { finishDeletion } from '../mobile/src/account/finish.ts';
+import { DELETE_ERROR, DOWNLOAD_ERROR, LINK_ERROR, SIGN_OUT_ERROR, isShareDismissal, providerLabel as phoneProviderLabel } from '../mobile/src/account/copy.ts';
+import { CONTACT_EMAIL } from '../src/lib/contact.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -148,4 +150,17 @@ test('deletion follows the website: photos, reports, the account, then the phone
     /nothing was deleted/,
   );
   assert.deepEqual(stopped, []);
+});
+
+test('account notices are fixed sentences, and a closed share sheet is not one of them', () => {
+  assert.equal(SIGN_OUT_ERROR, 'You are still signed in. Try again.');
+  assert.equal(DOWNLOAD_ERROR, 'Your data file could not be made. Try again.');
+  assert.equal(LINK_ERROR, 'The page could not open.');
+  assert.equal(DELETE_ERROR, `Your account was not deleted. Try again, and email ${CONTACT_EMAIL} if it keeps failing. Nothing was deleted.`);
+  assert.equal(phoneProviderLabel('apple'), 'Apple');
+  assert.equal(phoneProviderLabel('email'), 'email');
+  assert.equal(phoneProviderLabel(null), 'email');
+  assert.equal(phoneProviderLabel('google'), 'Google');
+  assert.equal(isShareDismissal(new Error('The activity was cancelled')), true);
+  assert.equal(isShareDismissal(new Error('Sharing is not available on this device')), false);
 });

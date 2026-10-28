@@ -44,7 +44,9 @@
           }
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-font"
     ],
     "scheme": "intus"
   }
