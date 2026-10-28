@@ -1,6 +1,6 @@
 # Intus for iPhone: the HealthKit sync companion
 
-A thin Expo (React Native) app on the same Supabase project as intus.fit. It does three things: sign in with your Intus account, ask Apple Health for read access, and sync. Everything else stays on the website until the phone screens are built (INT-89, INT-97).
+A thin Expo (React Native) app on the same Supabase project as intus.fit. It signs in with your Intus account, asks Apple Health for read access, syncs, and shows sleep. Other screens stay on the website until they are built (INT-89, INT-97).
 
 What it reads, and where it goes:
 
@@ -37,8 +37,12 @@ Installing on a real iPhone for more than a week, and TestFlight, need the Apple
 
 `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` point it at another Supabase project. Both default to production and are public by design, as on the web; row-level security keeps each person's rows to themselves. The login session is kept in the iOS keychain (`expo-secure-store`).
 
+## Sleep
+
+The Sleep screen lists nights from `sleep_sessions` with the same rules as the website (`src/features/sleep`): one source per night, and averages only after 5 nights in a 28 day stretch. The first time you are signed in on a device with Apple Health, a sheet explains the three reads and then iOS shows its own permission sheet. The purpose string is `NSHealthShareUsageDescription` in `app.json` (the HealthKit plugin writes it into Info.plist on `npm run ios`). If Health is off or has no sleep, add a night by hand. That row is `source_kind = 'manual'` and the website reads it from the same table.
+
 ## Not done yet
 
-- Background sync (HealthKit background delivery). The entitlement is off (`background: false` in `app.json`) until it is built; sync is by the button for now.
+- Background sync (HealthKit background delivery). The entitlement is off (`background: false` in `app.json`) until the app is on a paid account; sync is by the button for now.
 - Android and Health Connect (INT-57, INT-101).
 - The app icon: the template's placeholder icons are still in `assets/`. INT-50.
