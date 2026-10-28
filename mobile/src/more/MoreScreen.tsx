@@ -10,12 +10,12 @@ import { s } from '../theme/styles';
 export function MoreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MoreParamList>>();
   return (
-    <ScrollView style={s.flex} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={s.scroll}>
+    <ScrollView style={s.flex} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={s.pageScroll}>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Account')} style={s.listRow}>
         <Text style={s.body}>Account</Text>
         <SymbolView name="chevron.right" tintColor={color.ink3} size={16} />
       </Pressable>
-      <Text style={s.footer}>Not medical advice. Ranges are flagged, never diagnosed.</Text>
+      <Text style={s.pageFooter}>Not medical advice. Ranges are flagged, never diagnosed.</Text>
     </ScrollView>
   );
 }

@@ -4,11 +4,14 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SymbolView } from 'expo-symbols';
 import { createContext, useContext } from 'react';
+import { Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountScreen } from '../account/AccountScreen';
 import { MoreScreen } from '../more/MoreScreen';
+import { SleepScreen } from '../sleep/SleepScreen';
+import { s } from '../theme/styles';
 import { color, font } from '../theme/tokens';
 import type { MoreParamList } from './types';
-import { SyncScreen } from './SyncScreen';
 
 const SignedInContext = createContext<{ session: Session; onDeleted: () => void } | null>(null);
 
@@ -59,12 +62,20 @@ function MoreNavigator() {
   );
 }
 
-function SyncRoute() {
-  const { session } = useSignedIn();
-  return <SyncScreen session={session} />;
+function SleepRoute() {
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.wrap}>
+        <Text style={s.brand}>INTUS</Text>
+        <View style={s.flex}>
+          <SleepScreen />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
 }
 
-/** Signed-in app: Sync, and More, whose stack pushes Account with the system back chevron and a large title. */
+/** Signed-in app: Sleep, and More, whose stack pushes Account with the system back chevron and a large title. */
 export function SignedIn({ session, onDeleted }: { session: Session; onDeleted: () => void }) {
   return (
     <SignedInContext.Provider value={{ session, onDeleted }}>
@@ -79,11 +90,11 @@ export function SignedIn({ session, onDeleted }: { session: Session; onDeleted: 
         }}
       >
         <Tab.Screen
-          name="Sync"
+          name="Sleep"
           options={{
-            tabBarIcon: ({ color: tint }) => <SymbolView name="arrow.triangle.2.circlepath" tintColor={tint} size={22} />,
+            tabBarIcon: ({ color: tint }) => <SymbolView name="bed.double" tintColor={tint} size={22} />,
           }}
-          component={SyncRoute}
+          component={SleepRoute}
         />
         <Tab.Screen
           name="More"

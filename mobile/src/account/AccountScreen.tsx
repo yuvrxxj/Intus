@@ -139,7 +139,7 @@ export function AccountScreen({
 
   return (
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={s.flex} contentContainerStyle={s.scroll} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <ScrollView style={s.flex} contentContainerStyle={s.pageScroll} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         <View style={s.card}>
           <Text style={s.label}>Signed in</Text>
           <Text style={s.body}>{email ?? 'Your account'}</Text>
