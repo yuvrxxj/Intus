@@ -6,7 +6,7 @@ export function ErrorNotice({ message }: { message: string }) {
   return (
     <View style={s.errorNotice} accessibilityRole="alert">
       <Text style={s.errorKicker}>ERROR</Text>
-      <Text style={s.body}>{message}</Text>
+      <Text style={s.noticeBody}>{message}</Text>
     </View>
   );
 }

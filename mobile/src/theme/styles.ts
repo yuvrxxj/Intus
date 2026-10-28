@@ -46,7 +46,9 @@ export const s = StyleSheet.create({
   inputFocus: { borderWidth: 2 },
   inputInvalid: { borderWidth: 2, borderColor: color.red },
   errorNotice: { backgroundColor: color.redTint, borderRadius: 10, padding: 12, gap: 6 },
-  errorKicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red },
+  /** Label size, not body 15. Red is only this word and the field border. */
+  errorKicker: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.red, textTransform: 'uppercase' },
+  noticeBody: { fontFamily: font.body, fontSize: type.body, color: color.ink },
   warning: { fontFamily: font.heading, fontSize: 14, color: color.ochre },
   footer: {
     fontFamily: font.mono,
