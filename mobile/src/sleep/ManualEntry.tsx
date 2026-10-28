@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Platform, Text, TextInput, View } from 'react-native';
+import { Platform, Text, TextInput, View, type TextInputInstance } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LIMITS, validateSleepForm, type SleepErrors, type SleepForm, type SleepSession, type SleepValues } from '../../../src/features/sleep/model.ts';
 import { sessionMetrics } from '../../../src/features/sleep/metrics.ts';
@@ -48,8 +48,8 @@ export function ManualEntry({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [focused, setFocused] = useState<'latency' | 'awake' | 'notes' | null>(null);
-  const awakeRef = useRef<TextInput>(null);
-  const notesRef = useRef<TextInput>(null);
+  const awakeRef = useRef<TextInputInstance>(null);
+  const notesRef = useRef<TextInputInstance>(null);
 
   const form: SleepForm = {
     start: stampFromDate(start),
