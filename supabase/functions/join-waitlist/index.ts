@@ -2,22 +2,23 @@
 // See supabase/README.md. Sign-in is not required, so deploy with --no-verify-jwt: the publishable key is not a JWT
 // the gateway can check. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 //
-// TODO(INT-94 follow-up): send the confirmation email with Resend. Do not send it from here.
-// Subject: Confirm your place on the Intus waitlist
-// Body: Tap to confirm, then the link https://intus.fit/waitlist/confirmed?token=… (works for 7 days).
-// If this was not you, ignore this email and nothing happens.
-// Then: We'll email you three times: to confirm, when your place is ready, and when the app ships for your device. Nothing else.
-// Then an unsubscribe link. Only status = confirmed is eligible for an invite.
+// The confirm email goes out through Resend from marketing@mail.intus.fit. Secrets are set in the Supabase dashboard,
+// never in code: RESEND_API_KEY. WAITLIST_EMAIL_LIVE=true lets mail go to every sign-up; until then only addresses in
+// WAITLIST_EMAIL_ALLOWLIST (comma separated, for test sign-ups) get one. See mailer.ts.
+// TODO: an unsubscribe link and the postal address belong in the "place ready" and "launch" emails, not this one.
+// Only status = confirmed is eligible for an invite.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createHandler, createJoinLimiter, clientIpFrom, productionToken, type StoredWaitlist } from './handler.ts';
-import type { Device } from '../../../src/features/home/waitlist.ts';
+import type { Device } from '../_shared/waitlistRules.ts';
+import { createSendConfirm, mailerSettingsFrom } from './mailer.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 });
 
 const limiter = createJoinLimiter();
+const sendConfirm = createSendConfirm(mailerSettingsFrom((name) => Deno.env.get(name), fetch));
 
 interface Row {
   id: string;
@@ -50,6 +51,7 @@ Deno.serve(createHandler({
   allowJoin: (ip, now) => limiter.allow(ip, now),
   clientIp: clientIpFrom,
   newToken: productionToken,
+  sendConfirm,
   log: (message) => console.error(message),
   findByEmail: async (email) => {
     const { data, error } = await admin.from('waitlist').select(COLUMNS).eq('email', email).maybeSingle();
