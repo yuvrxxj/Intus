@@ -7,6 +7,7 @@ What a bot needs to draft posts and pictures for the Intus account on X without 
 | `facts.md` | The only facts a post may use, each with its source, and a list of what is never allowed |
 | `voice.md` | Voice, the three post formats, the picture rules, and what the account never does |
 | `grok-bot-routine.md` | The brief to paste into Grok Bot, the rollout stages and the one-time setup |
+| `photoassets.md` | The 20 hosted pictures Buffer posts: what each one shows now, its fact ids, and what changed in version 3 |
 | `cards.example.json` | Three example cards in the format the renderer reads |
 | `../../scripts/social-cards.ts` | Checks cards against the rules, then draws each as a PNG in the brand's paper, ink and red |
 
