@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   CONFIRM_TOKEN_TTL_MS,
   DEVICES,
@@ -41,6 +42,7 @@ function state(over: Partial<WaitlistState> = {}): WaitlistState {
 }
 
 test('the email promise is the agreed sentence, and it is the line used in each state', () => {
+  assert.equal(WAITLIST.intro, 'Everyone on the list gets in at launch.');
   assert.equal(WAITLIST.promise, PROMISE);
   assert.equal(WAITLIST.promiseConfirmed, "We'll email you twice more: when your place is ready, and when the app ships for your device. Nothing else.");
   assert.notEqual(WAITLIST.promiseConfirmed, WAITLIST.promise);
@@ -82,6 +84,19 @@ test('the device starts as laptop, and as iPhone on a phone width', () => {
   assert.equal(defaultDevice(false), 'laptop');
   assert.equal(defaultDevice(true), 'iphone');
   assert.equal(initialWaitlistState(true).device, 'iphone');
+});
+
+test('an empty email stays quiet until submit, and blurring it again keeps that error', () => {
+  const fresh = initialWaitlistState(false);
+  assert.equal(fresh.emailError, null);
+  const blurred = reduceWaitlist(fresh, { type: 'blur-email' });
+  assert.equal(blurred.emailError, null);
+  const submitted = reduceWaitlist(blurred, { type: 'submit' });
+  assert.equal(submitted.phase, 'idle');
+  assert.equal(submitted.emailError, WAITLIST.emailEmpty);
+  assert.equal(reduceWaitlist(submitted, { type: 'blur-email' }).emailError, WAITLIST.emailEmpty);
+  const cleared = reduceWaitlist(submitted, { type: 'email', value: '' });
+  assert.equal(reduceWaitlist(cleared, { type: 'blur-email' }).emailError, null);
 });
 
 test('typing does not validate, blur and submit do, and a failure keeps the typed email', () => {
@@ -174,6 +189,32 @@ test('join and confirm responses map onto the form states', () => {
   assert.deepEqual(normalizeTracks('  sleep  '), { ok: true, value: 'sleep' });
   assert.deepEqual(normalizeTracks('   '), { ok: true, value: null });
   assert.deepEqual(normalizeTracks('x'.repeat(TRACKS_MAX + 1)), { ok: false });
+});
+
+test('the waitlist heading sits on the frosted panel, and the form does not repeat the promise', () => {
+  const section = readFileSync(new URL('../src/features/home/WaitlistSection.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/styles/index.css', import.meta.url), 'utf8');
+  assert.match(section, /on-dots-panel/);
+  assert.match(section, /id="waitlist-title"/);
+  assert.match(section, /text-ink/);
+  assert.match(section, /font-\[600\]/);
+  assert.match(section, /opacity-100/);
+  assert.equal(section.includes('scroll-heading'), false);
+  assert.match(section, /showPromise=\{false\}/);
+  assert.match(section, /showPromise = true/);
+  const panel = css.slice(css.indexOf('.on-dots-panel {'), css.indexOf('@keyframes rail-art-in'));
+  assert.match(panel, /background:\s*rgba\(229,\s*236,\s*233,\s*0\.72\)/);
+  assert.match(panel, /-webkit-backdrop-filter:\s*blur\(8px\)\s*saturate\(1\.1\)/);
+  assert.match(panel, /backdrop-filter:\s*blur\(8px\)\s*saturate\(1\.1\)/);
+  assert.match(panel, /@supports not \(backdrop-filter: blur\(8px\)\)/);
+  assert.match(panel, /background:\s*#E5ECE9/);
+  assert.match(panel, /border:\s*none/);
+  assert.match(panel, /box-shadow:\s*none/);
+  assert.match(panel, /border-radius:\s*8px/);
+  assert.match(panel, /padding:\s*16px 20px/);
+  const notice = section.slice(section.indexOf('export function ErrorNotice'), section.indexOf('function phoneWidth'));
+  assert.equal(notice.includes('border'), false);
+  assert.match(notice, /bg-\[#F0DFDF\]/);
 });
 
 test('a confirmation token is 32 bytes of base64url, and only that shape is read from a link', async () => {
