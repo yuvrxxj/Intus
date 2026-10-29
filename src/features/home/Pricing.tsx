@@ -1,9 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import { buttonClass } from '@/components/ui/button';
 import { CONTACT_EMAIL } from '../../lib/contact.ts';
+import { WEB_AUTH_ENABLED } from '../auth/webAuthFlag.ts';
 import { Link } from './Link.tsx';
 import { PRICING_PAGE } from './pricing.ts';
 import { HOME_PATH, PRIVACY_PATH, SIGN_UP_URL, TERMS_PATH } from './route.ts';
+import { WAITLIST } from './waitlist.ts';
 
 /** The pricing page: a plain readable page, public on every device, signed in or not. The words are in pricing.ts. */
 export function Pricing() {
@@ -13,9 +15,15 @@ export function Pricing() {
         <Link to={HOME_PATH} className="font-mono text-[11px] tracking-[0.08em] text-primary uppercase">Intus</Link>
         <h1 className="mt-4 text-[34px] leading-tight font-semibold tracking-[-0.02em]">{PRICING_PAGE.title}</h1>
         <p className="mt-3 text-[17px] leading-relaxed text-ink-2">{PRICING_PAGE.lead}</p>
-        <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
-          Create account <ArrowRight className="size-4" aria-hidden="true" />
-        </Link>
+        {WEB_AUTH_ENABLED ? (
+          <Link to={SIGN_UP_URL} className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
+            Create account <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        ) : (
+          <a href="/#waitlist" className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
+            {WAITLIST.button} <ArrowRight className="size-4" aria-hidden="true" />
+          </a>
+        )}
         {PRICING_PAGE.sections.map((s) => (
           <section key={s.heading} className="mt-10">
             <h2 className="text-lg font-semibold">{s.heading}</h2>
