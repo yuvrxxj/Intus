@@ -11,6 +11,8 @@ All 20 pictures were redrawn and the copy was rewritten. The file names did not 
 - The copy of the old pictures 14 and 18 ("Pay once. Keep it. Forever." and "You already pay for the tracker, the food and the tests.") is gone, because it broke the no-pricing rule in `facts.md`. Pictures 16 and 20 were reworded to say only things in `facts.md`.
 - Every picture now says one thing that is true of the product today, or asks a plain question. The fact ids below are the ones to cite. "Framing" means the picture makes no claim about the product.
 
+Pictures 11 and 12 were replaced again on 29 Oct 2026 ("Wellness, consolidated." and "A quiet record of your health."), after the first version 3 upload. They were "A personal health tracker." and "Everything you track. One quiet record.".
+
 If a Buffer post still says something that matched the old picture, change the post, not the picture.
 
 ## The pictures
@@ -27,8 +29,8 @@ If a Buffer post still says something that matched the old picture, change the p
 | 08 | `08-output.png` | paper | Day 1 and day 90 never meet. | gap D1 and D90 | framing, no claim | What you get out. |
 | 09 | `09-the-stack.png` | paper | Compared to what? | none | framing, no claim | Three capsules a day. For how long now? |
 | 10 | `10-the-gap.png` | red | Intus. | dot | F1 | Day 1 and day 90 never meet. |
-| 11 | `11-bloodwork.png` | red | A personal health tracker. | none | F1 | Your last blood test is in a drawer. |
-| 12 | `12-the-timeline.png` | red | Everything you track. One quiet record. | line, 3 dots | F1 | One line. Everything on it. |
+| 11 | `11-bloodwork.png` | red | Wellness, consolidated. | line, 3 dots | F1 | Your last blood test is in a drawer. |
+| 12 | `12-the-timeline.png` | red | A quiet record of your health. | none | F1 | One line. Everything on it. |
 | 13 | `13-stop-guessing.png` | paper | Started a supplement? Mark the day. | split BEFORE, START, AFTER | F7 | Guessing is not a strategy. |
 | 14 | `14-ownership.png` | paper | Check every result before it is saved. | none | F3 | Pay once. Keep it. Forever. (removed: pricing) |
 | 15 | `15-introducing.png` | paper | Every result names its range. | none | F4 | Your inputs. Your outputs. One timeline. |
