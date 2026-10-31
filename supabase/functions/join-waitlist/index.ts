@@ -12,12 +12,31 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createHandler, createJoinLimiter, clientIpFrom, productionToken, type StoredWaitlist } from './handler.ts';
 import type { Device } from '../_shared/waitlistRules.ts';
 import { createSendConfirm, mailerSettingsFrom } from './mailer.ts';
+import { createSharedAllowJoin } from './sharedRateLimit.ts';
+import { JOIN_RATE_LIMIT, JOIN_RATE_WINDOW_MS, sha256Hex } from '../_shared/waitlistRules.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 });
 
-const limiter = createJoinLimiter();
+// The join limit is counted in the database so every instance shares it; the in-memory limiter only answers if the
+// database call fails. The caller's address is hashed with a server-side secret first and never stored.
+const memoryLimiter = createJoinLimiter();
+const RATE_SALT = Deno.env.get('WAITLIST_RATE_SALT') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const allowJoin = createSharedAllowJoin({
+  hashKey: (ip) => sha256Hex(`${RATE_SALT}:${ip}`),
+  check: async (keyHash) => {
+    const { data, error } = await admin.rpc('waitlist_allow_join', {
+      p_key_hash: keyHash,
+      p_limit: JOIN_RATE_LIMIT,
+      p_window_seconds: JOIN_RATE_WINDOW_MS / 1000,
+    });
+    if (error || typeof data !== 'boolean') throw new Error('rate limit check failed');
+    return data;
+  },
+  fallback: memoryLimiter,
+  log: (message) => console.error(message),
+});
 const sendConfirm = createSendConfirm(mailerSettingsFrom((name) => Deno.env.get(name), fetch));
 
 interface Row {
@@ -48,7 +67,7 @@ function mapRow(row: Row): StoredWaitlist {
 
 Deno.serve(createHandler({
   now: () => Date.now(),
-  allowJoin: (ip, now) => limiter.allow(ip, now),
+  allowJoin,
   clientIp: clientIpFrom,
   newToken: productionToken,
   sendConfirm,
