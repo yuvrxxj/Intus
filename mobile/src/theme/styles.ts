@@ -6,6 +6,9 @@ export const s = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wrap: { flex: 1, paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  /** Signed-out screen: scrolls at large text, and the footer sits at the bottom when there is room. */
+  signedOutScroll: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  footerPinned: { marginTop: 'auto' },
   /** Sleep sits in a padded wrap, so the scroll itself only spaces the blocks. */
   scroll: { gap: 14, paddingBottom: 24 },
   /** Account and More sit under a navigation header, so the scroll carries its own inset. */
