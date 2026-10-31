@@ -6,24 +6,12 @@ import { dayNumber } from '../../lib/dates.ts';
 import { useHabits } from '../habits/HabitsContext.tsx';
 import { useProfile } from '../profile/ProfileContext.tsx';
 import { useConditions } from '../cycle/useConditions.ts';
-import { BEFORE_DAYS, MIN_DAYS, YES_NO_UNIT, type BloodPair, type MetricEffect, type MetricGroup, type Verdict } from './effect.ts';
+import { BEFORE_DAYS, MIN_DAYS, type BloodPair, type MetricEffect, type MetricGroup, type Verdict } from './effect.ts';
+import { formatMarkerChange, formatMarkerWithUnit, formatMetricChange, formatMetricValue } from './format.ts';
 import { sortSupplements } from './model.ts';
 import { useSupplementEffects, type EffectsState, type SupplementEffect } from './useSupplementEffects.ts';
 
 const PILL: Record<RangeStatus, string> = { in_range: 'bk bk-ok', below: 'bk bk-lo', above: 'bk bk-hi', no_range: 'bk bk-none' };
-
-/** Four significant figures, no float noise: 69.97857 becomes 69.98 and 9012.3 becomes 9012. */
-function fmt(value: number): string {
-  return String(Number(value.toPrecision(4)));
-}
-
-function signed(value: number): string {
-  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${fmt(Math.abs(value))}`;
-}
-
-function percentOf(percent: number | null): string {
-  return percent === null ? '' : ` (${percent > 0 ? '+' : percent < 0 ? '−' : ''}${Math.abs(percent).toFixed(1)}%)`;
-}
 
 const VERDICT_WORD: Record<Exclude<Verdict, 'insufficient_data'>, string> = {
   higher: 'Higher',
@@ -33,18 +21,6 @@ const VERDICT_WORD: Record<Exclude<Verdict, 'insufficient_data'>, string> = {
 
 function daysOf(n: number): string {
   return `${n} day${n === 1 ? '' : 's'}`;
-}
-
-function unitOf(m: { unit: string }): string {
-  return m.unit ? ` ${m.unit}` : '';
-}
-
-/** A yes or no habit's average is a share of days, so its change is in percentage points, not a percent of a percent. */
-function changeOf(m: MetricEffect): string {
-  if (m.diff === null) return '—';
-  if (m.diff === 0) return 'No change';
-  if (m.unit === YES_NO_UNIT) return `${signed(m.diff)} points`;
-  return `${signed(m.diff)}${percentOf(m.percent)}`;
 }
 
 const GROUP_HEAD: Record<MetricGroup, string> = {
@@ -59,9 +35,9 @@ function MetricRow({ m }: { m: MetricEffect }) {
   return (
     <tr>
       <td>{m.label}</td>
-      <td data-label="Before">{m.before.mean === null ? '—' : <>{fmt(m.before.mean)}{unitOf(m)} <span className="fx-n">{daysOf(m.before.n)}</span></>}</td>
-      <td data-label="After">{m.after.mean === null ? '—' : <>{fmt(m.after.mean)}{unitOf(m)} <span className="fx-n">{daysOf(m.after.n)}</span></>}</td>
-      <td data-label="Change">{enough ? changeOf(m) : '—'}</td>
+      <td data-label="Before">{m.before.mean === null ? '—' : <>{formatMetricValue(m.before.mean, m.unit)} <span className="fx-n">{daysOf(m.before.n)}</span></>}</td>
+      <td data-label="After">{m.after.mean === null ? '—' : <>{formatMetricValue(m.after.mean, m.unit)} <span className="fx-n">{daysOf(m.after.n)}</span></>}</td>
+      <td data-label="Change">{enough ? formatMetricChange(m.diff, m.percent, m.unit) : '—'}</td>
       <td data-label="Reading">
         {enough ? (
           <span className={`fx-verdict fx-${m.verdict}`}>{VERDICT_WORD[m.verdict as Exclude<Verdict, 'insufficient_data'>]}</span>
@@ -79,14 +55,14 @@ function BloodRow({ p }: { p: BloodPair }) {
     <tr>
       <td>{p.biomarker.name}</td>
       <td data-label="Before">
-        {fmt(p.before.value)} {u} <span className="fx-n">{formatDay(p.before.measured_at)}</span>
+        {formatMarkerWithUnit(p.before.value, u)} <span className="fx-n">{formatDay(p.before.measured_at)}</span>
         <div><span className={PILL[p.before.range]}>{RANGE_LABEL[p.before.range]}</span></div>
       </td>
       <td data-label="After">
-        {fmt(p.after.value)} {u} <span className="fx-n">{formatDay(p.after.measured_at)}</span>
+        {formatMarkerWithUnit(p.after.value, u)} <span className="fx-n">{formatDay(p.after.measured_at)}</span>
         <div><span className={PILL[p.after.range]}>{RANGE_LABEL[p.after.range]}</span></div>
       </td>
-      <td data-label="Change">{p.delta === 0 ? 'No change' : `${signed(p.delta)} ${u}${percentOf(p.percent)}`}</td>
+      <td data-label="Change">{formatMarkerChange(p.delta, p.percent, u)}</td>
       <td data-label="On it for">{daysOf(p.daysOn)}</td>
     </tr>
   );
