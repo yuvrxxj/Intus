@@ -123,7 +123,7 @@ export function showManualEntry(
   healthAvailable: boolean,
   lastSyncNights: number | null,
 ): ManualEntryState {
-  const noHealthNight = !sessions.some((s) => s.sourceKind === 'healthkit');
+  const noHealthNight = !sessions.some((s) => s.sourceKind === 'healthkit' || s.sourceKind === 'health_connect');
   return {
     offered: true,
     open: !healthAvailable || lastSyncNights === 0 || noHealthNight,
