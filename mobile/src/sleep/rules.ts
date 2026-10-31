@@ -30,7 +30,6 @@ export const NEXT = {
   save: 'This night could not be saved. Check your connection and try again.',
   sync: 'Apple Health could not be read. Try Sync again.',
   remove: 'That night could not be deleted. Try again.',
-  signIn: 'Sign-in did not work. Check the email and password and try again.',
 } as const;
 
 /** How long the loading spinner waits before it says the work is still going. */
