@@ -38,7 +38,7 @@ export interface StoredWaitlist {
 export interface Deps {
   now(): number;
   /** 5 joins per IP per 10 minutes, by default. Confirm is not counted: the token is 32 random bytes. */
-  allowJoin(ip: string, now: number): boolean;
+  allowJoin(ip: string, now: number): boolean | Promise<boolean>;
   clientIp(req: Request): string;
   findByEmail(email: string): Promise<StoredWaitlist | null>;
   insert(row: { email: string; device: Device; confirmTokenHash: string; confirmTokenExpiresAt: string; confirmSentAt: string; referredBy?: string | null }): Promise<'created' | 'exists'>;
@@ -118,7 +118,7 @@ export function createHandler(deps: Deps) {
 
     // Missing action is a join. Anything else is refused. Joins are rate limited; confirms are not.
     if (body.action != null && body.action !== 'join') return reply(400, { error: 'bad_request' });
-    if (!deps.allowJoin(ip, now)) return reply(429, { error: 'rate_limited' });
+    if (!(await deps.allowJoin(ip, now))) return reply(429, { error: 'rate_limited' });
 
     // A filled honeypot looks like the check-your-email state and writes nothing, so a bot learns no new trick.
     if (honeypotTripped(body.company)) return reply(200, { result: 'pending' });
@@ -199,7 +199,7 @@ async function mail(deps: Deps, email: string, token: string): Promise<void> {
 
 /** "Send it again": one new token a minute. Inside that minute the answer is still pending, with again: false. */
 async function resend(deps: Deps, body: Record<string, unknown>, now: number, ip: string): Promise<Response> {
-  if (!deps.allowJoin(ip, now)) return reply(429, { error: 'rate_limited' });
+  if (!(await deps.allowJoin(ip, now))) return reply(429, { error: 'rate_limited' });
   if (typeof body.email !== 'string' || emailError(body.email)) return reply(400, { error: 'invalid_email' });
   const email = normalizeEmail(body.email);
   try {
