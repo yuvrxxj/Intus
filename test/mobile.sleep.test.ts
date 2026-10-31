@@ -158,9 +158,11 @@ test('the Health purpose string is honest, shared with the plist, and background
   assert.match(copy, /sleep/i);
   assert.match(copy, /heart rate variability/i);
   assert.match(copy, /resting heart rate/i);
+  assert.match(copy, /steps/i);
+  assert.match(copy, /active calories/i);
   assert.match(copy, /never writes/i);
   assert.match(HEALTH_SHEET.sync, /Intus only reads Health when you tap Sync/);
-  assert.match(HEALTH_SETTINGS_HINT, /Sleep, Heart rate variability, and Resting heart rate/);
+  assert.match(HEALTH_SETTINGS_HINT, /Sleep, Heart rate variability, Resting heart rate, Steps, and Active Energy/);
   assert.doesNotMatch(copy, /diagnos|treat|cure|prescri|apnea|insomnia|clinical|disorder/i);
   assert.equal(copy.includes('TypeError'), false);
 
