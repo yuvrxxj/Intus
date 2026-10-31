@@ -6,6 +6,7 @@ import { authEntryRedirect } from './features/auth/webAuth.ts';
 import { WEB_AUTH_ENABLED } from './features/auth/webAuthFlag.ts';
 import { Dashboard } from './features/dashboard/Dashboard.tsx';
 import { ConfirmWaitlist } from './features/home/ConfirmWaitlist.tsx';
+import { Unsubscribe } from './features/home/Unsubscribe.tsx';
 import { Home } from './features/home/Home.tsx';
 import { Pricing } from './features/home/Pricing.tsx';
 import { HOME_PATH, initialModeFor } from './features/home/route.ts';
@@ -42,6 +43,7 @@ function WebApp() {
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
   if (route === 'pricing') return <Pricing />;
   if (route === 'confirmed') return <ConfirmWaitlist />;
+  if (route === 'unsubscribe') return <Unsubscribe />;
   return (
     <>
       {session.status === 'loading' && <Loading />}
@@ -64,6 +66,7 @@ function PhoneSite() {
   if (route === 'privacy' || route === 'terms') return <Legal page={route} />;
   if (route === 'pricing') return <Pricing />;
   if (route === 'confirmed') return <ConfirmWaitlist />;
+  if (route === 'unsubscribe') return <Unsubscribe />;
   return route === 'home' ? <Home /> : <ComingSoon />;
 }
 

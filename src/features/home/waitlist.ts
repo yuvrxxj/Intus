@@ -27,6 +27,7 @@ import {
   type Device,
   type ReferralStanding,
 } from '../../../supabase/functions/_shared/waitlistRules.ts';
+import { isUnsubscribeToken, isWaitlistId } from '../../../supabase/functions/_shared/waitlistUnsubscribe.ts';
 
 // The pure rules the edge function also needs live in supabase/functions/_shared/waitlistRules.ts, and are re-exported
 // here so the page and the tests keep importing from one place.
@@ -105,6 +106,12 @@ export const WAITLIST = {
   copyLink: 'Copy link',
   copiedLink: 'Copied',
   copyError: 'We could not copy the link. Select it and copy it by hand.',
+  unsubscribeChecking: 'Checking the link',
+  unsubscribeKicker: 'Unsubscribed',
+  unsubscribed: 'You are unsubscribed. We will not email you again.',
+  unsubscribeInvalid: 'That unsubscribe link does not work. It may have been cut short. Open it again from the email, or copy the whole link into your browser.',
+  unsubscribeError: 'We could not unsubscribe you just now. Try again.',
+  unsubscribeRetry: 'Try again',
 } as const;
 
 /** "Your place: #4". The place is computed by the database from confirmed friends, so it can change between visits. */
@@ -402,4 +409,26 @@ export function resendPayload(email: string): { action: 'resend'; email: string 
 
 export function waitlistFunctionUrl(supabaseUrl: string): string {
   return `${supabaseUrl.replace(/\/$/, '')}/functions/v1/join-waitlist`;
+}
+
+export type UnsubscribeResult = 'unsubscribed' | 'invalid' | 'error';
+
+/** The id and signature from an unsubscribe link, or null when either is missing or malformed. */
+export function unsubscribeParamsFrom(search: string): { id: string; t: string } | null {
+  const params = new URLSearchParams(search);
+  const id = params.get('id');
+  const t = params.get('t');
+  return isWaitlistId(id) && isUnsubscribeToken(t) ? { id, t } : null;
+}
+
+export function unsubscribePayload(id: string, t: string): { action: 'unsubscribe'; id: string; t: string } {
+  return { action: 'unsubscribe', id, t };
+}
+
+export function interpretUnsubscribeResponse(status: number, body: unknown): UnsubscribeResult {
+  const record = recordOf(body);
+  if (record?.result === 'unsubscribed') return 'unsubscribed';
+  if (record?.result === 'invalid') return 'invalid';
+  if (status === 0 || status >= 500) return 'error';
+  return 'invalid';
 }

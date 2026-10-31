@@ -25,7 +25,9 @@ jobs:
         with:
           deno-version: v2.x
       - name: Edge function bundles (a missing import fails the next deploy)
-        run: deno check supabase/functions/join-waitlist/index.ts
+        run: |
+          deno check supabase/functions/join-waitlist/index.ts
+          deno check supabase/functions/send-waitlist-email/index.ts
       - name: Typecheck and build
         run: npm run build
       - name: Unit tests
