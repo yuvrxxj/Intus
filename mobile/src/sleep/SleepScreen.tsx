@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionSheetIOS, ActivityIndicator, Alert, Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import type { SleepSession, SleepValues } from '../../../src/features/sleep/model.ts';
 import { addSleep, deleteSleep, fetchProfileAge, fetchSleepSince } from '../data/sleep';
-import { askToRead, available } from '../healthkit';
+import { askToRead, available } from '../health/provider';
 import { healthAsked, markHealthAsked } from '../health/asked';
 import { s } from '../theme/styles';
 import { color } from '../theme/tokens';

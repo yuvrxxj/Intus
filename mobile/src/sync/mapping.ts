@@ -43,8 +43,8 @@ export interface QuantitySampleIn {
 
 /** Matches the sleep_sessions columns the sync writes. */
 export interface SleepRow {
-  /** 'healthkit' from the phone app; the web app's import of Apple's export file uses 'apple_health_export' */
-  source_kind: 'healthkit' | 'apple_health_export';
+  /** 'healthkit' from the iPhone app, 'health_connect' from the Android app; the web app's import of Apple's export file uses 'apple_health_export' */
+  source_kind: 'healthkit' | 'apple_health_export' | 'health_connect';
   source_name: string;
   external_id: string;
   start_at: string;
@@ -61,8 +61,15 @@ export interface CardioRow {
   measured_at: string;
   hrv_ms: number | null;
   resting_hr: number | null;
-  source: 'healthkit';
+  source: 'healthkit' | 'health_connect';
 }
+
+/**
+ * What the hrv_ms number means for each source. Apple reports SDNN, Health Connect reports RMSSD. They are different
+ * measures of the same thing and are not comparable, so they are never averaged together: each stays in its own
+ * cardio_metrics row (the source column is part of the row's key) and anything that shows HRV should say which it is.
+ */
+export const HRV_KIND: Record<CardioRow['source'], 'SDNN' | 'RMSSD'> = { healthkit: 'SDNN', health_connect: 'RMSSD' };
 
 /** Same-source samples closer than this are one session. The web app merges up to an hour when it reads. */
 export const GROUP_GAP_MIN = 30;
@@ -93,9 +100,10 @@ export function localDay(at: Date, offsetAt: OffsetAt = deviceOffset): string {
  */
 export function sleepRows(
   samples: readonly SleepSampleIn[],
-  options: { offsetAt?: OffsetAt; tzId?: string | null; recordedAt: Date },
+  options: { offsetAt?: OffsetAt; tzId?: string | null; recordedAt: Date; sourceKind?: SleepRow['source_kind'] },
 ): { rows: SleepRow[]; skipped: number } {
   const offsetAt = options.offsetAt ?? deviceOffset;
+  const sourceKind = options.sourceKind ?? 'healthkit';
   const bySource = new Map<string, SleepSampleIn[]>();
   for (const s of samples) {
     if (!(s.end.getTime() > s.start.getTime())) continue;
@@ -132,7 +140,7 @@ export function sleepRows(
       }
       const firstStage = Math.min(...stages.map((x) => x.s));
       rows.push({
-        source_kind: 'healthkit',
+        source_kind: sourceKind,
         source_name: sourceName,
         external_id: group[0].uuid,
         start_at: new Date(start).toISOString(),
@@ -151,7 +159,12 @@ export function sleepRows(
 }
 
 /** One row per local day with either reading. Readings outside a plausible range are dropped. */
-export function cardioRows(hrv: readonly QuantitySampleIn[], resting: readonly QuantitySampleIn[], offsetAt: OffsetAt = deviceOffset): CardioRow[] {
+export function cardioRows(
+  hrv: readonly QuantitySampleIn[],
+  resting: readonly QuantitySampleIn[],
+  offsetAt: OffsetAt = deviceOffset,
+  source: CardioRow['source'] = 'healthkit',
+): CardioRow[] {
   const days = new Map<string, { hrv: number[]; resting: { at: number; value: number } | null }>();
   const dayOf = (key: string) => {
     let d = days.get(key);
@@ -176,7 +189,7 @@ export function cardioRows(hrv: readonly QuantitySampleIn[], resting: readonly Q
       measured_at: day,
       hrv_ms: d.hrv.length === 0 ? null : Math.round(d.hrv.reduce((a, b) => a + b, 0) / d.hrv.length),
       resting_hr: d.resting === null ? null : Math.round(d.resting.value),
-      source: 'healthkit' as const,
+      source,
     }));
 }
 

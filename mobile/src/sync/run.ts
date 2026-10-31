@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { readHrv, readRestingHr, readSleep } from '../healthkit';
+import { identity, readHrv, readRestingHr, readSleep } from '../health/provider';
 import { supabase } from '../supabase';
 import { cardioRows, sleepRows, syncWindowStart } from './mapping';
 
@@ -24,14 +24,17 @@ export async function lastSync(): Promise<SyncResult | null> {
   }
 }
 
-/** Reads Apple Health, maps it, and upserts it. Throws with a plain message on any failure; nothing is half-written per table. */
+/** Reads the phone's health store (Apple Health, or Health Connect on Android), maps it, and upserts it. Throws with a plain message on any failure; nothing is half-written per table. */
 export async function syncNow(now = new Date()): Promise<SyncResult> {
   const previous = await lastSync();
   const from = syncWindowStart(now, previous ? RESYNC_DAYS : FIRST_SYNC_DAYS);
   const [sleep, hrv, resting] = await Promise.all([readSleep(from), readHrv(from), readRestingHr(from)]);
   const tzId = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
-  const nights = sleepRows(sleep, { tzId, recordedAt: now });
-  const heart = cardioRows(hrv, resting);
+  const nights = sleepRows(sleep, { tzId, recordedAt: now, sourceKind: identity.sleepSourceKind });
+  const heart = cardioRows(hrv, resting, undefined, identity.cardioSource);
+  // TODO(INT-147): daily steps and active energy. Android already has the reader (healthconnect.readDailyActivity) and
+  // the mapping (healthConnectMapping.activityDays); switch them on here once INT-147 adds the table, with the column
+  // names taken from that migration. Nothing is written for them until then.
 
   if (nights.rows.length > 0) {
     const { error } = await supabase.from('sleep_sessions').upsert(nights.rows, { onConflict: 'user_id,source_kind,source_name,external_id' });
