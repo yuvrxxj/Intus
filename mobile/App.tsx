@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SignIn } from './src/auth/SignIn';
 import { SignedIn } from './src/nav/SignedIn';
@@ -55,13 +55,12 @@ export default function App() {
       <SafeAreaView style={s.screen}>
         <StatusBar style="dark" />
         <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.wrap}>
+          {/* Scrolls so the fields and button stay reachable at the largest text sizes; the footer sits after the card. */}
+          <ScrollView contentContainerStyle={s.signedOutScroll} keyboardShouldPersistTaps="handled">
             <Text style={s.brand}>INTUS</Text>
-            <View style={s.flex}>
-              <SignIn deleted={deleted} />
-            </View>
-            <Text style={s.footer}>Not medical advice. Ranges are flagged, never diagnosed.</Text>
-          </View>
+            <SignIn deleted={deleted} />
+            <Text style={[s.footer, s.footerPinned]}>Not medical advice. Ranges are flagged, never diagnosed.</Text>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </SafeAreaProvider>

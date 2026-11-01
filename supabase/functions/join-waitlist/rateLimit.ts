@@ -1,5 +1,6 @@
-// A sliding window kept in memory. Each edge isolate has its own, so the limit is real for one instance and a
-// burst that lands on several instances can slip past it. A shared store can replace this later without changing callers.
+// A sliding window kept in memory. Each edge isolate has its own, so a burst that lands on several instances can slip
+// past it. It is only the fallback now: the real count is shared in the database (sharedRateLimit.ts), and this answers
+// when that call fails, so a database blip never stops anyone from joining.
 
 export interface RateLimiter {
   allow(key: string, now: number): boolean;
