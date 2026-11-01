@@ -96,7 +96,8 @@ test('the API roles cannot read the table or call the function; the service role
   }
   await db.exec('set role service_role');
   try {
-    assert.equal((await db.query(`select public.waitlist_allow_join('${KEY_B}', 5, 600) as ok`)).rows[0].ok, true);
+    // Same fixed clock as the first call: with the real clock this row would be older than ten minutes and be pruned.
+    assert.equal((await db.query(`select public.waitlist_allow_join('${KEY_B}', 5, 600, '${T0}'::timestamptz) as ok`)).rows[0].ok, true);
     assert.equal(Number((await db.query('select count(*) as n from public.waitlist_attempts')).rows[0].n), 2);
   } finally {
     await db.exec('reset role');
