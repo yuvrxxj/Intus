@@ -2,6 +2,26 @@
 
 These are the pictures Buffer posts to Instagram and X. They are square PNGs, 2160 by 2160, served at `https://www.intus.fit/photoassets/<file>` from `public/photoassets/`. The page at `/photoassets` lists them and asks not to be indexed.
 
+## The nine wordless pictures (1 Nov 2026)
+
+Pictures with no words, made for the Instagram and X pre-launch posts (INT-167). Each is a 4:5 PNG, 3840 by 4800, with a square crop of it, 3840 by 3840, for X. `scripts/social_ascii.py` draws them at that size, one object each, in ASCII on a red, paper or ink ground. A picture is at `https://www.intus.fit/photoassets/wordless-<name>.png` and its square at `wordless-<name>-square.png`. The page at `/photoassets` lists all of them.
+
+| # | Name | Ground | Alt text |
+| --- | --- | --- | --- |
+| 01 | `01-hourglass` | paper | An hourglass drawn in red characters on a paper-coloured ground. |
+| 02 | `02-mark` | red | The Intus mark, a slash that dissolves into dots, in paper on a red ground. |
+| 03 | `03-capsule` | ink | A glossy capsule, half solid red and half drawn in paper-coloured characters, on an ink-coloured ground. |
+| 04 | `04-trail` | red | A faint grid of dots on red with a trail of lit dots rising to a ringed dot. |
+| 05 | `05-moon` | ink | A crescent moon drawn in paper-coloured characters on an ink-coloured ground, the rest of the disc outlined in dots. |
+| 06 | `06-three-capsules` | paper | Two red capsules and a third drawn only as a dotted outline, on a paper-coloured ground. |
+| 07 | `07-bottle` | paper | A supplement bottle with a blank label, red with an ink-coloured cap, on a paper-coloured ground. |
+| 08 | `08-ring` | red | A ring drawn in paper-coloured characters on a red ground. |
+| 09 | `09-test-tube` | ink | A test tube part full of red liquid, with a red cap, drawn in characters on an ink-coloured ground. |
+
+- The numbers are positions on the Instagram profile grid, 01 top left. Post 09 first and 01 last and the grid lands as drawn.
+- None says anything about the product, so none cites a fact id, and none has words, numbers, people or data. The caption is what could break the rules: it must pass `facts.md` and `voice.md`, and a person approves the exact picture and text, as for the other twenty.
+- The same cache note as below applies: if a picture is ever redrawn, attach it again to any scheduled post.
+
 ## What changed on 29 Oct 2026 (version 3)
 
 All 20 pictures were redrawn and the copy was rewritten. The file names did not change, so every existing link still works, but **the file name no longer says what the picture shows**. Read the table below, not the name.
