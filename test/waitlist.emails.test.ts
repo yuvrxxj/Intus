@@ -37,7 +37,7 @@ const SETTINGS: WaitlistEmailSettings = {
   storeUrl: 'https://apps.apple.com/app/id0000000000',
   postalAddress: '1 Test Street\nTestville 00000',
 };
-const UNSUB = 'https://intus.fit/waitlist/unsubscribe?id=x&t=y';
+const UNSUB = 'https://www.intus.fit/waitlist/unsubscribe?id=x&t=y';
 
 test('both function folders only import from themselves, _shared and packages, so Supabase can bundle them', () => {
   for (const dir of ['supabase/functions/join-waitlist', 'supabase/functions/send-waitlist-email', 'supabase/functions/_shared']) {
@@ -168,7 +168,7 @@ test('the unsubscribe token verifies for its id and nothing else', async () => {
   for (const bad of [undefined, '', 'short', `${token}x`, 42]) assert.equal(await verifyUnsubscribeToken(ID, bad, SECRET), false);
   assert.equal(await verifyUnsubscribeToken('not-a-uuid', token, SECRET), false);
   assert.equal(await verifyUnsubscribeToken(ID, token, undefined), false, 'no secret, no unsubscribe');
-  assert.equal(unsubscribeLink(ID, token), `https://intus.fit/waitlist/unsubscribe?id=${ID}&t=${token}`);
+  assert.equal(unsubscribeLink(ID, token), `https://www.intus.fit/waitlist/unsubscribe?id=${ID}&t=${token}`);
 });
 
 test('the admin token comparison is exact', async () => {

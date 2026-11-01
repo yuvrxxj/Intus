@@ -2,7 +2,7 @@
 // an HMAC-SHA256 of that id under the secret WAITLIST_UNSUBSCRIBE_SECRET, so nothing new is stored and a link cannot be
 // made for someone else's id without the secret. No Deno or Node imports, so node:test, Vite and Deno all read this.
 
-export const UNSUBSCRIBE_ORIGIN = 'https://intus.fit';
+export const UNSUBSCRIBE_ORIGIN = 'https://www.intus.fit';
 export const UNSUBSCRIBE_PATH = '/waitlist/unsubscribe';
 
 /** A waitlist row id: a lower-case or upper-case UUID. Anything else is refused before any work is done. */
