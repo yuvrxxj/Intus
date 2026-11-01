@@ -7,6 +7,7 @@ import { createContext, useContext } from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountScreen } from '../account/AccountScreen';
+import { ActivityScreen } from '../activity/ActivityScreen';
 import { MoreScreen } from '../more/MoreScreen';
 import { SleepScreen } from '../sleep/SleepScreen';
 import { s } from '../theme/styles';
@@ -75,7 +76,20 @@ function SleepRoute() {
   );
 }
 
-/** Signed-in app: Sleep, and More, whose stack pushes Account with the system back chevron and a large title. */
+function ActivityRoute() {
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.wrap}>
+        <Text style={s.brand}>INTUS</Text>
+        <View style={s.flex}>
+          <ActivityScreen />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+/** Signed-in app: Sleep, Activity, and More, whose stack pushes Account with the system back chevron and a large title. */
 export function SignedIn({ session, onDeleted }: { session: Session; onDeleted: () => void }) {
   return (
     <SignedInContext.Provider value={{ session, onDeleted }}>
@@ -95,6 +109,13 @@ export function SignedIn({ session, onDeleted }: { session: Session; onDeleted: 
             tabBarIcon: ({ color: tint }) => <SymbolView name="bed.double" tintColor={tint} size={22} />,
           }}
           component={SleepRoute}
+        />
+        <Tab.Screen
+          name="Activity"
+          options={{
+            tabBarIcon: ({ color: tint }) => <SymbolView name="figure.walk" tintColor={tint} size={22} />,
+          }}
+          component={ActivityRoute}
         />
         <Tab.Screen
           name="More"

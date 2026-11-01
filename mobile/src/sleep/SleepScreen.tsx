@@ -358,13 +358,13 @@ function HealthCard({
       </View>
     );
   }
-  const empty = last !== null && last.nights === 0 && last.heartDays === 0;
+  const empty = last !== null && last.nights === 0 && last.heartDays === 0 && last.activityDays === 0;
   return (
     <View style={s.card}>
       <Text style={s.label}>Apple Health</Text>
       {last ? (
         <Text style={s.body}>
-          Last synced {new Date(last.at).toLocaleString()}: {last.nights} {last.nights === 1 ? 'night' : 'nights'} of sleep and {last.heartDays} {last.heartDays === 1 ? 'day' : 'days'} of heart readings.
+          Last synced {new Date(last.at).toLocaleString()}: {last.nights} {last.nights === 1 ? 'night' : 'nights'} of sleep, {last.heartDays} {last.heartDays === 1 ? 'day' : 'days'} of heart readings and {last.activityDays} {last.activityDays === 1 ? 'day' : 'days'} of steps and active calories.
           {last.skipped > 0 ? ` ${last.skipped} too short or too long to be a real sleep were left out.` : ''}
         </Text>
       ) : (

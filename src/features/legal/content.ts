@@ -3,7 +3,7 @@
 // this file in the same pull request (test/legal.test.ts checks the parts that are easy to get wrong).
 //
 // Facts only the operator can change, kept in one place:
-export const LEGAL_UPDATED = '12 October 2026';
+export const LEGAL_UPDATED = '1 November 2026';
 export const LEGAL_OPERATOR = 'Yuvraaj Singh Rahal';
 /** Where disputes go. Change here if Intus is ever run by a company in another country. */
 export const LEGAL_GOVERNING_LAW = 'India';
@@ -37,7 +37,7 @@ export const PRIVACY: LegalSection[] = [
       'Your account: your email address, and your password in hashed form (we never see it). If you sign in with Google, we receive your email address and name from Google.',
       'Health and body information you enter: your profile (name, sex, age, height, goals, activity level), daily weight, food, mood and notes, sleep, habits, workouts, heart readings, supplements, screening history, bloodwork results and the ranges printed on your reports, and, if you choose to add them, cycle days and health conditions.',
       'Files you choose to keep: progress photos, and copies of lab report PDFs if you tick "Keep a private copy" when uploading one.',
-      'Sleep, heart rate variability and resting heart rate from Apple Health, only if you install the Intus iPhone app and allow it. The app never writes to Apple Health.',
+      'Sleep, heart rate variability, resting heart rate, steps and active calories from Apple Health, only if you install the Intus iPhone app and allow it. The app never writes to Apple Health.',
       'Technical data: your IP address and browser or device type appear in the logs of our hosting providers. We use them only to keep the service running and secure.',
     ],
   },

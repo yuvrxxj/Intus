@@ -180,6 +180,61 @@ export function cardioRows(hrv: readonly QuantitySampleIn[], resting: readonly Q
     }));
 }
 
+/** Steps and active energy are limits in activity_days (supabase/migrations/20261101000200_activity_days.sql). */
+export const STEPS_RANGE = { min: 1, max: 200_000 } as const;
+export const ACTIVE_KCAL_RANGE = { min: 0.1, max: 20_000 } as const;
+
+/** One day's total as Apple Health works it out (cumulative sum over a day, already de-duplicated across devices). */
+export interface DayTotalIn {
+  start: Date;
+  end: Date;
+  /** undefined when Health had nothing for that day */
+  value: number | undefined;
+}
+
+/** Matches the activity_days columns the sync writes. */
+export interface ActivityRow {
+  day: string;
+  steps: number | null;
+  active_kcal: number | null;
+  source: 'healthkit';
+}
+
+/**
+ * Steps and active energy become one activity_days row per local day. The totals come from Apple's own daily statistics,
+ * which count a step once even when an iPhone and an Apple Watch both recorded it, so nothing is added up here. A day
+ * with no total, or a total of zero, has no reading (a phone left on a desk is not "0 steps"); a total outside the
+ * database's limits is a glitch. Both are left out, never stored half-right. Active energy is rounded to one decimal and
+ * steps to a whole number. A day with neither is dropped.
+ */
+export function activityRows(steps: readonly DayTotalIn[], energy: readonly DayTotalIn[], offsetAt: OffsetAt = deviceOffset): ActivityRow[] {
+  const days = new Map<string, { steps: number | null; kcal: number | null }>();
+  const dayOf = (key: string) => {
+    let d = days.get(key);
+    if (!d) {
+      d = { steps: null, kcal: null };
+      days.set(key, d);
+    }
+    return d;
+  };
+  for (const s of steps) {
+    if (s.value === undefined || !Number.isFinite(s.value)) continue;
+    const whole = Math.round(s.value);
+    if (whole < STEPS_RANGE.min || whole > STEPS_RANGE.max) continue;
+    dayOf(localDay(s.start, offsetAt)).steps = whole;
+  }
+  for (const s of energy) {
+    if (s.value === undefined || !Number.isFinite(s.value)) continue;
+    const tenths = Math.round(s.value * 10) / 10;
+    if (tenths < ACTIVE_KCAL_RANGE.min || tenths > ACTIVE_KCAL_RANGE.max) continue;
+    dayOf(localDay(s.start, offsetAt)).kcal = tenths;
+  }
+  return [...days.entries()]
+    .filter(([, d]) => d.steps !== null || d.kcal !== null)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([day, d]) => ({ day, steps: d.steps, active_kcal: d.kcal, source: 'healthkit' as const }));
+}
+
 /**
  * Where a sync starts: local midnight a number of days back, so every day it touches is read whole and a day's HRV mean
  * is never worked out from half a day. The first sync reads further back than the later ones.

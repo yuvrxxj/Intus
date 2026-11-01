@@ -8,21 +8,21 @@ import { MIN_NIGHTS, summarize, type PeriodSummary } from '../../../src/features
 import { formatClock, formatDuration, localDate, roundTo5 } from '../../../src/features/sleep/time.ts';
 import { dayNumber, isoDay } from '../../../src/lib/dates.ts';
 
-/** The sentence iOS shows on the system sheet, and the first line of ours. It names the three reads and no medical use. */
+/** The sentence iOS shows on the system sheet, and the first line of ours. It names the five reads and no medical use. */
 export const HEALTH_SHARE_PURPOSE =
-  'Intus reads your sleep, heart rate variability and resting heart rate from Apple Health to show them in your log. It never writes to Apple Health. Only you can see this data.';
+  'Intus reads your sleep, heart rate variability, resting heart rate, steps and active calories from Apple Health to show them in your log. It never writes to Apple Health. Only you can see this data.';
 
 export const HEALTH_SHEET = {
   title: 'Connect Apple Health',
-  reads: ['Sleep', 'Heart rate variability', 'Resting heart rate'],
-  aside: 'Steps, workouts and everything else stay in Apple Health. Intus does not read them.',
+  reads: ['Sleep', 'Heart rate variability', 'Resting heart rate', 'Steps', 'Active calories'],
+  aside: 'Workouts and everything else stay in Apple Health. Intus does not read them.',
   denial: 'If you turn access off, or if there is no sleep to read, you can enter nights by hand. iOS does not tell Intus which one happened.',
   sync: 'Intus only reads Health when you tap Sync.',
 } as const;
 
-/** Shown when a sync comes back empty. Names the three switches, because iOS will not say which were refused. */
+/** Shown when a sync comes back empty. Names the five switches, because iOS will not say which were refused. */
 export const HEALTH_SETTINGS_HINT =
-  'Nothing came back. If you turned access off, iOS does not tell apps. Open Settings, Health, Data Access and Devices, Intus, and turn on Sleep, Heart rate variability, and Resting heart rate.';
+  'Nothing came back. If you turned access off, iOS does not tell apps. Open Settings, Health, Data Access and Devices, Intus, and turn on Sleep, Heart rate variability, Resting heart rate, Steps, and Active Energy.';
 
 /** What to say instead of a raw client or database message. */
 export const NEXT = {

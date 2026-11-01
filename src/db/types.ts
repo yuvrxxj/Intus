@@ -40,6 +40,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      activity_days: {
+        Row: {
+          active_kcal: number | null;
+          created_at: string;
+          day: string;
+          id: string;
+          source: string;
+          steps: number | null;
+          user_id: string;
+        };
+        Insert: {
+          active_kcal?: number | null;
+          created_at?: string;
+          day: string;
+          id?: string;
+          source?: string;
+          steps?: number | null;
+          user_id?: string;
+        };
+        Update: {
+          active_kcal?: number | null;
+          created_at?: string;
+          day?: string;
+          id?: string;
+          source?: string;
+          steps?: number | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       biomarker_readings: {
         Row: {
           biomarker_id: string;
