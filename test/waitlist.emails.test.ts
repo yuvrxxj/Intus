@@ -20,7 +20,7 @@ import {
   unsubscribeToken,
   verifyUnsubscribeToken,
 } from '../supabase/functions/_shared/waitlistUnsubscribe.ts';
-import { postResend, type OutgoingMail } from '../supabase/functions/_shared/resendMail.ts';
+import { postResend, RESEND_URL, resendUrlFrom, type OutgoingMail } from '../supabase/functions/_shared/resendMail.ts';
 import { createHandler, clientIpFrom, type Deps } from '../supabase/functions/join-waitlist/handler.ts';
 import { createSendHandler, MAX_LIMIT, SEND_DELAY_MS, type Recipient, type SendConfig, type SendDeps } from '../supabase/functions/send-waitlist-email/handler.ts';
 import { interpretUnsubscribeResponse, unsubscribeParamsFrom, unsubscribePayload } from '../src/features/home/waitlist.ts';
@@ -282,6 +282,24 @@ test('the Resend call carries the unsubscribe headers and the idempotency key, a
   assert.equal(seen[0].headers['idempotency-key'], 'k1');
   assert.deepEqual(seen[0].body.headers, { 'List-Unsubscribe': '<https://intus.fit/u>' });
   await assert.rejects(postResend(fake(false), 'key', mail), (e: Error) => e.message === 'resend failed');
+});
+
+test('mail goes to Resend unless a local test run points it at this machine', async () => {
+  const env = (value?: string) => (name: string) => (name === 'RESEND_API_URL' ? value : undefined);
+  assert.equal(resendUrlFrom(env()), RESEND_URL);
+  assert.equal(RESEND_URL, 'https://api.resend.com/emails');
+  assert.equal(resendUrlFrom(env('  ')), RESEND_URL);
+  assert.equal(resendUrlFrom(env('http://host.docker.internal:8787/emails')), 'http://host.docker.internal:8787/emails');
+  assert.equal(resendUrlFrom(env('http://127.0.0.1:8787/emails')), 'http://127.0.0.1:8787/emails');
+  // plain http anywhere else is ignored, so a typo can never send mail unencrypted to another host
+  assert.equal(resendUrlFrom(env('http://example.org/emails')), RESEND_URL);
+  assert.equal(resendUrlFrom(env('http://localhost.example.org/emails')), RESEND_URL);
+  const urls: string[] = [];
+  const fake = (async (url: string) => { urls.push(url); return { ok: true } as Response; }) as unknown as typeof fetch;
+  const mail: OutgoingMail = { from: MARKETING_FROM, to: 'x@test.invalid', subject: 's', text: 't', html: 'h' };
+  await postResend(fake, 'key', mail);
+  await postResend(fake, 'key', mail, 'http://127.0.0.1:8787/emails');
+  assert.deepEqual(urls, [RESEND_URL, 'http://127.0.0.1:8787/emails']);
 });
 
 // ── send-waitlist-email ──

@@ -8,7 +8,7 @@
 // SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { mailGateFrom, postResend } from '../_shared/resendMail.ts';
+import { mailGateFrom, postResend, resendUrlFrom } from '../_shared/resendMail.ts';
 import { createSendHandler, type Recipient } from './handler.ts';
 
 const env = (name: string) => Deno.env.get(name) || undefined;
@@ -18,6 +18,7 @@ const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE
 });
 
 const apiKey = env('RESEND_API_KEY');
+const resendUrl = resendUrlFrom(env);
 
 Deno.serve(createSendHandler({
   config: {
@@ -49,7 +50,7 @@ Deno.serve(createSendHandler({
     const { error } = await admin.from('waitlist_emails_sent').delete().eq('waitlist_id', id).eq('kind', kind);
     if (error) throw new Error('release failed');
   },
-  send: (mail) => postResend(fetch, apiKey!, mail),
+  send: (mail) => postResend(fetch, apiKey!, mail, resendUrl),
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   log: (message) => console.error(message),
 }));

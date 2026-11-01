@@ -4,19 +4,21 @@
 // The gate and the Resend call are shared with send-waitlist-email (../_shared/resendMail.ts).
 
 import { CONFIRM_FROM, confirmEmail } from '../_shared/confirmEmail.ts';
-import { mailAllowed, mailGateFrom, postResend } from '../_shared/resendMail.ts';
+import { mailAllowed, mailGateFrom, postResend, resendUrlFrom } from '../_shared/resendMail.ts';
 
 export interface MailerSettings {
   apiKey: string | undefined;
   live: boolean;
   allowlist: string[];
   fetch: typeof fetch;
+  /** Resend, unless a local test run points RESEND_API_URL somewhere else (see resendUrlFrom). */
+  resendUrl?: string;
 }
 
 export type SendConfirm = (email: string, token: string) => Promise<'sent' | 'skipped'>;
 
 export function mailerSettingsFrom(env: (name: string) => string | undefined, fetchFn: typeof fetch): MailerSettings {
-  return { apiKey: env('RESEND_API_KEY'), ...mailGateFrom(env), fetch: fetchFn };
+  return { apiKey: env('RESEND_API_KEY'), ...mailGateFrom(env), fetch: fetchFn, resendUrl: resendUrlFrom(env) };
 }
 
 export function createSendConfirm(settings: MailerSettings): SendConfirm {
@@ -24,7 +26,7 @@ export function createSendConfirm(settings: MailerSettings): SendConfirm {
     if (!settings.apiKey) return 'skipped';
     if (!mailAllowed(settings, email)) return 'skipped';
     const message = confirmEmail(token);
-    await postResend(settings.fetch, settings.apiKey, { from: CONFIRM_FROM, to: email, ...message });
+    await postResend(settings.fetch, settings.apiKey, { from: CONFIRM_FROM, to: email, ...message }, settings.resendUrl);
     return 'sent';
   };
 }

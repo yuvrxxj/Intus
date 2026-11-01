@@ -31,11 +31,25 @@ export interface OutgoingMail {
   idempotencyKey?: string;
 }
 
-export async function postResend(fetchFn: typeof fetch, apiKey: string, mail: OutgoingMail): Promise<void> {
+export const RESEND_URL = 'https://api.resend.com/emails';
+
+/**
+ * Where mail is posted. Production leaves RESEND_API_URL unset and gets Resend. A local test run sets it to a stand-in
+ * on this machine (docs/ios/local-supabase.md), so mail lands in the local inbox and never reaches Resend. Anything
+ * that is not https, or plain http to this machine, is ignored rather than trusted.
+ */
+export function resendUrlFrom(env: (name: string) => string | undefined): string {
+  const url = env('RESEND_API_URL')?.trim();
+  if (!url) return RESEND_URL;
+  if (/^https:\/\//.test(url) || /^http:\/\/(localhost|127\.0\.0\.1|host\.docker\.internal)(:\d+)?\//.test(url)) return url;
+  return RESEND_URL;
+}
+
+export async function postResend(fetchFn: typeof fetch, apiKey: string, mail: OutgoingMail, url: string = RESEND_URL): Promise<void> {
   const headers: Record<string, string> = { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' };
   if (mail.idempotencyKey) headers['idempotency-key'] = mail.idempotencyKey;
   const body: Record<string, unknown> = { from: mail.from, to: [mail.to], subject: mail.subject, text: mail.text, html: mail.html };
   if (mail.headers) body.headers = mail.headers;
-  const res = await fetchFn('https://api.resend.com/emails', { method: 'POST', headers, body: JSON.stringify(body) });
+  const res = await fetchFn(url, { method: 'POST', headers, body: JSON.stringify(body) });
   if (!res.ok) throw new Error('resend failed');
 }

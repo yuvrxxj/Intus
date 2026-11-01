@@ -201,6 +201,15 @@ curl -s -X POST https://zfyeqfnretrrmtevczrc.supabase.co/functions/v1/send-waitl
 
 The answer is `{kind, dryRun, live, eligible, sent, skipped, failed, missingSettings}`. Running it again only reaches people who have not had that email yet. If the function is stopped part way through a send (a timeout), the person being sent to at that moment may be recorded as sent without the mail going out.
 
+**Trying all three emails on your Mac, with no real mail.** With the local Supabase running (`docs/ios/local-supabase.md`):
+
+1. `python3 scripts/fake-resend.py` stands in for Resend. It takes what the functions would send to Resend and puts it in the local inbox at http://127.0.0.1:54324. It never contacts the internet.
+2. Write an env file outside the repository with test values only: `WAITLIST_ADMIN_TOKEN`, `WAITLIST_UNSUBSCRIBE_SECRET` (each `openssl rand -hex 32`), `RESEND_API_KEY=local-fake-key`, `RESEND_API_URL=http://host.docker.internal:8787/emails`, `WAITLIST_POSTAL_ADDRESS`, `WAITLIST_TESTFLIGHT_URL=https://testflight.apple.com/join/LOCALTEST` and `WAITLIST_EMAIL_ALLOWLIST` with your test addresses.
+3. `supabase functions serve --no-verify-jwt --env-file <that file>` (set `[edge_runtime] enabled = true` in `config.toml` first, and do not commit that).
+4. Join from the website run against the stack (`VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_PUBLISHABLE_KEY=<from bash scripts/local-supabase.sh env> npm run dev`), confirm from the local inbox (swap `https://intus.fit` for `http://localhost:5173` in the link), then run the curl commands above against `http://127.0.0.1:54321/functions/v1/send-waitlist-email`.
+
+`RESEND_API_URL` exists only for this. Production leaves it unset and mail goes to Resend. A plain `http://` address is accepted only for this machine (`localhost`, `127.0.0.1`, `host.docker.internal`); anything else falls back to Resend.
+
 **Deploying the function.** It is not part of the migration workflow. Deploy `supabase/functions/read-report` with the
 Supabase CLI (`supabase functions deploy read-report --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`) or the
 Supabase connector in a Claude Code session, and keep the repository and the deployed copy the same. It checks the
