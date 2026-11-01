@@ -64,7 +64,7 @@ test('/photoassets stays out of search without changing the rest of the site', (
     rewrites: { source: string; destination: string }[];
   };
   const robots = vercel.headers.filter((rule) => rule.headers.some((header) => header.key === 'X-Robots-Tag'));
-  // /waitlist/confirmed and /signin are kept out of search too (test/indexing.test.ts); the photo assets are the last two
+  // /waitlist/confirmed, /waitlist/unsubscribe and /signin are kept out of search too (test/indexing.test.ts); the photo assets are the last two
   assert.deepEqual(robots.map((rule) => rule.source).slice(-2), ['/photoassets', '/photoassets/:path*']);
   for (const rule of robots) {
     assert.deepEqual(rule.headers, [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }]);

@@ -15,7 +15,8 @@ test('the sitemap lists every public page on the canonical www host, once each',
 });
 
 test('the sitemap leaves out the pages that must not be indexed', () => {
-  for (const path of [SIGN_IN_PATH, CONFIRMED_PATH, '/photoassets']) {
+  // /waitlist/unsubscribe is the email unsubscribe page (INT-163)
+  for (const path of [SIGN_IN_PATH, CONFIRMED_PATH, '/waitlist/unsubscribe', '/photoassets']) {
     assert.ok(!listed.some((loc) => loc.startsWith(`${HOST}${path}`)), `${path} must not be in the sitemap`);
   }
 });
@@ -33,7 +34,7 @@ test('robots.txt does not block pages that are kept out of the index with noinde
 
 test('the pages that stay out of the index send noindex', () => {
   const noindexed = vercel.headers.filter((rule) => rule.headers.some((h) => h.key === 'X-Robots-Tag' && /noindex/.test(h.value))).map((rule) => rule.source);
-  for (const path of [CONFIRMED_PATH, SIGN_IN_PATH, '/photoassets']) {
+  for (const path of [CONFIRMED_PATH, SIGN_IN_PATH, '/waitlist/unsubscribe', '/photoassets']) {
     assert.ok(noindexed.includes(path), `${path} needs an X-Robots-Tag noindex header in vercel.json`);
   }
 });
