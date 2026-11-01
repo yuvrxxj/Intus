@@ -1,6 +1,6 @@
 # Intus for iPhone: the HealthKit sync companion
 
-A thin Expo (React Native) app on the same Supabase project as intus.fit. It does three things: sign in with your Intus account, ask Apple Health for read access, and sync. Everything else stays on the website until the phone screens are built (INT-89, INT-97).
+A thin Expo (React Native) app on the same Supabase project as intus.fit. It signs in with your Intus account, asks Apple Health for read access, syncs, and shows sleep. From Account it can sign out, download your data, or delete the account. The daily log and the other screens stay on the website until they are built (INT-89, INT-97).
 
 What it reads, and where it goes:
 
@@ -33,12 +33,20 @@ npm run ios                   # builds the development client, installs it in th
 
 Installing on a real iPhone for more than a week, and TestFlight, need the Apple Developer Program (99 USD a year). Not now. When it is time: create the app in App Store Connect with the bundle id `fit.intus.app`, then `npm run build:testflight`. EAS makes the certificates and the provisioning profile with the HealthKit capability, builds, and submits. App Store review for a HealthKit app wants a privacy policy URL (INT-66) and a clear purpose string (in `app.json`).
 
+## Account
+
+Signed in, Sleep is the first tab. The More tab pushes Account, with the system back chevron and a large title. Sign out asks "Sign out of Intus?" and returns to the sign-in screen. Download my data builds the same JSON file the website saves (the shared `buildExport`) and opens the iOS share sheet. Delete account is a destructive row that opens a system action sheet; only then does the email have to be typed back. Photos and uploaded lab reports are removed, `delete_my_account()` runs, and the keychain, async storage and cache are cleared. Privacy policy and terms open in the app at https://intus.fit/privacy and https://intus.fit/terms. The "Not medical advice" line sits at the bottom of More.
+
 ## Settings
 
 `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` point it at another Supabase project. Both default to production and are public by design, as on the web; row-level security keeps each person's rows to themselves. The login session is kept in the iOS keychain (`expo-secure-store`).
 
+## Sleep
+
+The Sleep screen lists nights from `sleep_sessions` with the same rules as the website (`src/features/sleep`): one source per night, and averages only after 5 nights in a 28 day stretch. The first time you are signed in on a device with Apple Health, a sheet explains the three reads and then iOS shows its own permission sheet. The purpose string is `NSHealthShareUsageDescription` in `app.json` (the HealthKit plugin writes it into Info.plist on `npm run ios`). Add a night by hand stays on the screen after a Health night is stored. The form also opens on its own when a sync comes back with no sleep. That row is `source_kind = 'manual'` and the website reads it from the same table.
+
 ## Not done yet
 
-- Background sync (HealthKit background delivery). The entitlement is off (`background: false` in `app.json`) until it is built; sync is by the button for now.
+- Background sync (HealthKit background delivery). The entitlement is off (`background: false` in `app.json`) until the app is on a paid account; sync is by the button for now.
 - Android and Health Connect (INT-57, INT-101).
 - The app icon: the template's placeholder icons are still in `assets/`. INT-50.

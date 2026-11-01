@@ -34,12 +34,13 @@ again. Do not add new files to it.
 
 | Kind of table | Tables | Rule |
 | --- | --- | --- |
-| Personal | `biomarker_readings`, `cycle_days`, `daily_logs`, `habits`, `medications`, `profile`, `profile_conditions`, `sleep_sessions`, `workouts`, `workout_sets`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
+| Personal | `activity_days`, `biomarker_readings`, `cycle_days`, `daily_logs`, `habits`, `medications`, `profile`, `profile_conditions`, `sleep_sessions`, `workouts`, `workout_sets`, and the tables no screen uses yet (`action_items`, `body_composition`, `cardio_metrics`, `devices`, `diagnoses`, `meals`, `photo_log`, `supplement_catalog`) | Each row has a `user_id`, filled in from the signed-in user. You see and change only your own rows |
 | Reference | `biomarkers` | Everyone signed in can read it. Nobody can change it through the API; it is edited by migration |
 | Files | the `check-in-photos` Storage bucket | Private. Each person can read, add and delete only inside their own `<user id>/` folder, names must be `<uuid>.jpg` or `.webp`, files are at most 2 MiB, and a person holds at most 200. There is no update policy |
 | Files | the `lab-reports` Storage bucket | The same rules for uploaded lab report PDFs: own folder only, `<uuid>.pdf`, at most 10 MiB each and 200 per person, no update policy. `delete_my_account()` refuses while any remain, and the app removes them first |
 | Internal | `ai_settings` | Unreachable through the API: row level security with no policy. Edited in the Supabase dashboard |
 | Internal | `ai_usage` | A person can read their own rows. Only the Edge Function writes them |
+| Internal | `waitlist` | No `user_id`. Row level security is forced and there is no policy, and `anon` and `authenticated` have no grants, so the API cannot read it. Only the `join-waitlist` Edge Function (service role) inserts. The email is stored in lower case and is unique. A confirmation token is stored as a SHA-256 hash with an expiry, for the later double opt-in email, which this table does not send |
 
 One log per person per day (`unique (user_id, log_date)`), one profile per person, and one row of heart readings per person, day and source (`unique (user_id, measured_at, source)` on `cardio_metrics`, so the phone sync can upsert).
 
@@ -88,6 +89,10 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261012000600_ai_reading.sql` | Adds `ai_settings` (off by default: the limits, provider, model and prices), `ai_usage` (one row per AI call, never any report text) and the three functions that enforce the limits |
 | `20261013000100_date_of_birth.sql` | Adds `profile.date_of_birth` (nullable, not before 1900), so a person's age is worked out from it and goes up on their birthday. The old `age` column stays for people who have not given a date |
 | `20261015000100_cleanup_after_per_user_change.sql` | Housekeeping after the 5 Oct change (INT-67). First writes the one old `daily_logs.cardio` word the seed could not map (`stairs`) into the Cardio habit. Then drops `screening_history` and `screening_rules`, the profile columns `family_colorectal_cancer`, `family_prostate_cancer` and `noise_or_blast_exposure`, `medications.paracetamol_mg_per_dose`, the old `daily_logs` columns `lift`, `core`, `cardio`, `cigs` and `steps`, `private.is_owner()`, `app_owner`, and the `backup_20261005` schema (a copy of all 16 tables from before the per-person change) |
+| `20261028000100_waitlist.sql` | Adds `waitlist` for early access (INT-94): unique email, device, `pending` or `confirmed`, a SHA-256 confirm-token hash and its expiry, and `created_at`. Row level security is forced and the API roles cannot read or write it. The confirmation email is not part of this migration |
+| `20261029000100_waitlist_referrals.sql` | Adds `referral_code` (unique, ten hex characters, made by the database) and `referred_by` to `waitlist`, a trigger that refuses a person referring themselves (same address, or the same inbox once the +tag and gmail dots are dropped), and the view `waitlist_standing` that computes each confirmed person's place (most confirmed friends first, then earliest sign-up). The place is never stored. Row level security is unchanged: the API roles read nothing, only the service role reads the view. **Apply this before deploying the code that uses it** (INT-151) |
+| `20261101000100_waitlist_rate_limit.sql` | Adds `waitlist_attempts` (one row per allowed join attempt, keyed by a salted SHA-256 of the caller's address; the raw address is never stored) and `waitlist_allow_join(key, limit, window)`, an atomic sliding-window check that answers true and records the attempt, or false and records nothing, and deletes rows older than the window. Row level security is forced; only the service role can read the table or call the function. The function uses it for the 5-per-10-minutes join limit so every instance shares one count. Optional secret `WAITLIST_RATE_SALT` (defaults to the service role key). **Apply this before redeploying the function** (INT-152) |
+| `20261101000200_activity_days.sql` | Adds `activity_days` (INT-147): one row per person, day and source with `steps` (whole number, 0 to 200,000) and `active_kcal` (0 to 20,000, one decimal), at least one of the two, source `manual`, `healthkit`, `health_connect` or `other`. The iPhone sync writes `healthkit`; Android will write `health_connect` into the same table. Per-person policy like the other personal tables, no access for the signed-out role, removed with the account. **Apply this before the app build that syncs steps** |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carried
@@ -141,6 +146,16 @@ prompts fails with "no endpoints", and nothing is sent. On Gemini, make sure Clo
 the free tier lets Google use prompts to improve its products and human reviewers may read them, which is not
 acceptable for health data.
 
+## Waitlist
+
+`public.waitlist` holds early-access sign-ups. It is not a personal table: there is no `user_id`, and deleting an account does not touch it. Row level security is forced on, there is no policy, and `anon` and `authenticated` have no grants. The browser never reads the table.
+
+The Edge Function `supabase/functions/join-waitlist` checks the email, the device and a honeypot field, allows 5 joins or resends from one IP address per 10 minutes (counted in the database by `waitlist_allow_join`, so every instance shares one count; if that call fails it falls back to a per-instance memory count and logs it), and inserts. It stores SHA-256 of a confirmation token and an expiry seven days out. Signing up again while the row is still pending replaces that hash. Opening the link sets `confirmed_at` and keeps the hash, so the same link can be opened again. Optional answers (`tracks_today`, at most 280 characters, and `answered_at`) are written by that function, not by a public policy. Only a confirmed row is eligible for an invite. It never returns the token. It emails the raw token once, through Resend from `marketing@mail.intus.fit`, and only when `RESEND_API_KEY` is set. Until the secret `WAITLIST_EMAIL_LIVE` is `true`, only addresses in the secret `WAITLIST_EMAIL_ALLOWLIST` (comma separated) get mail, so test sign-ups work and real ones are untouched.
+
+The function reads shared rules from `supabase/functions/_shared/` (`waitlistRules.ts`, `confirmEmail.ts`), because Supabase bundles only the function's own folder plus `_shared/`. The web page re-exports `waitlistRules.ts`, so there is one copy. CI runs `deno check supabase/functions/join-waitlist/index.ts`, and a test fails if the function imports anything outside its folder and `_shared/`.
+
+**Deploying is a manual step.** Merging does not deploy functions. After the migration is merged: `supabase functions deploy join-waitlist --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`, and set the secrets in the dashboard. The gateway check stays off because callers are signed out and the publishable key is not a JWT. The live function was hand-patched once; redeploy from this code to replace it. Country, UTM and analytics are later pull requests.
+
 **Deploying the function.** It is not part of the migration workflow. Deploy `supabase/functions/read-report` with the
 Supabase CLI (`supabase functions deploy read-report --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`) or the
 Supabase connector in a Claude Code session, and keep the repository and the deployed copy the same. It checks the
@@ -155,6 +170,8 @@ scores it against the on-device reader: results reproduced, wrong numbers droppe
 time. A model with no private host is reported as unusable. Keep real reports and their text out of the repository.
 
 ## Sign-in
+
+The public website does not offer these screens until `VITE_WEB_AUTH_ENABLED` is `true` (see the README, "Web sign-in"). The Supabase settings below stay as they are.
 
 Three ways in, all free:
 

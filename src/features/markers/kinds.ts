@@ -57,6 +57,7 @@ export function kindOfSource(source: DataSource): MarkerKind {
 export const TABLE_KIND: Record<PersonalTable, MarkerKind | 'bySource' | null> = {
   sleep_sessions: 'bySource',
   cardio_metrics: 'bySource',
+  activity_days: 'bySource',
   cycle_days: 'bySource',
   daily_logs: 'daily',
   meals: 'daily',

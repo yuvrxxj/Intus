@@ -37,6 +37,8 @@ const STRENGTH = migration('20261012000500_strength');
 const AI_READING = migration('20261012000600_ai_reading');
 // The exact date of birth, so a person's age rolls over on their birthday.
 const DATE_OF_BIRTH = migration('20261013000100_date_of_birth');
+// Steps and active calories per day, one row per person, day and source.
+const ACTIVITY = migration('20261101000200_activity_days');
 // Photo check-ins: the private bucket, its policies, and the rule that an account with pictures cannot be deleted.
 const PHOTOS = migration('20261009000200_photo_check_ins');
 // A data fix, not a migration: carries the owner's old hardcoded habits into the new table.
@@ -770,11 +772,14 @@ async function worldWithAccounts() {
   await runScript(db, DELETE_ACCOUNT);
   await runScript(db, PHOTOS);
   await runScript(db, SLEEP);
+  await runScript(db, ACTIVITY);
   // the owner's rows came from the backfill; give them a habit too
   await db.exec(`insert into public.habits (user_id, name, kind) values ('${OWNER}', 'Walk', 'yesno')`);
+  await db.exec(`insert into public.activity_days (user_id, day, steps, active_kcal, source) values ('${OWNER}', '2026-10-10', 8000, 410.5, 'healthkit')`);
   await asUser(db, OTHER, async () => {
     for (const table of PERSONAL) await insertRow(db, table, 2);
     await db.exec(`insert into public.habits (name, kind) values ('Read', 'yesno')`);
+    await db.exec(`insert into public.activity_days (day, steps, active_kcal, source) values ('2026-10-10', 6500, 300, 'healthkit')`);
   });
   return db;
 }
@@ -1634,4 +1639,90 @@ test('the date of birth migration can be applied twice and keeps what is stored'
   const row = (await db.query(`select date_of_birth::text as d, age from public.profile`)).rows[0];
   assert.deepEqual(row, { d: '1988-02-29', age: 38 });
   assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.profile'::regclass and conname = 'profile_date_of_birth_plausible'`), 1);
+});
+
+
+// ── activity days (steps and active calories) ─────────────────────────────────────────────────────────
+
+const activityDay = (over = {}) => ({ day: '2026-10-11', steps: 7000, active_kcal: 350.5, source: 'healthkit', ...over });
+const insertActivity = (db, over = {}) => {
+  const row = activityDay(over);
+  const cols = Object.keys(row);
+  return db.query(`insert into public.activity_days (${cols.join(', ')}) values (${cols.map((_, i) => `$${i + 1}`).join(', ')})`, Object.values(row));
+};
+
+test('a person can add a day, it is filled in with their id, and nobody can add one for someone else', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, THIRD, async () => {
+    await insertActivity(db);
+    const row = (await db.query('select user_id, steps, active_kcal::float as kcal, source from public.activity_days')).rows[0];
+    assert.deepEqual(row, { user_id: THIRD, steps: 7000, kcal: 350.5, source: 'healthkit' });
+    await assert.rejects(() => insertActivity(db, { user_id: OWNER, day: '2026-10-12' }), RLS);
+  });
+  assert.equal(await count(db, `select count(*) as n from public.activity_days where user_id = '${OWNER}'`), 1, 'the owner still has only their own');
+});
+
+test('activity is private: another person sees none of it and cannot change or delete it, and the signed-out role has no access', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, THIRD, async () => {
+    assert.equal(await rowsOf(db, 'activity_days'), 0, 'the other accounts\' rows are not visible');
+    assert.equal((await db.query(`update public.activity_days set steps = 1 returning id`)).rows.length, 0);
+    assert.equal((await db.query(`delete from public.activity_days returning id`)).rows.length, 0);
+  });
+  await asUser(db, OTHER, async () => assert.equal(await rowsOf(db, 'activity_days'), 1, 'and each person sees their own'));
+  await asAnon(db, async () => {
+    await assert.rejects(() => db.query('select * from public.activity_days'), /permission denied/);
+    await assert.rejects(() => insertActivity(db), /permission denied/);
+  });
+  assert.equal(await rowsOf(db, 'activity_days'), 2, 'nothing changed');
+});
+
+test('a day holds a whole number of steps and a plausible amount of energy, from at least one of them, and only known sources', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, THIRD, async () => {
+    await insertActivity(db, { day: '2026-10-01', steps: 0, active_kcal: null });
+    await insertActivity(db, { day: '2026-10-02', steps: null, active_kcal: 0 });
+    await insertActivity(db, { day: '2026-10-03', steps: 200000, active_kcal: 20000 });
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-04', steps: null, active_kcal: null }), /activity_days_has_a_value/);
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-05', steps: -1 }), /check/);
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-05', steps: 200001 }), /check/);
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-05', active_kcal: -0.1 }), /check/);
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-05', active_kcal: 20000.1 }), /check|out of range/);
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-05', source: 'fitbit' }), /check/);
+    await assert.rejects(() => insertActivity(db, { day: '1999-12-31' }), /activity_days_not_before_2000/);
+  });
+});
+
+test('one row per person, day and source: syncing a day again updates it, and two sources for one day stay two rows', async () => {
+  const db = await worldWithAccounts();
+  await asUser(db, THIRD, async () => {
+    await insertActivity(db);
+    await assert.rejects(() => insertActivity(db), /duplicate key|activity_days_day_source_key/);
+    await db.exec(`insert into public.activity_days (day, steps, active_kcal, source) values ('2026-10-11', 9000, 500, 'healthkit')
+                   on conflict (user_id, day, source) do update set steps = excluded.steps, active_kcal = excluded.active_kcal`);
+    await insertActivity(db, { source: 'health_connect', steps: 7100 });
+    const rows = (await db.query(`select source, steps from public.activity_days order by source`)).rows;
+    assert.deepEqual(rows, [{ source: 'health_connect', steps: 7100 }, { source: 'healthkit', steps: 9000 }]);
+  });
+  // another person may have the same day and source as someone else, but not twice themselves
+  await asUser(db, OTHER, async () => {
+    await assert.rejects(() => insertActivity(db, { day: '2026-10-10' }), /duplicate key/, 'their own seeded day is taken');
+    await insertActivity(db, { day: '2026-10-11' });
+  });
+});
+
+test('deleting an account removes its activity days and leaves everyone else\'s', async () => {
+  const db = await worldWithAccounts();
+  assert.equal(await count(db, `select count(*) as n from public.activity_days where user_id = '${OTHER}'`), 1);
+  await asUser(db, OTHER, () => db.exec('select public.delete_my_account()'));
+  assert.equal(await count(db, `select count(*) as n from public.activity_days where user_id = '${OTHER}'`), 0);
+  assert.equal(await count(db, `select count(*) as n from public.activity_days where user_id = '${OWNER}'`), 1, 'the owner keeps theirs');
+});
+
+test('the activity migration can be applied twice and keeps what is stored', async () => {
+  const db = await worldWithAccounts();
+  await runScript(db, ACTIVITY);
+  assert.equal(await rowsOf(db, 'activity_days'), 2);
+  assert.equal(await count(db, `select count(*) as n from pg_policies where schemaname = 'public' and tablename = 'activity_days'`), 1);
+  assert.equal(await count(db, `select count(*) as n from pg_constraint where conrelid = 'public.activity_days'::regclass and conname = 'activity_days_day_source_key'`), 1);
 });

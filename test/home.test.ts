@@ -30,3 +30,11 @@ test('the pricing page has its own address', () => {
   assert.equal(routeFor('/pricing-plans'), 'home');
   assert.equal(routeFor('/pricing/extra'), 'home');
 });
+
+test('a confirmation link has its own address and the waitlist section does not', () => {
+  assert.equal(routeFor('/waitlist/confirmed'), 'confirmed');
+  assert.equal(routeFor('/waitlist/confirmed/'), 'confirmed');
+  assert.equal(routeFor('/waitlist'), 'home');
+  assert.equal(routeFor('/waitlist/confirmed/extra'), 'home');
+  assert.equal(routeFor('/waitlist/confirm'), 'home');
+});
