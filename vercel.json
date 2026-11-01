@@ -6,6 +6,18 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/waitlist/confirmed",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/waitlist/unsubscribe",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/signin",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
       "source": "/photoassets",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     },
