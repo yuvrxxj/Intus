@@ -29,19 +29,34 @@ const FILES = [
   '20-guestlist.png',
 ];
 
+/** The nine wordless pre-launch pictures: a 4:5 picture and a square crop of each, both 3840 wide (docs/social/photoassets.md). */
+const WORDLESS = [
+  '01-hourglass',
+  '02-mark',
+  '03-capsule',
+  '04-trail',
+  '05-moon',
+  '06-three-capsules',
+  '07-bottle',
+  '08-ring',
+  '09-test-tube',
+];
+const WORDLESS_FILES = WORDLESS.flatMap((name) => [`wordless-${name}.png`, `wordless-${name}-square.png`]);
+
 function read(path: string): string {
   return readFileSync(new URL(path, root), 'utf8');
 }
 
-test('the twenty marketing images are static PNGs under public/photoassets', () => {
+test('the marketing images are static PNGs under public/photoassets', () => {
   const dir = new URL('public/photoassets/', root);
   const pngs = readdirSync(dir).filter((name) => name.endsWith('.png')).sort();
-  assert.deepEqual(pngs, FILES);
-  for (const name of FILES) {
+  assert.deepEqual(pngs, [...FILES, ...WORDLESS_FILES].sort());
+  for (const name of [...FILES, ...WORDLESS_FILES]) {
     const bytes = readFileSync(new URL(name, dir));
     assert.equal(bytes.subarray(1, 4).toString('latin1'), 'PNG', `${name} is not a PNG`);
-    assert.equal(bytes.readUInt32BE(16), 2160);
-    assert.equal(bytes.readUInt32BE(20), 2160);
+    const [width, height] = [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
+    const want = name.startsWith('wordless-') ? (name.endsWith('-square.png') ? [3840, 3840] : [3840, 4800]) : [2160, 2160];
+    assert.deepEqual([width, height], want, `${name} is ${width} by ${height}`);
   }
 });
 
@@ -55,7 +70,13 @@ test('the photoassets page is static, lists every file, and asks not to be index
     assert.ok(html.includes(`src="${href}"`), `${href} is not shown`);
     assert.ok(html.includes(`href="${href}"`), `${href} is not linked`);
   }
-  assert.equal(html.match(/<img /g)?.length, FILES.length);
+  for (const name of WORDLESS) {
+    const href = `/photoassets/wordless-${name}.png`;
+    assert.ok(html.includes(`src="${href}"`), `${href} is not shown`);
+    assert.ok(html.includes(`href="${href}"`), `${href} is not linked`);
+    assert.ok(html.includes(`href="/photoassets/wordless-${name}-square.png"`), `the square of ${name} is not linked`);
+  }
+  assert.equal(html.match(/<img /g)?.length, FILES.length + WORDLESS.length);
 });
 
 test('/photoassets stays out of search without changing the rest of the site', () => {
