@@ -169,6 +169,13 @@ report.txt --models a,b` (with `OPENROUTER_API_KEY` set) runs each one through t
 scores it against the on-device reader: results reproduced, wrong numbers dropped, extra results found, tokens and
 time. A model with no private host is reported as unusable. Keep real reports and their text out of the repository.
 
+**Trying free hosts that may keep or train on prompts.** `--allow-training` leaves out the OpenRouter privacy rule so
+`:free` models and other free tiers can be tried. It only runs on an invented report, one that says "INVENTED REPORT
+FOR TESTING" at the top, such as `scripts/ai-eval-sample-report.txt`, and refuses anything else, so a real report can
+never reach those hosts through it. Another host that speaks the chat-completions format is tried with `--base-url`
+and `--key-env` (the name of the variable that holds its key). The app itself never leaves the rule out. The examples
+for OpenRouter, Groq and Cloudflare are at the top of `scripts/ai-eval.ts`.
+
 ## Sign-in
 
 The public website does not offer these screens until `VITE_WEB_AUTH_ENABLED` is `true` (see the README, "Web sign-in"). The Supabase settings below stay as they are.
