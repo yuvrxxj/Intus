@@ -5,7 +5,8 @@
 // The confirm email goes out through Resend from marketing@mail.intus.fit. Secrets are set in the Supabase dashboard,
 // never in code: RESEND_API_KEY. WAITLIST_EMAIL_LIVE=true lets mail go to every sign-up; until then only addresses in
 // WAITLIST_EMAIL_ALLOWLIST (comma separated, for test sign-ups) get one. See mailer.ts.
-// TODO: an unsubscribe link and the postal address belong in the "place ready" and "launch" emails, not this one.
+// The "place ready" and "launch" emails are sent by send-waitlist-email. Their unsubscribe link lands here
+// (action 'unsubscribe'), checked against the secret WAITLIST_UNSUBSCRIBE_SECRET.
 // Only status = confirmed is eligible for an invite.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -72,6 +73,12 @@ Deno.serve(createHandler({
   newToken: productionToken,
   sendConfirm,
   log: (message) => console.error(message),
+  unsubscribeSecret: Deno.env.get('WAITLIST_UNSUBSCRIBE_SECRET') || undefined,
+  markUnsubscribed: async (id, at) => {
+    // Only the first unsubscribe sets the time; a second open of the link writes nothing.
+    const { error } = await admin.from('waitlist').update({ unsubscribed_at: at }).eq('id', id).is('unsubscribed_at', null);
+    if (error) throw new Error('unsubscribe failed');
+  },
   findByEmail: async (email) => {
     const { data, error } = await admin.from('waitlist').select(COLUMNS).eq('email', email).maybeSingle();
     if (error) throw new Error('read failed');

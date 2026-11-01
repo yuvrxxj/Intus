@@ -11,6 +11,9 @@ import {
   waitlistFunctionUrl,
   answersPayload,
   interpretAnswersResponse,
+  interpretUnsubscribeResponse,
+  unsubscribePayload,
+  type UnsubscribeResult,
   type AnswersOutcome,
   type ConfirmPageResult,
   type Device,
@@ -59,4 +62,8 @@ export function submitAnswers(token: string, device: Device, tracks: string, fet
 
 export function submitResend(email: string, fetcher: typeof fetch = fetch): Promise<ResendOutcome> {
   return post(resendPayload(email), fetcher).then((posted) => interpretResendResponse(posted.status, posted.body, offlineNow()));
+}
+
+export function submitUnsubscribe(id: string, t: string, fetcher: typeof fetch = fetch): Promise<UnsubscribeResult> {
+  return post(unsubscribePayload(id, t), fetcher).then((posted) => interpretUnsubscribeResponse(posted.status, posted.body));
 }

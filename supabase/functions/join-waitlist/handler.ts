@@ -22,6 +22,7 @@ import {
   type Device,
   type ReferralStanding,
 } from '../_shared/waitlistRules.ts';
+import { verifyUnsubscribeToken } from '../_shared/waitlistUnsubscribe.ts';
 import { createMemoryRateLimit, type RateLimiter } from './rateLimit.ts';
 
 export interface StoredWaitlist {
@@ -55,6 +56,10 @@ export interface Deps {
   newToken(): string;
   /** Emails the raw token. Optional: absent or 'skipped' means nothing was sent. A throw is logged and not shown. */
   sendConfirm?(email: string, token: string): Promise<'sent' | 'skipped'>;
+  /** WAITLIST_UNSUBSCRIBE_SECRET. Unset means an unsubscribe link cannot be checked, so the answer is "unavailable". */
+  unsubscribeSecret?: string;
+  /** Sets unsubscribed_at if it is not set yet. Running it twice changes nothing. A missing row is not an error. */
+  markUnsubscribed?(id: string, at: string): Promise<void>;
   log(message: string): void;
 }
 
@@ -115,6 +120,7 @@ export function createHandler(deps: Deps) {
     if (body.action === 'confirm') return confirm(deps, body, now);
     if (body.action === 'answers') return answers(deps, body, now);
     if (body.action === 'resend') return resend(deps, body, now, ip);
+    if (body.action === 'unsubscribe') return unsubscribe(deps, body, now);
 
     // Missing action is a join. Anything else is refused. Joins are rate limited; confirms are not.
     if (body.action != null && body.action !== 'join') return reply(400, { error: 'bad_request' });
@@ -258,6 +264,26 @@ async function answers(deps: Deps, body: Record<string, unknown>, now: number): 
     return reply(200, { result: 'saved' });
   } catch {
     deps.log('answers failed');
+    return reply(500, { error: 'unavailable' });
+  }
+}
+
+/**
+ * The link in the place-ready and launch emails: ?id=<row id>&t=<HMAC of the id>. Nothing is stored for the link; the
+ * signature is checked in constant time. A good link always answers "unsubscribed", however often it is opened. A bad
+ * one answers "invalid" and writes nothing. Not rate limited: a valid token cannot be guessed.
+ */
+async function unsubscribe(deps: Deps, body: Record<string, unknown>, now: number): Promise<Response> {
+  if (!deps.unsubscribeSecret || !deps.markUnsubscribed) {
+    deps.log('unsubscribe is not configured');
+    return reply(500, { error: 'unavailable' });
+  }
+  if (!(await verifyUnsubscribeToken(body.id, body.t, deps.unsubscribeSecret))) return reply(200, { result: 'invalid' });
+  try {
+    await deps.markUnsubscribed((body.id as string).toLowerCase(), new Date(now).toISOString());
+    return reply(200, { result: 'unsubscribed' });
+  } catch {
+    deps.log('unsubscribe failed');
     return reply(500, { error: 'unavailable' });
   }
 }

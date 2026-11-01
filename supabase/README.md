@@ -93,6 +93,7 @@ at myaccount.google.com, under connections to third-party apps.
 | `20261029000100_waitlist_referrals.sql` | Adds `referral_code` (unique, ten hex characters, made by the database) and `referred_by` to `waitlist`, a trigger that refuses a person referring themselves (same address, or the same inbox once the +tag and gmail dots are dropped), and the view `waitlist_standing` that computes each confirmed person's place (most confirmed friends first, then earliest sign-up). The place is never stored. Row level security is unchanged: the API roles read nothing, only the service role reads the view. **Apply this before deploying the code that uses it** (INT-151) |
 | `20261101000100_waitlist_rate_limit.sql` | Adds `waitlist_attempts` (one row per allowed join attempt, keyed by a salted SHA-256 of the caller's address; the raw address is never stored) and `waitlist_allow_join(key, limit, window)`, an atomic sliding-window check that answers true and records the attempt, or false and records nothing, and deletes rows older than the window. Row level security is forced; only the service role can read the table or call the function. The function uses it for the 5-per-10-minutes join limit so every instance shares one count. Optional secret `WAITLIST_RATE_SALT` (defaults to the service role key). **Apply this before redeploying the function** (INT-152) |
 | `20261101000200_activity_days.sql` | Adds `activity_days` (INT-147): one row per person, day and source with `steps` (whole number, 0 to 200,000) and `active_kcal` (0 to 20,000, one decimal), at least one of the two, source `manual`, `healthkit`, `health_connect` or `other`. The iPhone sync writes `healthkit`; Android will write `health_connect` into the same table. Per-person policy like the other personal tables, no access for the signed-out role, removed with the account. **Apply this before the app build that syncs steps** |
+| `20261101000300_waitlist_emails.sql` | Adds `waitlist.unsubscribed_at` (set the first time someone opens the unsubscribe link), the table `waitlist_emails_sent` (one row per person per email, `place_ready` or `launch`; primary key on the pair, so the same email can never be recorded twice; deleted with the waitlist row), and the functions `waitlist_email_recipients(kind, limit, only)` and `waitlist_email_candidate_count(kind, only)`, which list and count who is still due an email: confirmed, not unsubscribed, not yet sent, in waitlist place order. Row level security is forced; only the service role can touch the table or call the functions. **Apply this before deploying `send-waitlist-email` or redeploying `join-waitlist`** (INT-163) |
 
 The first eight are applied to the live project and listed in `baseline.txt`. Everything after them is applied by the
 workflow when its pull request is merged. `one-off/20261005_seed_owner_habits.sql` is not a migration. It carried
@@ -155,6 +156,59 @@ The Edge Function `supabase/functions/join-waitlist` checks the email, the devic
 The function reads shared rules from `supabase/functions/_shared/` (`waitlistRules.ts`, `confirmEmail.ts`), because Supabase bundles only the function's own folder plus `_shared/`. The web page re-exports `waitlistRules.ts`, so there is one copy. CI runs `deno check supabase/functions/join-waitlist/index.ts`, and a test fails if the function imports anything outside its folder and `_shared/`.
 
 **Deploying is a manual step.** Merging does not deploy functions. After the migration is merged: `supabase functions deploy join-waitlist --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`, and set the secrets in the dashboard. The gateway check stays off because callers are signed out and the publishable key is not a JWT. The live function was hand-patched once; redeploy from this code to replace it. Country, UTM and analytics are later pull requests.
+
+### The place-ready and launch emails (INT-163)
+
+The waitlist promises three emails: confirm (sent by `join-waitlist`), "your place is ready" and "the app is live". The other two are sent by the Edge Function `supabase/functions/send-waitlist-email`, which only the founder calls, with curl. The wording is in `supabase/functions/_shared/waitlistEmails.ts`. Both end with the line "This is one of the three emails you signed up for", an unsubscribe link and the postal address.
+
+- **Who gets one:** confirmed, not unsubscribed, not yet sent that email, best place first (`waitlist_standing`). Pending sign-ups never do.
+- **Go-live gate:** the same as the confirm email. Until `WAITLIST_EMAIL_LIVE` is `true`, only addresses in `WAITLIST_EMAIL_ALLOWLIST` get one; everyone else is counted as skipped and not mailed.
+- **Never twice:** each send is recorded in `waitlist_emails_sent` before it goes out, so a retry or a double click skips that person. A failed send removes its record so the next run retries it. Resend also gets an idempotency key per person and email. Three failures in a row stop the run.
+- **Dry run by default:** without `"dryRun": false` nothing is sent or written. The answer shows the counts, the first five addresses masked (`a***@gmail.com`), any settings still missing and a preview of the text.
+- **Unsubscribe:** the link is `https://www.intus.fit/waitlist/unsubscribe?id=<row id>&t=<signature>`, where the signature is HMAC-SHA256 of the row id under `WAITLIST_UNSUBSCRIBE_SECRET`. Nothing is stored for it. Opening it calls `join-waitlist` with `action: 'unsubscribe'`, which checks the signature in constant time and sets `unsubscribed_at` once. The mail also carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so mail apps can show an Unsubscribe button; that button POSTs to the same link, and `middleware.ts` on Vercel hands the POST to `join-waitlist`.
+- **Logs** carry counts only, never an address or a token.
+
+**Settings** (Edge Functions, Secrets in the dashboard; never in code, chat or the repository):
+
+| Setting | Used by | What it is |
+| --- | --- | --- |
+| `WAITLIST_ADMIN_TOKEN` | send-waitlist-email | Long random string (at least 32 characters, `openssl rand -hex 32`). The function refuses every request while it is unset or short |
+| `WAITLIST_UNSUBSCRIBE_SECRET` | both | Long random string (at least 32 characters). Signs the unsubscribe links. Changing it breaks every link already sent, so set it once |
+| `WAITLIST_POSTAL_ADDRESS` | both emails | The sender's postal address (required by CAN-SPAM). Line breaks become commas |
+| `WAITLIST_TESTFLIGHT_URL` | place_ready | The TestFlight public link, `https://testflight.apple.com/join/...` |
+| `WAITLIST_STORE_URL` | launch | The App Store link, `https://apps.apple.com/...`. Leave unset until launch: the launch email is refused without it |
+| `RESEND_API_KEY`, `WAITLIST_EMAIL_LIVE`, `WAITLIST_EMAIL_ALLOWLIST` | both | As for the confirm email |
+
+Any value that is empty or looks like a placeholder (contains `<` or `>`, `TBD`, `XXX`, `TODO`, `example.com`, `placeholder`, `{{`) is treated as missing, and a real run is refused with `settings_missing` and the names.
+
+**Deploying** (manual, after the migration is merged): `supabase functions deploy send-waitlist-email --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`, and redeploy `join-waitlist` too (`supabase functions deploy join-waitlist --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`), because the unsubscribe link is checked there. The gateway check is off for `send-waitlist-email` because it checks `x-admin-token` itself. CI runs `deno check` on both functions.
+
+**A dry run** (sends nothing; put the admin token in a shell variable first, never in a file):
+
+```sh
+curl -s -X POST https://zfyeqfnretrrmtevczrc.supabase.co/functions/v1/send-waitlist-email \
+  -H "x-admin-token: $WAITLIST_ADMIN_TOKEN" -H 'content-type: application/json' \
+  -d '{"kind":"place_ready"}'
+```
+
+**A real send** (only after the dry run looks right; `limit` is how many people this call tries, at most 500, default 50; keep it at 100 or below so the call finishes inside the function time limit, and run it again for the next batch):
+
+```sh
+curl -s -X POST https://zfyeqfnretrrmtevczrc.supabase.co/functions/v1/send-waitlist-email \
+  -H "x-admin-token: $WAITLIST_ADMIN_TOKEN" -H 'content-type: application/json' \
+  -d '{"kind":"place_ready","dryRun":false,"limit":50}'
+```
+
+The answer is `{kind, dryRun, live, eligible, sent, skipped, failed, missingSettings}`. Running it again only reaches people who have not had that email yet. If the function is stopped part way through a send (a timeout), the person being sent to at that moment may be recorded as sent without the mail going out.
+
+**Trying all three emails on your Mac, with no real mail.** With the local Supabase running (`docs/ios/local-supabase.md`):
+
+1. `python3 scripts/fake-resend.py` stands in for Resend. It takes what the functions would send to Resend and puts it in the local inbox at http://127.0.0.1:54324. It never contacts the internet.
+2. Write an env file outside the repository with test values only: `WAITLIST_ADMIN_TOKEN`, `WAITLIST_UNSUBSCRIBE_SECRET` (each `openssl rand -hex 32`), `RESEND_API_KEY=local-fake-key`, `RESEND_API_URL=http://host.docker.internal:8787/emails`, `WAITLIST_POSTAL_ADDRESS`, `WAITLIST_TESTFLIGHT_URL=https://testflight.apple.com/join/LOCALTEST` and `WAITLIST_EMAIL_ALLOWLIST` with your test addresses.
+3. `supabase functions serve --no-verify-jwt --env-file <that file>` (set `[edge_runtime] enabled = true` in `config.toml` first, and do not commit that).
+4. Join from the website run against the stack (`VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_PUBLISHABLE_KEY=<from bash scripts/local-supabase.sh env> npm run dev`), confirm from the local inbox (swap `https://intus.fit` for `http://localhost:5173` in the link), then run the curl commands above against `http://127.0.0.1:54321/functions/v1/send-waitlist-email`.
+
+`RESEND_API_URL` exists only for this. Production leaves it unset and mail goes to Resend. A plain `http://` address is accepted only for this machine (`localhost`, `127.0.0.1`, `host.docker.internal`); anything else falls back to Resend.
 
 **Deploying the function.** It is not part of the migration workflow. Deploy `supabase/functions/read-report` with the
 Supabase CLI (`supabase functions deploy read-report --no-verify-jwt --project-ref zfyeqfnretrrmtevczrc`) or the
