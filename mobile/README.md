@@ -41,6 +41,8 @@ Signed in, Sleep is the first tab. The More tab pushes Account, with the system 
 
 `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` point it at another Supabase project. Both default to production and are public by design, as on the web; row-level security keeps each person's rows to themselves. The login session is kept in the iOS keychain (`expo-secure-store`).
 
+To test signed-in screens without making accounts on production, run a local Supabase and point the app at it: see `docs/ios/local-supabase.md`.
+
 ## Sleep
 
 The Sleep screen lists nights from `sleep_sessions` with the same rules as the website (`src/features/sleep`): one source per night, and averages only after 5 nights in a 28 day stretch. The first time you are signed in on a device with Apple Health, a sheet explains the three reads and then iOS shows its own permission sheet. The purpose string is `NSHealthShareUsageDescription` in `app.json` (the HealthKit plugin writes it into Info.plist on `npm run ios`). Add a night by hand stays on the screen after a Health night is stored. The form also opens on its own when a sync comes back with no sleep. That row is `source_kind = 'manual'` and the website reads it from the same table.
