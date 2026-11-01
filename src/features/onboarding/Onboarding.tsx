@@ -20,6 +20,7 @@ import {
   ACTIVITY, DIET_LABEL, STEPS, adviceFor, firstInvalidStep, formFromProfile, goalNotes, goalSentence, habitsFromForm, profileFromForm,
   validateStep, type Diet, type OnboardingErrors, type OnboardingForm, type StepId,
 } from './model.ts';
+import { DatePicker } from '@/components/ui/date-picker';
 
 /** What each step is for, shown under its title so nobody wonders why a question is asked. */
 const STEP_COPY: Record<StepId, { short: string; why: string; art: AsciiShape }> = {
@@ -238,7 +239,7 @@ export function Onboarding({ onSkip }: { onSkip: () => void }) {
                         options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />
                       <Field id="ob-dob" label="Date of birth" error={errors.date_of_birth}
                         hint={age !== null && !errors.date_of_birth ? `You are ${age}. Your age updates itself on your birthday.` : 'Your age is worked out from this, so it stays right.'}>
-                        <input id="ob-dob" type="date" autoComplete="bday" min="1900-01-01" max={today} value={form.date_of_birth} onChange={(e) => set('date_of_birth', e.target.value)} />
+                        <DatePicker id="ob-dob" min="1900-01-01" max={today} value={form.date_of_birth} onChange={(v) => set('date_of_birth', v)} />
                       </Field>
                       <Field id="ob-height" label="Height (cm)" error={errors.height_cm}>
                         <input id="ob-height" type="number" inputMode="decimal" step="0.5" value={form.height_cm} placeholder="175" onChange={(e) => set('height_cm', e.target.value)} />

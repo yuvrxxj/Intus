@@ -7,6 +7,7 @@ import { extractLines } from './extract.ts';
 import { parseReport } from './parse.ts';
 import { reviewRows, validateReview, type ReviewRow } from './review.ts';
 import './reports.css';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Props {
   biomarkers: readonly Biomarker[];
@@ -132,7 +133,7 @@ export function ReportUpload({ biomarkers, readings, today, onSaved, onCancel }:
             </div>
             <div className="fld">
               <label htmlFor="rp-date">Date of the test</label>
-              <input id="rp-date" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} />
+              <DatePicker id="rp-date" max={today} value={date} onChange={setDate} />
               {dateError ? <div className="fld-err" role="alert">{dateError}</div>
                 : stage.dateUnsure ? <div className="fld-hint">The report's date could be day-first or month-first. Check it.</div>
                 : !date ? <div className="fld-hint">No date was found on the report. Enter the day the sample was taken.</div> : null}

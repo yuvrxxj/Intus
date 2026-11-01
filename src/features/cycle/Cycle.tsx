@@ -7,6 +7,7 @@ import {
 } from './model.ts';
 import { useConditions } from './useConditions.ts';
 import './cycle.css';
+import { DatePicker } from '@/components/ui/date-picker';
 
 type Notify = (message: string, error?: boolean) => void;
 
@@ -84,7 +85,7 @@ function CycleCard({ today, notify }: { today: string; notify: Notify }) {
           <div className="form-grid">
             <div className="fld">
               <label htmlFor="cy-day">Day</label>
-              <input id="cy-day" type="date" max={today} value={day} onChange={(e) => setDay(e.target.value)} />
+              <DatePicker id="cy-day" max={today} value={day} onChange={setDay} />
             </div>
             <div className="fld">
               <label htmlFor="cy-flow">Flow</label>
